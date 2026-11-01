@@ -1,0 +1,68 @@
+name: Build NAVIN OS ISO
+
+on:
+  push:
+    branches: [main]
+    paths: ["build-iso/**", ".github/workflows/build-iso.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-iso
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune -af || true
+          df -h /
+
+      - name: Build ISO in Debian 12 container
+        run: |
+          sudo docker run --rm --privileged \
+            -v "$GITHUB_WORKSPACE:/work" -w /work/build-iso \
+            debian:bookworm bash ./build.sh
+
+      - name: Verify ISO
+        id: verify
+        run: |
+          cd build-iso
+          test -f navin-os-1.0-x86_64.iso
+          file navin-os-1.0-x86_64.iso
+          SIZE=$(stat -c %s navin-os-1.0-x86_64.iso)
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cut -d' ' -f1 navin-os-1.0-x86_64.iso.sha256)" >> "$GITHUB_OUTPUT"
+          if [ "$SIZE" -gt 2100000000 ]; then echo "ISO larger than GitHub's 2 GiB asset limit"; exit 1; fi
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-iso/build.log
+          if-no-files-found: ignore
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0-build.${{ github.run_number }}
+          name: NAVIN OS 1.0 (build ${{ github.run_number }})
+          make_latest: true
+          body: |
+            NAVIN OS 1.0 — Debian 12 Bookworm base, x86_64 hybrid ISO (UEFI + Legacy BIOS).
+
+            SHA256: ${{ steps.verify.outputs.sha }}
+
+            Status: [Build Passed] in GitHub Actions. Not yet [Tested in VM] or [Validated on Physical Hardware] by this pipeline.
+          files: |
+            build-iso/navin-os-1.0-x86_64.iso
+            build-iso/navin-os-1.0-x86_64.iso.sha256

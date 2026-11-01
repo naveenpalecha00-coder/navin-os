@@ -1,0 +1,143 @@
+#!/bin/sh
+# NAVIN OS customization hook — runs inside the chroot during `lb build`.
+set -e
+export DEBIAN_FRONTEND=noninteractive
+
+echo "[navin-os] 1/9 Latest Mozilla Firefox (official Mozilla APT repo)"
+install -d -m 0755 /etc/apt/keyrings
+if wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O /etc/apt/keyrings/packages.mozilla.org.asc; then
+  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" > /etc/apt/sources.list.d/mozilla.list
+  cat > /etc/apt/preferences.d/mozilla <<'EOF'
+Package: *
+Pin: origin packages.mozilla.org
+Pin-Priority: 1000
+EOF
+  apt-get update
+  apt-get install -y --no-install-recommends firefox || apt-get install -y firefox-esr
+else
+  echo "[navin-os] Mozilla repo unreachable, falling back to firefox-esr"
+  apt-get install -y firefox-esr
+fi
+apt-get clean
+
+echo "[navin-os] 2/9 OS branding"
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN OS 1.0 (Debian 12 Bookworm base)"/' /usr/lib/os-release
+grep -q '^NAVIN_OS_VERSION' /usr/lib/os-release || echo 'NAVIN_OS_VERSION="1.0"' >> /usr/lib/os-release
+printf 'NAVIN OS 1.0 \\n \\l\n\n' > /etc/issue
+echo "NAVIN OS 1.0" > /etc/issue.net
+echo "navin-os" > /etc/hostname
+
+echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
+for g in sudo netdev audio video plugdev bluetooth lpadmin; do getent group $g >/dev/null || groupadd $g || true; done
+sed -i 's/^#\?\s*SKEL=.*/SKEL=\/etc\/skel/' /etc/adduser.conf || true
+
+echo "[navin-os] 4/9 Wallpaper as system default"
+update-alternatives --install /usr/share/images/desktop-base/desktop-background desktop-background /usr/share/backgrounds/navin-os/wallpaper.jpg 100 || true
+update-alternatives --set desktop-background /usr/share/backgrounds/navin-os/wallpaper.jpg || true
+mkdir -p /usr/share/backgrounds/xfce
+ln -sf /usr/share/backgrounds/navin-os/wallpaper.jpg /usr/share/backgrounds/xfce/xfce-shapes.svg.navin || true
+
+echo "[navin-os] 5/9 ZRAM (50% RAM, zstd)"
+cat > /etc/default/zramswap <<'EOF'
+ALGO=zstd
+PERCENT=50
+PRIORITY=100
+EOF
+systemctl enable zramswap.service || true
+echo 'vm.swappiness=100' > /etc/sysctl.d/99-navin-zram.conf
+
+echo "[navin-os] 6/9 Trim non-essential services"
+for s in apt-daily.timer apt-daily-upgrade.timer man-db.timer e2scrub_reap.service ModemManager.service; do
+  systemctl disable "$s" 2>/dev/null || true
+done
+apt-get purge -y tracker tracker-miner-fs 2>/dev/null || true
+systemctl enable NetworkManager.service || true
+systemctl enable bluetooth.service || true
+systemctl enable lightdm.service || true
+ufw --force default deny incoming || true
+ufw --force default allow outgoing || true
+
+echo "[navin-os] 7/9 Plymouth boot splash"
+if [ -d /usr/share/plymouth/themes/spinner ]; then
+  cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
+  plymouth-set-default-theme spinner || true
+fi
+
+echo "[navin-os] 8/9 Calamares branding + desktop launcher"
+if [ -d /etc/calamares/branding/debian ]; then
+  rm -rf /etc/calamares/branding/navin
+  cp -a /etc/calamares/branding/debian /etc/calamares/branding/navin
+  D=/etc/calamares/branding/navin/branding.desc
+  sed -i 's/^componentName:.*/componentName:  navin/' "$D"
+  sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
+  sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
+  sed -i 's/version:.*/version:             "1.0"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "1.0"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN OS 1.0"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN OS 1.0"/' "$D"
+  sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
+  sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
+  sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
+  sed -i 's/welcomeStyleCalamares:.*/welcomeStyleCalamares: true/' "$D"
+  cp /usr/share/pixmaps/navin-os-logo.png /etc/calamares/branding/navin/navin-logo.png
+  sed -i 's/productLogo:.*/productLogo:         "navin-logo.png"/' "$D"
+  sed -i 's/productIcon:.*/productIcon:         "navin-logo.png"/' "$D"
+  sed -i 's/^branding:.*/branding: navin/' /etc/calamares/settings.conf
+fi
+cat > /usr/share/applications/install-navin-os.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install NAVIN OS
+Comment=Install NAVIN OS to this computer or a USB drive
+Exec=install-debian
+Icon=/usr/share/pixmaps/navin-os-logo.png
+Terminal=false
+Categories=System;
+EOF
+cp /usr/share/applications/install-navin-os.desktop /etc/skel/Desktop/
+chmod +x /etc/skel/Desktop/install-navin-os.desktop
+[ -f /usr/share/applications/firefox.desktop ] && cp /usr/share/applications/firefox.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/firefox.desktop || true
+# Remove installer launcher from installed system (Calamares runs in chroot)
+mkdir -p /etc/calamares/modules
+
+echo "[navin-os] 9/9 Picom compositor autostart"
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/navin-picom.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=NAVIN Compositor
+Exec=picom --backend xrender --vsync --no-fading-openclose
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+EOF
+# Disable xfwm4 built-in compositor so picom is the only compositor
+mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="theme" type="string" value="Arc-Dark"/>
+    <property name="workspace_count" type="int" value="4"/>
+    <property name="snap_to_border" type="bool" value="true"/>
+    <property name="tile_on_move" type="bool" value="true"/>
+  </property>
+</channel>
+EOF
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="Arc-Dark"/>
+    <property name="IconThemeName" type="string" value="Papirus-Dark"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="FontName" type="string" value="Noto Sans 10"/>
+  </property>
+</channel>
+EOF
+
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+echo "[navin-os] customization complete"
