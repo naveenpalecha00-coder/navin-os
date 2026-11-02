@@ -95,6 +95,8 @@ Icon=/usr/share/pixmaps/navin-os-logo.png
 Terminal=false
 Categories=System;
 EOF
+rm -f /etc/skel/Desktop 2>/dev/null || true
+mkdir -p /etc/skel/Desktop
 cp /usr/share/applications/install-navin-os.desktop /etc/skel/Desktop/
 chmod +x /etc/skel/Desktop/install-navin-os.desktop
 [ -f /usr/share/applications/firefox.desktop ] && cp /usr/share/applications/firefox.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/firefox.desktop || true
