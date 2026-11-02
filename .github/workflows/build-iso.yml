@@ -41,7 +41,7 @@ jobs:
           SIZE=$(stat -c %s navin-os-1.0-x86_64.iso)
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
           echo "sha=$(cut -d' ' -f1 navin-os-1.0-x86_64.iso.sha256)" >> "$GITHUB_OUTPUT"
-          if [ "$SIZE" -gt 2100000000 ]; then echo "ISO larger than GitHub's 2 GiB asset limit"; exit 1; fi
+          if [ "$SIZE" -gt 2147000000 ]; then echo "ISO larger than GitHub's 2 GiB asset limit"; exit 1; fi
 
       - name: Upload build log
         if: always()

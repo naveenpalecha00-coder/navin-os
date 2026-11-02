@@ -17,6 +17,8 @@ less
 xdg-user-dirs
 xdg-utils
 policykit-1
+polkitd
+lightdm-gtk-greeter
 udisks2
 gvfs
 gvfs-backends
@@ -32,7 +34,13 @@ xorg
 xserver-xorg-video-all
 xserver-xorg-input-all
 xfce4
-xfce4-goodies
+xfce4-terminal
+xfce4-screenshooter
+xfce4-taskmanager
+thunar
+xfce4-settings
+gvfs-fuse
+network-manager-gnome
 xfce4-power-manager
 xfce4-notifyd
 xfce4-pulseaudio-plugin
