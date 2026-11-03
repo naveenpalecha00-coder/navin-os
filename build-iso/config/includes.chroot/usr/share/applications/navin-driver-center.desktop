@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=NAVIN Driver & Device Center
+Comment=Detect hardware and install drivers safely
+Exec=navin-driver-center
+Icon=/usr/share/pixmaps/navin-os-logo.png
+Terminal=false
+Categories=System;Settings;HardwareSettings;

@@ -1,0 +1,15 @@
+/* NAVIN OS 1.0 accent: reference blue #1677F2 on white */
+@define-color selected_bg_color #1677F2;
+@define-color theme_selected_bg_color #1677F2;
+@define-color accent_bg_color #1677F2;
+
+.xfce4-panel { border-top: 1px solid rgba(0, 0, 0, 0.06); }
+.xfce4-panel button { border-radius: 10px; }
+.xfce4-panel button:checked, .xfce4-panel button:hover { background-color: rgba(22, 119, 242, 0.12); }
+window.background { background-color: #FFFFFF; }
+.sidebar, placessidebar, .thunar .sidebar { background-color: #F8FAFF; }
+placessidebar row:selected { background-color: rgba(22, 119, 242, 0.14); color: #111111; border-radius: 8px; }
+entry { border-radius: 10px; }
+button { border-radius: 10px; }
+XfdesktopIconView.view { background: transparent; color: #111111; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8); }
+XfdesktopIconView.view:active { background-color: rgba(22, 119, 242, 0.25); border-radius: 10px; }

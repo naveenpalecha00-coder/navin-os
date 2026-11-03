@@ -1,0 +1,46 @@
+// NAVIN OS 1.0 boot splash
+Window.SetBackgroundTopColor(1.0, 1.0, 1.0);
+Window.SetBackgroundBottomColor(0.973, 0.98, 1.0);
+
+W = Window.GetWidth();
+H = Window.GetHeight();
+
+logo = Image("logo.png");
+logo_s = Sprite(logo);
+logo_s.SetX(W / 2 - logo.GetWidth() / 2);
+logo_s.SetY(H / 2 - logo.GetHeight() / 2 - 70);
+
+title = Image.Text("N A V I N   O S", 0.07, 0.07, 0.09, 1, "Sans Bold 26");
+title_s = Sprite(title);
+title_s.SetX(W / 2 - title.GetWidth() / 2);
+title_s.SetY(H / 2 + logo.GetHeight() / 2 - 50);
+
+box = Image("progress_box.png");
+box_s = Sprite(box);
+box_x = W / 2 - box.GetWidth() / 2;
+box_y = H / 2 + logo.GetHeight() / 2 + 10;
+box_s.SetPosition(box_x, box_y, 1);
+
+bar = Image("progress_bar.png");
+bar_s = Sprite();
+bar_s.SetPosition(box_x, box_y, 2);
+
+fun progress_callback(duration, progress) {
+  w = Math.Int(bar.GetWidth() * progress);
+  if (w < 1) w = 1;
+  bar_s.SetImage(bar.Scale(w, bar.GetHeight()));
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+msg_s = Sprite();
+fun message_callback(text) {
+  img = Image.Text(text, 0.35, 0.4, 0.5, 1, "Sans 11");
+  msg_s.SetImage(img);
+  msg_s.SetPosition(W / 2 - img.GetWidth() / 2, H - 60, 3);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+fun quit_callback() {
+  bar_s.SetImage(bar);
+}
+Plymouth.SetQuitFunction(quit_callback);

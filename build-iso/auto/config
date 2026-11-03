@@ -14,9 +14,10 @@ lb config noauto \
   --mirror-binary "http://deb.debian.org/debian/" \
   --security true \
   --updates true \
-  --apt-recommends true \
+  --apt-recommends false \
+  --apt-indices false \
   --firmware-chroot true \
-  --firmware-binary true \
+  --firmware-binary false \
   --binary-images iso-hybrid \
   --bootloaders "grub-efi,syslinux" \
   --debian-installer none \

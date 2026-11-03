@@ -58,10 +58,13 @@ ufw --force default deny incoming || true
 ufw --force default allow outgoing || true
 
 echo "[navin-os] 7/9 Plymouth boot splash"
-if [ -d /usr/share/plymouth/themes/spinner ]; then
+if [ -f /usr/share/plymouth/themes/navin/navin.plymouth ]; then
+  plymouth-set-default-theme navin || true
+elif [ -d /usr/share/plymouth/themes/spinner ]; then
   cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
   plymouth-set-default-theme spinner || true
 fi
+chmod +x /usr/local/bin/navin-driver-center || true
 
 echo "[navin-os] 8/9 Calamares branding + desktop launcher"
 if [ -d /etc/calamares/branding/debian ]; then
@@ -100,6 +103,7 @@ mkdir -p /etc/skel/Desktop
 cp /usr/share/applications/install-navin-os.desktop /etc/skel/Desktop/
 chmod +x /etc/skel/Desktop/install-navin-os.desktop
 [ -f /usr/share/applications/firefox.desktop ] && cp /usr/share/applications/firefox.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/firefox.desktop || true
+cp /usr/share/applications/navin-driver-center.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/navin-driver-center.desktop || true
 # Remove installer launcher from installed system (Calamares runs in chroot)
 mkdir -p /etc/calamares/modules
 
@@ -109,7 +113,7 @@ cat > /etc/xdg/autostart/navin-picom.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=NAVIN Compositor
-Exec=picom --backend xrender --vsync --no-fading-openclose
+Exec=picom --config /etc/xdg/picom.conf
 OnlyShowIn=XFCE;
 X-GNOME-Autostart-enabled=true
 EOF
@@ -120,7 +124,7 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
     <property name="use_compositing" type="bool" value="false"/>
-    <property name="theme" type="string" value="Arc-Dark"/>
+    <property name="theme" type="string" value="Arc"/>
     <property name="workspace_count" type="int" value="4"/>
     <property name="snap_to_border" type="bool" value="true"/>
     <property name="tile_on_move" type="bool" value="true"/>
@@ -131,8 +135,8 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
-    <property name="ThemeName" type="string" value="Arc-Dark"/>
-    <property name="IconThemeName" type="string" value="Papirus-Dark"/>
+    <property name="ThemeName" type="string" value="Arc"/>
+    <property name="IconThemeName" type="string" value="Papirus-Light"/>
   </property>
   <property name="Gtk" type="empty">
     <property name="FontName" type="string" value="Noto Sans 10"/>
