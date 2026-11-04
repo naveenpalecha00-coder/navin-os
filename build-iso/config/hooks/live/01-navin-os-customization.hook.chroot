@@ -144,6 +144,17 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
 </channel>
 EOF
 
+
+echo "[navin-os] 1.1 features: login fix, apps, AI Doctor, App Store"
+systemctl enable navin-live-user.service || true
+groupadd -r autologin 2>/dev/null || true
+groupadd -r nopasswdlogin 2>/dev/null || true
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+systemctl enable tlp.service 2>/dev/null || true
+touch /var/log/navin-doctor.log; chmod 644 /var/log/navin-doctor.log
+for d in navin-settings navin-ai-doctor; do cp /usr/share/applications/$d.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$d.desktop || true; done
+sed -i 's/^favorites=.*/favorites=firefox.desktop,thunar.desktop,xfce4-terminal.desktop,navin-settings.desktop,navin-ai-doctor.desktop,org.gnome.Software.desktop,navin-updater.desktop,install-navin-os.desktop/' /etc/skel/.config/xfce4/panel/whiskermenu-1.rc || true
+
 # Shrink image: drop docs, man pages, non-English translations
 rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* /usr/share/help/* || true
 find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en*' ! -name 'hi*' ! -name 'locale.alias' -exec rm -rf {} + || true

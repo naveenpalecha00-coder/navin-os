@@ -113,3 +113,19 @@ zenity
 pciutils
 usbutils
 libinput-tools
+
+# ---- NAVIN OS 1.1 features ----
+user-setup
+sudo
+yad
+jq
+libnotify-bin
+redshift
+tlp
+xfce4-clipman-plugin
+xfce4-screenshooter
+gnome-software
+gnome-software-plugin-flatpak
+flatpak
+memtest86+
+xfce4-datetime-plugin

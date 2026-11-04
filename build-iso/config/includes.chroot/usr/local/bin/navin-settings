@@ -1,0 +1,79 @@
+#!/bin/bash
+# NAVIN Settings — one place for every system setting. Each entry opens the real Debian tool behind it.
+T="NAVIN Settings"; ICON=/usr/share/pixmaps/navin-os-logo.png
+W=/usr/share/backgrounds/navin-os
+
+set_theme() {
+  if [ "$1" = dark ]; then G=Arc-Dark; I=Papirus-Dark; else G=Arc; I=Papirus-Light; fi
+  xfconf-query -c xsettings -p /Net/ThemeName -s "$G"
+  xfconf-query -c xsettings -p /Net/IconThemeName -s "$I"
+  xfconf-query -c xfwm4 -p /general/theme -s "$G"
+}
+set_wallpaper() {
+  for p in $(xfconf-query -c xfce4-desktop -l | grep -E 'last-image$'); do xfconf-query -c xfce4-desktop -p "$p" -s "$1"; done
+}
+accent() {
+  C=$(zenity --color-selection --title="Accent colour" --color="#1677F2") || return
+  mkdir -p ~/.config/gtk-3.0
+  sed -i '/navin-accent/d' ~/.config/gtk-3.0/gtk.css 2>/dev/null
+  echo "@define-color theme_selected_bg_color $C; /* navin-accent */" >> ~/.config/gtk-3.0/gtk.css
+  zenity --info --text="Accent set. Apps restart karne par dikhega."
+}
+nightlight() {
+  if pgrep -x redshift >/dev/null; then pkill -x redshift; redshift -x; notify-send "Night light OFF"
+  else redshift -P -O 4000 >/dev/null 2>&1 & notify-send "Night light ON (warm screen)"; fi
+}
+updates() { navin-updater; }
+
+while true; do
+  C=$(zenity --list --title="$T" --window-icon=$ICON --width=560 --height=640 --text="Kya set karna hai?" --column="Setting" --column="Detail" \
+    "📶 Wi-Fi & Network" "Networks, connect, hotspot" \
+    "🔵 Bluetooth" "Pair devices" \
+    "🔊 Sound" "Speaker, mic, volume" \
+    "🖥️ Display" "Resolution, scaling, monitors" \
+    "🌙 Night Light" "Warm screen on/off" \
+    "🔋 Battery & Power" "Battery saver, sleep" \
+    "🎨 Light / Dark Mode" "Switch theme" \
+    "🖼️ Wallpaper" "Choose wallpaper" \
+    "🎯 Accent Colour" "Highlight colour" \
+    "🖱️ Mouse & Touchpad" "Speed, tap to click" \
+    "⌨️ Keyboard & Language" "Layouts, shortcuts" \
+    "🕒 Date & Time" "Timezone, clock" \
+    "👤 Users & Password" "Accounts, change password" \
+    "🔒 Privacy & Firewall" "Firewall, screen lock" \
+    "🖨️ Printers" "Add printer" \
+    "💾 Storage & Disks" "Disks, USB, format" \
+    "⬆️ System Updates" "Check & install updates" \
+    "🗄️ Backup & Restore" "Backup to USB" \
+    "🔧 Drivers & Devices" "NAVIN Driver Center" \
+    "🤖 NAVIN AI System Doctor" "Auto-detect & fix errors, chat" \
+    "📊 System Monitor" "CPU, RAM, apps" \
+    "ℹ️ About NAVIN OS" "Version, hardware") || exit 0
+  case "$C" in
+    *Wi-Fi*) nm-connection-editor & ;;
+    *Bluetooth*) blueman-manager & ;;
+    *Sound*) pavucontrol & ;;
+    *Display*) xfce4-display-settings & ;;
+    *Night*) nightlight ;;
+    *Battery*) M=$(zenity --list --title="Power" --column=Mode "Battery Saver" "Balanced" "Power settings…") && case "$M" in
+                 Battery*) pkexec /usr/local/lib/navin/navin-repair battery-saver && xset dpms 120 180 300; notify-send "Battery saver ON";;
+                 Balanced) pkexec /usr/local/lib/navin/navin-repair balanced; notify-send "Balanced mode";;
+                 *) xfce4-power-manager-settings & ;; esac ;;
+    *Dark*) M=$(zenity --list --title="Theme" --column=Mode "Light" "Dark") && set_theme "$( [ "$M" = Dark ] && echo dark || echo light)" ;;
+    *Wallpaper*) F=$(zenity --file-selection --title="Wallpaper chuno" --filename="$W/" --file-filter="Images | *.jpg *.jpeg *.png *.webp") && set_wallpaper "$F" ;;
+    *Accent*) accent ;;
+    *Mouse*) xfce4-mouse-settings & ;;
+    *Keyboard*) xfce4-keyboard-settings & ;;
+    *Date*) xfce4-datetime-settings 2>/dev/null & ;;
+    *Users*) P=$(zenity --forms --title="Change password" --add-password="New password" --add-password="Confirm") && [ "${P%%|*}" = "${P#*|}" ] && printf '%s\n%s\n' "${P%%|*}" "${P%%|*}" | pkexec passwd "$USER" && zenity --info --text="Password changed" ;;
+    *Privacy*) gufw & ;;
+    *Printers*) system-config-printer & ;;
+    *Storage*) gnome-disks & ;;
+    *Updates*) updates ;;
+    *Backup*) navin-backup & ;;
+    *Drivers*) navin-driver-center & ;;
+    *Doctor*) navin-ai-doctor & ;;
+    *Monitor*) xfce4-taskmanager & ;;
+    *About*) navin-about & ;;
+  esac
+done

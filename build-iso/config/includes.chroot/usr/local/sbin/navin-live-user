@@ -1,0 +1,23 @@
+#!/bin/sh
+# NAVIN OS: guarantee the 'navin' user exists with password 'navin' and can autologin.
+# Runs every boot before LightDM (safe on installed systems: only fixes a missing/locked account).
+set -e
+U=navin
+if ! id "$U" >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -c "Navin" "$U"
+  echo "$U:$U" | chpasswd
+fi
+# Unlock + set password only if the account is locked or has no password (never overwrite a user-chosen one)
+ST=$(passwd -S "$U" 2>/dev/null | awk '{print $2}')
+if [ "$ST" = "L" ] || [ "$ST" = "NP" ]; then echo "$U:$U" | chpasswd; fi
+for g in sudo netdev audio video plugdev bluetooth lpadmin autologin nopasswdlogin; do
+  getent group $g >/dev/null || groupadd -r $g
+  usermod -aG $g "$U" || true
+done
+# Copy skel the first time (desktop icons, theme)
+if [ ! -f /home/$U/.navin-skel-done ]; then
+  cp -rn /etc/skel/. /home/$U/ 2>/dev/null || true
+  touch /home/$U/.navin-skel-done
+  chown -R $U:$U /home/$U
+fi
+exit 0

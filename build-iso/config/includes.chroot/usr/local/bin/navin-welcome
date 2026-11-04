@@ -1,0 +1,22 @@
+#!/bin/bash
+# NAVIN Welcome — first-login tour with quick actions. Shows once (re-open from Start menu).
+T="Welcome to NAVIN OS"; FLAG="$HOME/.config/navin/welcome-done"
+[ "${1:-}" = "--autostart" ] && [ -f "$FLAG" ] && exit 0
+mkdir -p "$HOME/.config/navin"; touch "$FLAG"
+while true; do
+  C=$(zenity --list --title="$T" --window-icon=/usr/share/pixmaps/navin-os-logo.png --width=560 --height=520 \
+    --text="<b>Namaste! NAVIN OS 1.0 me aapka swagat hai.</b>\nYour PC. Your OS. Your Freedom.\n\nUsername: navin   Password: navin" \
+    --column="Shuru karein" \
+    "📶 Wi-Fi connect karo" "🎨 Light/Dark mode & wallpaper" "⬆️ Updates check karo" "🛍️ App Store (apps install karo)" \
+    "🔧 Drivers check karo" "🤖 NAVIN AI System Doctor" "💽 NAVIN OS ko PC/USB par install karo" "✅ Done") || exit 0
+  case "$C" in
+    *Wi-Fi*) nm-connection-editor & ;;
+    *Light*) navin-settings & ;;
+    *Updates*) navin-updater & ;;
+    *Store*) gnome-software & ;;
+    *Drivers*) navin-driver-center & ;;
+    *Doctor*) navin-ai-doctor & ;;
+    *install*) install-debian & ;;
+    *) exit 0 ;;
+  esac
+done

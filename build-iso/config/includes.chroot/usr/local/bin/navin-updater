@@ -1,0 +1,17 @@
+#!/bin/bash
+# NAVIN System Updater — safe updates: checks space + internet, shows what will change, then upgrades via APT.
+T="NAVIN System Updater"; R="pkexec /usr/local/lib/navin/navin-repair"
+FREE=$(df --output=avail -BM / | tail -1 | tr -dc 0-9)
+[ "${FREE:-0}" -lt 1500 ] && { zenity --error --title="$T" --text="Kam se kam 1.5 GB khali jagah chahiye (abhi ${FREE} MB)."; exit 1; }
+nmcli -t -f CONNECTIVITY g 2>/dev/null | grep -q full || { zenity --error --title="$T" --text="Internet nahi hai. Wi-Fi connect karke dobara try karo."; exit 1; }
+$R apt-update 2>&1 | zenity --progress --pulsate --auto-close --no-cancel --title="$T" --text="Updates dhoondh raha hoon..."
+LIST=$(apt list --upgradable 2>/dev/null | tail -n +2 | cut -d/ -f1)
+N=$(echo -n "$LIST" | grep -c .)
+[ "$N" -eq 0 ] && { zenity --info --title="$T" --text="✅ NAVIN OS up to date hai."; exit 0; }
+echo "$LIST" | zenity --text-info --title="$T — $N updates" --width=500 --height=420 --ok-label="Install karo" --cancel-label="Baad me" || exit 0
+$R upgrade 2>&1 | tee /tmp/navin-update.log | zenity --progress --pulsate --auto-close --no-cancel --title="$T" --text="$N updates install ho rahe hain... computer band mat karo."
+if [ "${PIPESTATUS[0]}" -eq 0 ]; then
+  zenity --question --title="$T" --text="✅ Updates install ho gaye. Abhi restart karein?" && systemctl reboot
+else
+  zenity --error --title="$T" --text="Update fail hua. NAVIN AI Doctor khol raha hoon."; navin-ai-doctor --scan
+fi

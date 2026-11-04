@@ -7,7 +7,7 @@ apt-get update
 apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin \
   mtools dosfstools syslinux syslinux-common isolinux ca-certificates wget
 
-chmod +x auto/* config/hooks/live/*.hook.chroot
+chmod +x auto/* config/hooks/live/* config/includes.chroot/usr/local/bin/* config/includes.chroot/usr/local/sbin/* config/includes.chroot/usr/local/lib/navin/*
 lb clean --purge || true
 lb config
 lb build
