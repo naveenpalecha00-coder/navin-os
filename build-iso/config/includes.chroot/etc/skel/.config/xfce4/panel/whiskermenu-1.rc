@@ -34,4 +34,4 @@ command-logout=xfce4-session-logout
 show-command-logout=false
 command-menueditor=menulibre
 show-command-menueditor=false
-favorites=firefox.desktop,thunar.desktop,xfce4-terminal.desktop,xfce-settings-manager.desktop,install-navin-os.desktop
+favorites=google-chrome.desktop,thunar.desktop,xfce4-terminal.desktop,xfce-settings-manager.desktop,install-navin-os.desktop

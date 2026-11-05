@@ -1,15 +1,15 @@
 #!/bin/sh
-# NAVIN OS: guarantee the 'navin' user exists with password 'navin' and can autologin.
+# NAVIN OS: guarantee the 'navin' user exists with NO password (user sets one in Settings) and can autologin.
 # Runs every boot before LightDM (safe on installed systems: only fixes a missing/locked account).
 set -e
 U=navin
 if ! id "$U" >/dev/null 2>&1; then
   useradd -m -s /bin/bash -c "Navin" "$U"
-  echo "$U:$U" | chpasswd
+  passwd -d "$U"
 fi
-# Unlock + set password only if the account is locked or has no password (never overwrite a user-chosen one)
+# Remove a locked password only; never touch a password the user chose in Settings
 ST=$(passwd -S "$U" 2>/dev/null | awk '{print $2}')
-if [ "$ST" = "L" ] || [ "$ST" = "NP" ]; then echo "$U:$U" | chpasswd; fi
+[ "$ST" = "L" ] && passwd -d "$U"
 for g in sudo netdev audio video plugdev bluetooth lpadmin autologin nopasswdlogin; do
   getent group $g >/dev/null || groupadd -r $g
   usermod -aG $g "$U" || true

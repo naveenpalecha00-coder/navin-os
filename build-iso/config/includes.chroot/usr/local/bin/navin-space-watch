@@ -1,0 +1,8 @@
+#!/bin/bash
+# Opens NAVIN AI when SPACE is held for 5 seconds (reads X key state, no root needed).
+held=0
+while sleep 0.25; do
+  if xinput query-state "Virtual core keyboard" 2>/dev/null | grep -q 'key\[65\]=down'; then
+    held=$((held+1)); [ $held -eq 20 ] && ! pgrep -f navin-assistant >/dev/null && navin-assistant &
+  else held=0; fi
+done

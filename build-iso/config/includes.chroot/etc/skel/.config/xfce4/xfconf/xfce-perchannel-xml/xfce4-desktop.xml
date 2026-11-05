@@ -2,6 +2,7 @@
 <!-- NAVIN OS 1.0 desktop: blue wave wallpaper, vertical icons on the left -->
 <channel name="xfce4-desktop" version="1.0">
   <property name="desktop-icons" type="empty">
+    <property name="single-click" type="bool" value="true"/>
     <property name="style" type="int" value="2"/>
     <property name="icon-size" type="uint" value="52"/>
     <property name="tooltip-size" type="double" value="48"/>

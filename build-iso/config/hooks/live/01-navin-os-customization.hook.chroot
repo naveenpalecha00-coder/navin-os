@@ -3,21 +3,20 @@
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[navin-os] 1/9 Latest Mozilla Firefox (official Mozilla APT repo)"
+echo "[navin-os] 1/9 Google Chrome (official Google APT repo)"
 install -d -m 0755 /etc/apt/keyrings
-if wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O /etc/apt/keyrings/packages.mozilla.org.asc; then
-  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" > /etc/apt/sources.list.d/mozilla.list
-  cat > /etc/apt/preferences.d/mozilla <<'EOF'
-Package: *
-Pin: origin packages.mozilla.org
-Pin-Priority: 1000
-EOF
+if wget -q -O- https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /etc/apt/keyrings/google-chrome.gpg; then
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
   apt-get update
-  apt-get install -y --no-install-recommends firefox || apt-get install -y firefox-esr
+  apt-get install -y --no-install-recommends google-chrome-stable || apt-get install -y chromium
 else
-  echo "[navin-os] Mozilla repo unreachable, falling back to firefox-esr"
-  apt-get install -y firefox-esr
+  apt-get install -y chromium
 fi
+mkdir -p /etc/opt/chrome/policies/managed
+cat > /etc/opt/chrome/policies/managed/navin.json <<'EOF'
+{ "HardwareAccelerationModeEnabled": true, "BackgroundModeEnabled": false, "HomepageLocation": "https://navinos.lovable.app", "MetricsReportingEnabled": false }
+EOF
+sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable --enable-gpu-rasterization --enable-zero-copy --disk-cache-dir=/tmp/chrome-cache|' /usr/share/applications/google-chrome.desktop 2>/dev/null || true
 apt-get clean
 
 echo "[navin-os] 2/9 OS branding"
@@ -102,7 +101,7 @@ rm -f /etc/skel/Desktop 2>/dev/null || true
 mkdir -p /etc/skel/Desktop
 cp /usr/share/applications/install-navin-os.desktop /etc/skel/Desktop/
 chmod +x /etc/skel/Desktop/install-navin-os.desktop
-[ -f /usr/share/applications/firefox.desktop ] && cp /usr/share/applications/firefox.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/firefox.desktop || true
+for c in google-chrome chromium; do [ -f /usr/share/applications/$c.desktop ] && cp /usr/share/applications/$c.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$c.desktop && break; done
 cp /usr/share/applications/navin-driver-center.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/navin-driver-center.desktop || true
 # Remove installer launcher from installed system (Calamares runs in chroot)
 mkdir -p /etc/calamares/modules
@@ -152,8 +151,19 @@ groupadd -r nopasswdlogin 2>/dev/null || true
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 systemctl enable tlp.service 2>/dev/null || true
 touch /var/log/navin-doctor.log; chmod 644 /var/log/navin-doctor.log
-for d in navin-settings navin-ai-doctor; do cp /usr/share/applications/$d.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$d.desktop || true; done
-sed -i 's/^favorites=.*/favorites=firefox.desktop,thunar.desktop,xfce4-terminal.desktop,navin-settings.desktop,navin-ai-doctor.desktop,org.gnome.Software.desktop,navin-updater.desktop,install-navin-os.desktop/' /etc/skel/.config/xfce4/panel/whiskermenu-1.rc || true
+for d in navin-settings navin-assistant; do cp /usr/share/applications/$d.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$d.desktop || true; done
+sed -i 's/^favorites=.*/favorites=google-chrome.desktop,thunar.desktop,xfce4-terminal.desktop,navin-settings.desktop,navin-ai-doctor.desktop,org.gnome.Software.desktop,navin-updater.desktop,install-navin-os.desktop/' /etc/skel/.config/xfce4/panel/whiskermenu-1.rc || true
+
+echo "[navin-os] Build 6: passwordless admin, Wine, speed"
+chmod 0440 /etc/sudoers.d/navin-nopasswd
+dpkg --add-architecture i386 || true
+systemctl enable preload.service 2>/dev/null || true
+for m in application/x-ms-dos-executable application/x-msdownload application/x-msi application/vnd.microsoft.portable-executable; do
+  echo "$m=navin-exe-run.desktop" >> /usr/share/applications/mimeapps.list.navin
+done
+{ echo "[Default Applications]"; cat /usr/share/applications/mimeapps.list.navin; echo "x-scheme-handler/http=google-chrome.desktop"; echo "x-scheme-handler/https=google-chrome.desktop"; echo "text/html=google-chrome.desktop"; } > /etc/xdg/mimeapps.list
+rm -f /usr/share/applications/mimeapps.list.navin
+update-desktop-database /usr/share/applications || true
 
 # Shrink image: drop docs, man pages, non-English translations
 rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* /usr/share/help/* || true

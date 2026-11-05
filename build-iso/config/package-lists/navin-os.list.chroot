@@ -129,3 +129,13 @@ gnome-software-plugin-flatpak
 flatpak
 memtest86+
 xfce4-datetime-plugin
+
+# ---- NAVIN OS Build 6 ----
+wine
+wine64
+winetricks
+preload
+xinput
+x11-utils
+sound-theme-freedesktop
+pulseaudio-utils

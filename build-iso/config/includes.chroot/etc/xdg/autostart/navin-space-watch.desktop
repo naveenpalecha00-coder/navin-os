@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN AI hotkey
+Exec=navin-space-watch
+OnlyShowIn=XFCE;

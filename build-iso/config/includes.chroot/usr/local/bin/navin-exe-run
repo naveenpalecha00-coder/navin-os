@@ -1,0 +1,6 @@
+#!/bin/bash
+# Run/install a Windows .exe with Wine; Wine creates Start-menu/desktop shortcuts automatically.
+f="$1"; [ -f "$f" ] || exit 1
+export WINEPREFIX="$HOME/.wine"
+[ -d "$WINEPREFIX" ] || zenity --notification --text="Windows support pehli baar set ho raha hai..." &
+case "${f,,}" in *.msi) exec wine msiexec /i "$f" ;; *) exec wine "$f" ;; esac
