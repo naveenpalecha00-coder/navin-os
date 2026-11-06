@@ -1,0 +1,10 @@
+#!/bin/bash
+# NAVIN OS: unmute laptop microphone + speakers (runs at login and from Settings)
+for c in $(amixer scontrols 2>/dev/null | grep -oE "'(Capture|Internal Mic|Mic|Digital|Mic Boost|Master|Speaker|Headphone)[^']*'" | tr -d "'" | tr ' ' '#'); do
+  n=${c//#/ }; amixer -q sset "$n" 80% unmute cap 2>/dev/null || amixer -q sset "$n" 80% unmute 2>/dev/null
+done
+sleep 2
+pactl set-source-mute @DEFAULT_SOURCE@ 0 2>/dev/null; pactl set-source-volume @DEFAULT_SOURCE@ 80% 2>/dev/null
+pactl set-sink-mute @DEFAULT_SINK@ 0 2>/dev/null
+[ "$1" = "--test" ] && { arecord -q -d 4 -f cd /tmp/navin-mic.wav && aplay -q /tmp/navin-mic.wav && notify-send "NAVIN" "Mic test: aapki awaaz wapas suni? Agar haan, mic kaam kar raha hai."; } 
+exit 0

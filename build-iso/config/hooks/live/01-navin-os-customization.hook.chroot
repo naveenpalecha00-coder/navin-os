@@ -165,6 +165,16 @@ done
 rm -f /usr/share/applications/mimeapps.list.navin
 update-desktop-database /usr/share/applications || true
 
+
+echo "[navin-os] Build 7: fast boot, clean desktop, hardware fixes"
+for u in NetworkManager-wait-online.service systemd-networkd-wait-online.service apt-daily.service apt-daily-upgrade.service cups-browsed.service; do systemctl mask "$u" 2>/dev/null || true; done
+systemctl disable cups.service 2>/dev/null; systemctl enable cups.socket 2>/dev/null || true
+mkdir -p /etc/systemd/system.conf.d
+printf '[Manager]\nDefaultTimeoutStartSec=10s\nDefaultTimeoutStopSec=5s\n' > /etc/systemd/system.conf.d/navin-fast.conf
+sed -i 's/^#\?Storage=.*/Storage=volatile/' /etc/systemd/journald.conf || true
+rm -f /etc/skel/Desktop/navin-settings.desktop /etc/skel/Desktop/navin-assistant.desktop /etc/skel/Desktop/navin-driver-center.desktop
+chmod 0755 /usr/local/lib/navin/navin-fan /usr/local/bin/navin-* || true
+
 # Shrink image: drop docs, man pages, non-English translations
 rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* /usr/share/help/* || true
 find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en*' ! -name 'hi*' ! -name 'locale.alias' -exec rm -rf {} + || true

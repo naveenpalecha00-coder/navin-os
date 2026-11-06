@@ -139,3 +139,24 @@ xinput
 x11-utils
 sound-theme-freedesktop
 pulseaudio-utils
+
+# ---- NAVIN OS Build 7 ----
+alsa-utils
+alsa-ucm-conf
+xserver-xorg-input-libinput
+xserver-xorg-input-synaptics
+onboard
+lm-sensors
+xdotool
+mtp-tools
+jmtpfs
+fonts-liberation2
+fonts-crosextra-carlito
+fonts-crosextra-caladea
+gstreamer1.0-plugins-good
+gstreamer1.0-plugins-bad
+gstreamer1.0-plugins-ugly
+gstreamer1.0-libav
+xfce4-xkb-plugin
+espeak-ng
+xclip

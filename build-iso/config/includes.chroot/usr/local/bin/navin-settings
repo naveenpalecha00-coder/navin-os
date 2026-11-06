@@ -46,6 +46,9 @@ while true; do
     "⬆️ System Updates" "Check & install updates" \
     "🗄️ Backup & Restore" "Backup to USB" \
     "🔧 Drivers & Devices" "NAVIN Driver Center" \
+    "🌀 Fan & Cooling" "Silent / Auto / Turbo fan" \
+    "🎤 Fix Microphone" "Unmute + 4 sec mic test" \
+    "🖱️ Fix Touchpad" "Tap-to-click reset" \
     "🤖 NAVIN AI System Doctor" "Auto-detect & fix errors, chat" \
     "📊 System Monitor" "CPU, RAM, apps" \
     "ℹ️ About NAVIN OS" "Version, hardware") || exit 0
@@ -72,6 +75,9 @@ while true; do
     *Updates*) updates ;;
     *Backup*) navin-backup & ;;
     *Drivers*) navin-driver-center & ;;
+    *Fan*) navin-fan-control & ;;
+    *Microphone*) navin-mic-fix --test & ;;
+    *"Fix Touchpad"*) for id in $(xinput list --id-only); do xinput set-prop $id "libinput Tapping Enabled" 1 2>/dev/null; done; notify-send "Touchpad" "Tap-to-click ON" ;;
     *Doctor*) navin-ai-doctor & ;;
     *Monitor*) xfce4-taskmanager & ;;
     *About*) navin-about & ;;

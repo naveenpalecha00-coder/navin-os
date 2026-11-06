@@ -22,10 +22,10 @@ lb config noauto \
   --bootloaders "grub-efi,syslinux" \
   --debian-installer none \
   --memtest memtest86+ \
-  --chroot-squashfs-compression-type xz \
+  --chroot-squashfs-compression-type zstd \
   --image-name navin-os \
   --iso-application "NAVIN OS" \
   --iso-publisher "Navin Palecha" \
   --iso-volume "NAVIN_OS_1_0" \
-  --bootappend-live "boot=live components quiet splash username=navin user-fullname=Navin hostname=navin-os locales=en_US.UTF-8 keyboard-layouts=us" \
+  --bootappend-live "boot=live components persistence quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 username=navin user-fullname=Navin hostname=navin-os locales=en_US.UTF-8 keyboard-layouts=us" \
   "${@}"

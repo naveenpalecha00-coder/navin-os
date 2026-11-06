@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action><icon>view-refresh</icon><name>Refresh</name><unique-id>navin-1</unique-id><command>xdotool key F5</command><description>Refresh</description><patterns>*</patterns><directories/><audio-files/><image-files/><other-files/><text-files/><video-files/></action>
+<action><icon>utilities-terminal</icon><name>Open in Terminal</name><unique-id>navin-2</unique-id><command>xfce4-terminal --working-directory=%f</command><description>Terminal here</description><patterns>*</patterns><startup-notify/><directories/></action>
+<action><icon>video-display</icon><name>Display settings</name><unique-id>navin-3</unique-id><command>xfce4-display-settings</command><description>Display</description><patterns>*</patterns><directories/></action>
+<action><icon>preferences-desktop-wallpaper</icon><name>Personalize</name><unique-id>navin-4</unique-id><command>navin-settings</command><description>NAVIN Settings</description><patterns>*</patterns><directories/></action>
+<action><icon>edit-copy</icon><name>Copy as path</name><unique-id>navin-5</unique-id><command>echo -n %f | xclip -selection clipboard</command><description>Copy path</description><patterns>*</patterns><directories/><audio-files/><image-files/><other-files/><text-files/><video-files/></action>
+<action><icon>navin-os-logo</icon><name>Ask NAVIN AI about this</name><unique-id>navin-6</unique-id><command>navin-assistant %f</command><description>NAVIN AI</description><patterns>*</patterns><audio-files/><image-files/><other-files/><text-files/><video-files/></action>
+</actions>

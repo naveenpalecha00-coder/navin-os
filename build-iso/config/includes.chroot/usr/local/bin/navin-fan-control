@@ -1,0 +1,11 @@
+#!/bin/bash
+# NAVIN Fan & Cooling Center (Samsung Galaxy Book, Samsung legacy, Dell/HP/Lenovo/ASUS via ACPI)
+temp() { sensors 2>/dev/null | grep -m1 -E 'Package id 0|Tctl|temp1' | grep -oE '\+[0-9.]+°C' | head -1; }
+fan() { sensors 2>/dev/null | grep -m1 -i 'fan' | grep -oE '[0-9]+ RPM'; }
+while true; do
+  M=$(zenity --list --title="NAVIN Fan & Cooling" --width=460 --height=330 --text="CPU: $(temp || echo n/a)   Fan: $(fan || echo auto)" --column=Mode --column=Detail \
+    "🤫 Silent" "Fan slow, quiet, cool battery" "⚖️ Auto" "Balanced (default)" "🚀 Turbo" "Fan full speed, max performance" "🔄 Refresh" "Temperature dobara padho") || exit 0
+  case "$M" in *Silent*) m=silent;; *Turbo*) m=turbo;; *Auto*) m=auto;; *) continue;; esac
+  r=$(pkexec /usr/local/lib/navin/navin-fan $m)
+  [ "$r" = 1 ] && notify-send "NAVIN Cooling" "$m mode ON" || notify-send "NAVIN Cooling" "$m CPU mode ON (is laptop ka fan BIOS control karta hai)"
+done
