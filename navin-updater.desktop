@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN System Updater
+Comment=Check and install updates safely
+Exec=navin-updater
+Icon=system-software-update
+Terminal=false
+Categories=System;

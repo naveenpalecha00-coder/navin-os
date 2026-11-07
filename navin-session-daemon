@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+import subprocess,time,pathlib,os
+from Xlib import display, XK
+from navin_logic import HOLD_SECONDS
+connection=display.Display(); keys={name:connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('space','Control_L','Control_R')}; started={}; fired=set()
+usb=set(pathlib.Path('/sys/bus/usb/devices').glob('*')); last_bt=0
+while True:
+ try:
+  state=connection.query_keymap()
+  for name,key in keys.items():
+   down=bool(state[key//8] & (1<<(key%8)))
+   if down:
+    started.setdefault(name,time.monotonic())
+    if name not in fired and time.monotonic()-started[name]>=HOLD_SECONDS:
+     fired.add(name)
+     cmd=['navin-ai-desktop'] if name=='space' else (['pkill','-x','onboard'] if subprocess.run(['pgrep','-x','onboard'],stdout=subprocess.DEVNULL).returncode==0 else ['onboard'])
+     subprocess.Popen(cmd)
+   else:started.pop(name,None); fired.discard(name)
+  now=set(pathlib.Path('/sys/bus/usb/devices').glob('*'))
+  if now!=usb:
+   sound='device-added.oga' if len(now)>len(usb) else 'device-removed.oga'; subprocess.Popen(['paplay','/usr/share/sounds/freedesktop/stereo/'+sound]); usb=now
+  # Reconnect trusted, paired earbuds only; never newly pair devices automatically.
+  if time.monotonic()-last_bt>60:
+   last_bt=time.monotonic()
+   info=subprocess.run(['bluetoothctl','devices','Trusted'],capture_output=True,text=True,timeout=5)
+   for line in info.stdout.splitlines():
+    parts=line.split()
+    if len(parts)<2:continue
+    d=subprocess.run(['bluetoothctl','info',parts[1]],capture_output=True,text=True,timeout=5).stdout
+    if 'Connected: no' in d and 'Paired: yes' in d and ('Audio Sink' in d or 'Headset' in d):subprocess.Popen(['bluetoothctl','connect',parts[1]],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ except Exception:pass
+ time.sleep(.2)

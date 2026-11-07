@@ -1,0 +1,30 @@
+#!/bin/bash
+# NAVIN OS privileged repair helper. Only runs whitelisted, safe actions (called via pkexec).
+# Every action is logged to /var/log/navin-doctor.log.
+set -u
+LOG=/var/log/navin-doctor.log
+log(){ echo "$(date '+%F %T') [$1] $2" >> "$LOG"; }
+A="${1:-}"
+case "$A" in
+  wifi)       rfkill unblock wifi; rfkill unblock all; nmcli radio wifi on; systemctl restart NetworkManager ;;
+  network)    systemctl restart NetworkManager; resolvectl flush-caches 2>/dev/null || true ;;
+  bluetooth)  rfkill unblock bluetooth; systemctl restart bluetooth ;;
+  packages)   dpkg --configure -a && apt-get -f install -y ;;
+  apt-update) apt-get update ;;
+  upgrade)    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=--force-confold full-upgrade ;;
+  clean)      apt-get clean; apt-get autoremove -y; journalctl --vacuum-size=100M; rm -rf /var/tmp/* 2>/dev/null ;;
+  printer)    systemctl restart cups ;;
+  services)   systemctl reset-failed; for s in $(systemctl --failed --plain --no-legend | awk '{print $1}'); do systemctl restart "$s" || true; done ;;
+  time)       timedatectl set-ntp true ;;
+  firewall-on)  ufw --force enable ;;
+  firewall-off) ufw --force disable ;;
+  battery-saver) tlp bat 2>/dev/null || tlp start ;;
+  balanced)   tlp start ;;
+  ram-boost) before=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); sync; echo 3 > /proc/sys/vm/drop_caches; after=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); echo "$(( (after-before)/1024 )) MB available-memory change" ;;
+  remove) shift; [ "$#" -gt 0 ] || exit 2; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || exit 2; done; apt-get remove -y "$@" ;;
+  install)    shift; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "bad package $p"; exit 2; }; done; apt-get install -y "$@" ;;
+  *) echo "Unknown or unsafe action: $A"; log DENIED "$A"; exit 2 ;;
+esac
+RC=$?
+log "$( [ $RC -eq 0 ] && echo OK || echo FAIL )" "$*"
+exit $RC

@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+import os,sys,json,subprocess,tempfile,pathlib
+if os.geteuid()!=0:sys.exit('Administrator privileges required')
+if len(sys.argv)!=2:sys.exit('Select one unmounted ext4 partition')
+target=sys.argv[1]
+if not target.startswith('/dev/') or pathlib.Path(target).is_symlink():sys.exit('Invalid block device')
+info=json.loads(subprocess.check_output(['lsblk','-J','-o','PATH,TYPE,FSTYPE,MOUNTPOINTS',target]))['blockdevices'][0]
+if info['type']!='part' or info['fstype']!='ext4' or any(info.get('mountpoints') or []):sys.exit('Only unmounted ext4 partitions are supported; use Disks to prepare a spare partition first.')
+parent=subprocess.check_output(['lsblk','-no','PKNAME',target],text=True).strip()
+if pathlib.Path('/sys/class/block/'+parent+'/removable').read_text().strip()!='1':sys.exit('Persistence setup is restricted to removable drives')
+subprocess.run(['e2label',target,'persistence'],check=True)
+with tempfile.TemporaryDirectory(prefix='navin-persistence-') as mount:
+ subprocess.run(['mount','-o','nosuid,nodev,noexec',target,mount],check=True)
+ try:pathlib.Path(mount,'persistence.conf').write_text('/ union\n')
+ finally:subprocess.run(['umount',mount],check=True)
+print('Persistence configured. Reboot with the persistence boot option. Test a saved file after reboot.')

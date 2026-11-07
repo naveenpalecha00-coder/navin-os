@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Spotlight
+Exec=navin-search
+Icon=system-search
+Terminal=false
+Categories=Utility;

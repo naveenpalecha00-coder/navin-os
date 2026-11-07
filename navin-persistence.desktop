@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN USB Persistence
+Exec=navin-persistence
+Icon=drive-removable-media
+Categories=System;

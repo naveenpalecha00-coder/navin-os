@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Settings
+Comment=All system settings in one place
+Exec=navin-settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;

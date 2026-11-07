@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+# Privileged API broker. Key never enters JS, desktop source, process arguments or logs.
+import sys,os,json,pathlib,requests,base64
+from navin_logic import VOICES,IMAGE_SIZES
+if os.geteuid()!=0:sys.exit('Administrator authorization required')
+try:
+ raw=sys.stdin.read(12*1024*1024)
+ request=json.loads(raw); action=request['action']; payload=request.get('payload',{})
+ keyfile=pathlib.Path('/etc/navin/api.key')
+ if not keyfile.exists():raise ValueError('NAVIN AI authorization has not been securely provisioned on this device. Contact the OS publisher; no key entry is needed here.')
+ if keyfile.stat().st_uid!=0 or keyfile.stat().st_mode & 0o077:raise ValueError('NAVIN AI authorization file must be root-owned, mode 0600.')
+ key=keyfile.read_text().strip()
+ if not key:raise ValueError('NAVIN AI authorization is unavailable.')
+ headers={'Authorization':'Bearer '+key}; base='https://navinaiengine.lovable.app'
+ paths={'chat':'/v1/chat/completions','models':'/v1/models','speech':'/v1/audio/speech','transcribe':'/v1/audio/transcriptions','image':'/v1/images/generations'}
+ if action not in paths:raise ValueError('Unsupported AI action')
+ if action=='models':response=requests.get(base+paths[action],headers=headers,timeout=(15,120))
+ elif action=='transcribe':
+  audio=base64.b64decode(payload['audio'],validate=True)
+  if len(audio)>8*1024*1024:raise ValueError('Recording exceeds 8 MB')
+  response=requests.post(base+paths[action],headers=headers,files={'file':('recording.wav',audio,'audio/wav')},data={'model':payload.get('model','navin-1')},timeout=(15,120))
+ else:
+  if action=='chat':
+   messages=payload.get('messages',[])
+   if not isinstance(messages,list) or len(messages)>100 or any(m.get('role') not in ('system','user','assistant') or not isinstance(m.get('content'),str) for m in messages):raise ValueError('Invalid conversation')
+   data={'model':payload.get('model','navin-1'),'messages':messages,'stream':True}
+  elif action=='speech':
+   if payload.get('voice') not in VOICES:raise ValueError('Unknown voice')
+   data={'model':payload.get('model','navin-1'),'input':str(payload.get('input',''))[:10000],'voice':payload['voice'],'response_format':'mp3'}
+  else:
+   if payload.get('size') not in IMAGE_SIZES:raise ValueError('Unsupported image size')
+   data={'model':payload.get('model','navin-1'),'prompt':str(payload.get('prompt',''))[:10000],'size':payload['size'],'n':1}
+  response=requests.post(base+paths[action],headers=headers,json=data,stream=action=='chat',timeout=(15,120))
+ if not response.ok:
+  # Never dump request headers or the key. Keep exact provider status and error body.
+  raise ValueError('NAVIN AI HTTP '+str(response.status_code)+': '+response.text[:2000])
+ if action=='chat':
+  for line in response.iter_lines(decode_unicode=True):
+   if not line or not line.startswith('data:'):continue
+   text=line[5:].strip()
+   if text=='[DONE]':break
+   event=json.loads(text)
+   if event.get('error'):raise ValueError(str(event['error']))
+   for choice in event.get('choices',[]):
+    content=choice.get('delta',{}).get('content','')
+    if content:print(json.dumps({'delta':content}),flush=True)
+  print(json.dumps({'done':True}),flush=True)
+ elif action=='speech':print(json.dumps({'audio':base64.b64encode(response.content).decode(),'mime':'audio/mpeg'}),flush=True)
+ else:print(json.dumps(response.json()),flush=True)
+except Exception as error:
+ print(json.dumps({'error':str(error)}),flush=True);sys.exit(1)

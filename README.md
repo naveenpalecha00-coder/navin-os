@@ -1,24 +1,32 @@
-# NAVIN OS
+# NAVIN OS — ISO build
 
-**Your PC. Your OS. Your Freedom.** — by Navin Palecha
+Debian 12 Bookworm `live-build` recipe that produces `navin-os-1.0-x86_64.iso` (hybrid: UEFI + Legacy BIOS, USB + DVD).
 
-A lightweight Debian 12 (Bookworm) based Linux distribution for 4 GB RAM PCs, with an XFCE desktop, the latest Mozilla Firefox, and the Calamares graphical installer. Boots on UEFI and Legacy BIOS.
+## Build locally (Debian 12 host, as root)
+```bash
+sudo ./build-iso/build.sh
+```
 
-## Download
-Latest ISO: https://github.com/naveenpalecha00-coder/navin-os/releases/latest/download/navin-os-1.0-x86_64.iso
+## Build with Docker (any Linux)
+```bash
+docker run --rm --privileged -v "$PWD:/work" -w /work/build-iso debian:bookworm bash ./build.sh
+```
 
-The SHA-256 checksum is published in each release. Verify:
-- Linux/macOS: `sha256sum navin-os-1.0-x86_64.iso`
-- Windows: `Get-FileHash .\navin-os-1.0-x86_64.iso -Algorithm SHA256`
+## Build on GitHub
+Push to `main` or run **Actions → Build NAVIN OS ISO → Run workflow**. The ISO and its `.sha256` are attached to a new GitHub Release.
 
-## Build it yourself
-See [build-iso/README.md](build-iso/README.md). Every push to `main` touching `build-iso/` rebuilds the ISO via GitHub Actions.
+## What's inside
+- XFCE 4.18 + picom compositor, Arc-Dark / Papirus theme, NAVIN wallpaper
+- Latest Mozilla Firefox from Mozilla's official signed APT repo (falls back to firefox-esr)
+- NetworkManager, PipeWire, BlueZ, CUPS, UFW, non-free firmware (Intel/Realtek/Atheros/Broadcom/AMD)
+- Calamares installer branded "Install NAVIN OS" (erase disk, dual boot, manual, USB target)
+- ZRAM swap (50% RAM, zstd), trimmed background services
+- Plymouth spinner splash with NAVIN logo, LightDM GTK greeter theme
 
-## Status
-- [Implemented in Code] live-build recipe, hook, branding, workflow
-- [Build Passed] — see the Actions tab
-- [Tested in VM / QEMU] — pending
-- [Validated on Physical Hardware] — pending
+## Test in QEMU
+```bash
+qemu-system-x86_64 -enable-kvm -m 4096 -smp 2 -cdrom navin-os-1.0-x86_64.iso -boot d
+# UEFI: add -bios /usr/share/ovmf/OVMF.fd
+```
 
-## License
-NAVIN OS custom configuration: MIT. Bundled software keeps its own licenses (Linux kernel GPLv2, Debian, Calamares GPLv3, XFCE GPL/LGPL, Firefox MPL 2.0).
+<!-- build trigger: 2026-11-07 -->

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+name=$(zenity --entry --title="New Folder" --text="Folder name") || exit 0
+case "$name" in ''|.|..|*/*) exit 2;; esac
+mkdir -- "${1:-$HOME/Desktop}/$name"

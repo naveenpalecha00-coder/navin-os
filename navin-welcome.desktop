@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Welcome
+Exec=navin-welcome --autostart
+OnlyShowIn=XFCE;

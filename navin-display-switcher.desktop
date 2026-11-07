@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Project
+Exec=navin-display-switcher
+Icon=video-display
+Terminal=false
+Categories=Settings;

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN AI
+Exec=navin-ai-desktop
+Icon=/usr/share/pixmaps/navin-os-logo.png
+Terminal=false
+Categories=Utility;

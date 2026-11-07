@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+D=$(lsblk -rno PATH,TYPE,FSTYPE,MOUNTPOINT | awk '$2=="part" && $3=="ext4" && NF==3 {print $1}')
+[ -n "$D" ] || { zenity --info --text="Prepare a spare ext4 partition on your removable USB in Disks first. Existing data will not be formatted by this tool."; gnome-disks; exit 0; }
+P=$(printf '%s
+' "$D" | zenity --list --title="NAVIN USB Persistence" --column="Unmounted ext4 partition") || exit 0
+zenity --question --text="Label $P as persistence and write / union? Back up its files first. This does not format the partition." || exit 0
+pkexec /usr/local/lib/navin/navin-persistence "$P" | zenity --text-info --title="Persistence result"

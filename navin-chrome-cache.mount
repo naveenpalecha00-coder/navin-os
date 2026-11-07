@@ -1,0 +1,10 @@
+[Unit]
+Description=NAVIN bounded RAM browser cache
+Before=lightdm.service
+[Mount]
+What=tmpfs
+Where=/var/cache/navin/chrome
+Type=tmpfs
+Options=mode=1777,size=128M,nosuid,nodev,noexec
+[Install]
+WantedBy=multi-user.target

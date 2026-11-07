@@ -1,0 +1,240 @@
+#!/bin/sh
+# NAVIN OS customization hook — runs inside the chroot during `lb build`.
+set -e
+export DEBIAN_FRONTEND=noninteractive
+
+echo "[navin-os] Build 8 Liquorix (signed official repository; Debian fallback kernel retained)"
+install -d -m 0755 /etc/apt/keyrings
+wget -q https://liquorix.net/liquorix-keyring.gpg -O /etc/apt/keyrings/liquorix-keyring.gpg
+chmod 0644 /etc/apt/keyrings/liquorix-keyring.gpg
+printf '%s\n' 'deb [arch=amd64 signed-by=/etc/apt/keyrings/liquorix-keyring.gpg] https://liquorix.net/debian bookworm main' > /etc/apt/sources.list.d/liquorix.list
+apt-get update
+apt-get install -y --no-install-recommends linux-image-liquorix-amd64
+# live-build discovers installed vmlinuz files when assembling the hybrid image.
+# Preserve kernel config evidence in the released report.
+mkdir -p /usr/share/navin
+{ dpkg-query -W 'linux-image*'; grep -HE 'CONFIG_(HZ_1000|NTSYNC|FUTEX|PREEMPT)=' /boot/config-* || true; } > /usr/share/navin/kernel-report.txt
+
+echo "[navin-os] 1/9 Google Chrome (official Google APT repo)"
+install -d -m 0755 /etc/apt/keyrings
+if wget -q -O- https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /etc/apt/keyrings/google-chrome.gpg; then
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+  apt-get update
+  apt-get install -y --no-install-recommends google-chrome-stable || apt-get install -y chromium
+else
+  apt-get install -y chromium
+fi
+mkdir -p /etc/opt/chrome/policies/managed
+cat > /etc/opt/chrome/policies/managed/navin.json <<'EOF'
+{ "HardwareAccelerationModeEnabled": true, "BackgroundModeEnabled": false, "HomepageLocation": "https://navinos.lovable.app", "MetricsReportingEnabled": false }
+EOF
+sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable --enable-features=VaapiVideoDecoder,VaapiVideoEncoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy|' /usr/share/applications/google-chrome.desktop 2>/dev/null || true
+apt-get clean
+
+echo "[navin-os] 2/9 OS branding"
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN OS 1.0 (Debian 12 Bookworm base)"/' /usr/lib/os-release
+grep -q '^NAVIN_OS_VERSION' /usr/lib/os-release || echo 'NAVIN_OS_VERSION="1.0"' >> /usr/lib/os-release
+printf 'NAVIN OS 1.0 \\n \\l\n\n' > /etc/issue
+echo "NAVIN OS 1.0" > /etc/issue.net
+echo "navin-os" > /etc/hostname
+
+echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
+for g in sudo netdev audio video plugdev bluetooth lpadmin; do getent group $g >/dev/null || groupadd $g || true; done
+sed -i 's/^#\?\s*SKEL=.*/SKEL=\/etc\/skel/' /etc/adduser.conf || true
+
+echo "[navin-os] 4/9 Wallpaper as system default"
+update-alternatives --install /usr/share/images/desktop-base/desktop-background desktop-background /usr/share/backgrounds/navin-os/wallpaper.jpg 100 || true
+update-alternatives --set desktop-background /usr/share/backgrounds/navin-os/wallpaper.jpg || true
+mkdir -p /usr/share/backgrounds/xfce
+ln -sf /usr/share/backgrounds/navin-os/wallpaper.jpg /usr/share/backgrounds/xfce/xfce-shapes.svg.navin || true
+
+echo "[navin-os] 5/9 ZRAM (50% RAM, zstd)"
+cat > /etc/default/zramswap <<'EOF'
+ALGO=lz4
+PERCENT=50
+PRIORITY=100
+EOF
+systemctl enable zramswap.service || true
+echo 'vm.swappiness=10' > /etc/sysctl.d/99-navin-zram.conf
+
+echo "[navin-os] 6/9 Trim non-essential services"
+for s in apt-daily.timer apt-daily-upgrade.timer man-db.timer e2scrub_reap.service ModemManager.service; do
+  systemctl disable "$s" 2>/dev/null || true
+done
+apt-get purge -y tracker tracker-miner-fs 2>/dev/null || true
+systemctl enable NetworkManager.service || true
+systemctl enable bluetooth.service || true
+systemctl enable lightdm.service || true
+ufw --force default deny incoming || true
+ufw --force default allow outgoing || true
+
+echo "[navin-os] 7/9 Plymouth boot splash"
+if [ -f /usr/share/plymouth/themes/navin/navin.plymouth ]; then
+  plymouth-set-default-theme navin || true
+elif [ -d /usr/share/plymouth/themes/spinner ]; then
+  cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
+  plymouth-set-default-theme spinner || true
+fi
+chmod +x /usr/local/bin/navin-driver-center || true
+
+echo "[navin-os] 8/9 Calamares branding + desktop launcher"
+if [ -d /etc/calamares/branding/debian ]; then
+  rm -rf /etc/calamares/branding/navin
+  cp -a /etc/calamares/branding/debian /etc/calamares/branding/navin
+  D=/etc/calamares/branding/navin/branding.desc
+  sed -i 's/^componentName:.*/componentName:  navin/' "$D"
+  sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
+  sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
+  sed -i 's/version:.*/version:             "1.0"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "1.0"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN OS 1.0"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN OS 1.0"/' "$D"
+  sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
+  sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
+  sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
+  sed -i 's/welcomeStyleCalamares:.*/welcomeStyleCalamares: true/' "$D"
+  cp /usr/share/pixmaps/navin-os-logo.png /etc/calamares/branding/navin/navin-logo.png
+  sed -i 's/productLogo:.*/productLogo:         "navin-logo.png"/' "$D"
+  sed -i 's/productIcon:.*/productIcon:         "navin-logo.png"/' "$D"
+  sed -i 's/^branding:.*/branding: navin/' /etc/calamares/settings.conf
+fi
+cat > /usr/share/applications/install-navin-os.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install NAVIN OS
+Comment=Install NAVIN OS to this computer or a USB drive
+Exec=install-debian
+Icon=/usr/share/pixmaps/navin-os-logo.png
+Terminal=false
+Categories=System;
+EOF
+rm -f /etc/skel/Desktop 2>/dev/null || true
+mkdir -p /etc/skel/Desktop
+cp /usr/share/applications/install-navin-os.desktop /etc/skel/Desktop/
+chmod +x /etc/skel/Desktop/install-navin-os.desktop
+for c in google-chrome chromium; do [ -f /usr/share/applications/$c.desktop ] && cp /usr/share/applications/$c.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$c.desktop && break; done
+cp /usr/share/applications/navin-driver-center.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/navin-driver-center.desktop || true
+# Remove installer launcher from installed system (Calamares runs in chroot)
+mkdir -p /etc/calamares/modules
+
+echo "[navin-os] 9/9 Picom compositor autostart"
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/navin-picom.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=NAVIN Compositor
+Exec=picom --config /etc/xdg/picom.conf
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+EOF
+# Disable xfwm4 built-in compositor so picom is the only compositor
+mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="theme" type="string" value="Arc"/>
+    <property name="workspace_count" type="int" value="4"/>
+    <property name="snap_to_border" type="bool" value="true"/>
+    <property name="tile_on_move" type="bool" value="true"/>
+  </property>
+</channel>
+EOF
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="Arc"/>
+    <property name="IconThemeName" type="string" value="Papirus-Light"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="FontName" type="string" value="Noto Sans 10"/>
+  </property>
+</channel>
+EOF
+
+
+echo "[navin-os] 1.1 features: login fix, apps, AI Doctor, App Store"
+systemctl enable navin-live-user.service || true
+groupadd -r autologin 2>/dev/null || true
+groupadd -r nopasswdlogin 2>/dev/null || true
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+systemctl enable tlp.service 2>/dev/null || true
+touch /var/log/navin-doctor.log; chmod 644 /var/log/navin-doctor.log
+for d in navin-settings navin-assistant; do cp /usr/share/applications/$d.desktop /etc/skel/Desktop/ && chmod +x /etc/skel/Desktop/$d.desktop || true; done
+sed -i 's/^favorites=.*/favorites=google-chrome.desktop,thunar.desktop,xfce4-terminal.desktop,navin-settings.desktop,navin-ai-doctor.desktop,org.gnome.Software.desktop,navin-updater.desktop,install-navin-os.desktop/' /etc/skel/.config/xfce4/panel/whiskermenu-1.rc || true
+
+echo "[navin-os] Build 6: passwordless admin, Wine, speed"
+chmod 0440 /etc/sudoers.d/navin-nopasswd
+dpkg --add-architecture i386 || true
+systemctl disable preload.service 2>/dev/null || true
+for m in application/x-ms-dos-executable application/x-msdownload application/x-msi application/vnd.microsoft.portable-executable; do
+  echo "$m=navin-exe-run.desktop" >> /usr/share/applications/mimeapps.list.navin
+done
+{ echo "[Default Applications]"; cat /usr/share/applications/mimeapps.list.navin; echo "x-scheme-handler/http=google-chrome.desktop"; echo "x-scheme-handler/https=google-chrome.desktop"; echo "text/html=google-chrome.desktop"; } > /etc/xdg/mimeapps.list
+rm -f /usr/share/applications/mimeapps.list.navin
+update-desktop-database /usr/share/applications || true
+
+
+echo "[navin-os] Build 7: fast boot, clean desktop, hardware fixes"
+for u in NetworkManager-wait-online.service systemd-networkd-wait-online.service apt-daily.service apt-daily-upgrade.service cups-browsed.service; do systemctl mask "$u" 2>/dev/null || true; done
+systemctl disable cups.service 2>/dev/null || true; systemctl enable cups.socket 2>/dev/null || true
+mkdir -p /etc/systemd/system.conf.d
+printf '[Manager]\nDefaultTimeoutStartSec=10s\nDefaultTimeoutStopSec=5s\n' > /etc/systemd/system.conf.d/navin-fast.conf
+sed -i 's/^#\?Storage=.*/Storage=volatile/' /etc/systemd/journald.conf || true
+rm -f /etc/skel/Desktop/navin-settings.desktop /etc/skel/Desktop/navin-assistant.desktop /etc/skel/Desktop/navin-driver-center.desktop
+chmod 0755 /usr/local/lib/navin/navin-fan /usr/local/bin/navin-* || true
+
+# Shrink image: drop docs, man pages, non-English translations
+rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* /usr/share/help/* || true
+find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en*' ! -name 'hi*' ! -name 'locale.alias' -exec rm -rf {} + || true
+apt-get autoremove -y --purge || true
+apt-get clean
+rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin /tmp/* || true
+echo "[navin-os] Build 8 final configuration"
+install -d -m 0700 /etc/navin
+printf '8\n' > /etc/navin/build
+# No shared API secret belongs in a public ISO. AI broker reads a root-provisioned
+# /etc/navin/api.key only; it never prompts desktop users or exposes keys to WebKit.
+rm -f /etc/xdg/autostart/navin-doctor-monitor.desktop /etc/xdg/autostart/navin-space-watch.desktop
+systemctl enable navin-chrome-cache.mount
+mkdir -p /var/cache/navin/chrome
+# Scoped tmpfs cap; per-user Chrome cache is created by navin-chrome.
+chmod 1777 /var/cache/navin/chrome
+if [ -d /usr/share/plymouth/themes/spinner ]; then
+  cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
+  plymouth-set-default-theme -R spinner
+fi
+# Installer keeps stock storage/user safety modules; removable disks are visible.
+if [ -f /etc/calamares/modules/partition.conf ]; then
+  sed -i 's/^drawNestedPartitions:.*/drawNestedPartitions: true/' /etc/calamares/modules/partition.conf
+fi
+# Set browser command via wrapper for unique user cache, not shared /tmp cache.
+if [ -f /usr/share/applications/google-chrome.desktop ]; then
+  sed -i 's|^Exec=.*|Exec=navin-chrome %U|' /usr/share/applications/google-chrome.desktop
+fi
+# DXVK availability varies by suite. Fail with a clear report, not missing package resolution.
+if apt-cache show dxvk >/dev/null 2>&1; then
+  apt-get update
+  apt-get install -y --no-install-recommends dxvk
+else
+  echo 'DXVK not available in configured Debian suite; Wine uses WineD3D.' >> /usr/share/navin/kernel-report.txt
+fi
+# Resolve launcher files through actual per-plugin directories.
+for pair in '2:navin-ai-desktop' '3:google-chrome' '4:thunar' '5:navin-app-store' '6:navin-camera' '7:xfce4-terminal' '8:navin-settings' '13:navin-control-center'; do
+  n=${pair%%:*}; app=${pair#*:}
+  mkdir -p /etc/skel/.config/xfce4/panel/launcher-$n
+  src=/usr/share/applications/$app.desktop
+  [ -f "$src" ] || { [ "$app" = google-chrome ] && src=/usr/share/applications/chromium.desktop; }
+  if [ -f "$src" ]; then cp "$src" /etc/skel/.config/xfce4/panel/launcher-$n/$app.desktop; fi
+done
+# Camera/App Store/AI launchers plus launchers used by centered panel.
+for app in navin-ai-desktop navin-camera navin-app-store navin-control-center; do
+  cp /usr/share/applications/$app.desktop /etc/skel/Desktop/
+  chmod +x /etc/skel/Desktop/$app.desktop
+done
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+echo "[navin-os] customization complete"

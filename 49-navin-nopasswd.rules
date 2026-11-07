@@ -1,0 +1,4 @@
+// NAVIN OS: members of sudo get admin actions without a password prompt.
+polkit.addRule(function(action, subject) {
+  if (subject.isInGroup("sudo") && subject.local && subject.active) return polkit.Result.YES;
+});

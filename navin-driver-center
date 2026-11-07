@@ -1,0 +1,79 @@
+#!/bin/bash
+# NAVIN Driver & Device Center — real hardware detection + safe driver guidance.
+# Reads lspci/lsusb/libinput/rfkill/pactl/bluetoothctl. Never auto-runs downloaded code.
+TITLE="NAVIN Driver & Device Center"
+ICON=/usr/share/pixmaps/navin-os-logo.png
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+report() {
+  echo "==== NAVIN OS — Hardware Report ($(date)) ===="
+  echo; echo "## System"
+  grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"'
+  echo "Kernel: $(uname -r)"
+  echo "CPU: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ //')"
+  echo "RAM: $(free -h | awk '/Mem:/{print $2" total, "$3" used"}')"
+  [ -d /sys/class/power_supply/BAT0 ] && echo "Battery: $(cat /sys/class/power_supply/BAT0/capacity)% ($(cat /sys/class/power_supply/BAT0/status))"
+
+  echo; echo "## Graphics"
+  lspci -k 2>/dev/null | grep -A3 -Ei 'vga|3d|display' | grep -Ei 'vga|3d|display|driver in use'
+
+  echo; echo "## Wi-Fi / Network"
+  lspci -k 2>/dev/null | grep -A3 -Ei 'network|ethernet' | grep -Ei 'network|ethernet|driver in use'
+  lsusb 2>/dev/null | grep -Ei 'wireless|wlan|802.11|wi-fi' || true
+  have rfkill && rfkill list 2>/dev/null
+  have nmcli && nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null
+
+  echo; echo "## Bluetooth"
+  if have bluetoothctl; then bluetoothctl show 2>/dev/null | grep -E 'Controller|Powered' || echo "No Bluetooth adapter detected"; fi
+
+  echo; echo "## Audio"
+  lspci -k 2>/dev/null | grep -A3 -i audio | grep -Ei 'audio|driver in use'
+  have pactl && pactl list short sinks 2>/dev/null
+
+  echo; echo "## Touchpad / Mouse / Keyboard"
+  if have libinput; then
+    libinput list-devices 2>/dev/null | grep -E '^Device:' | sed 's/Device: */ - /'
+  else
+    grep -E '^N: Name=' /proc/bus/input/devices | sed 's/N: Name=/ - /'
+  fi
+
+  echo; echo "## USB devices"
+  lsusb 2>/dev/null
+
+  echo; echo "## Missing firmware (from kernel log)"
+  M=$(journalctl -k -b 2>/dev/null | grep -Ei 'firmware.*(failed|missing)' | tail -n 10)
+  [ -n "$M" ] && echo "$M" || echo "No missing-firmware messages found — no extra driver appears to be required."
+}
+
+suggest() {
+  S=""
+  L=$(lspci -nn 2>/dev/null)
+  echo "$L" | grep -qi 'nvidia' && S="$S\n - NVIDIA GPU: install 'nvidia-driver' from Debian non-free (Software Manager), then reboot."
+  echo "$L" | grep -qi 'broadcom.*network' && S="$S\n - Broadcom Wi-Fi: try 'broadcom-sta-dkms' or 'firmware-b43-installer' from Debian, then reboot."
+  journalctl -k -b 2>/dev/null | grep -qi 'rtw\|rtl.*firmware' && S="$S\n - Realtek firmware message seen: 'firmware-realtek' is already in NAVIN OS; check for updates."
+  [ -z "$S" ] && S="\n - No known driver problems detected. Touchpads usually work via the kernel + libinput without extra drivers."
+  printf "%b\n\nNote: Windows .exe drivers do not work on Linux. Only install .deb packages for amd64 from the manufacturer or Debian." "$S"
+}
+
+while true; do
+  CH=$(zenity --list --title="$TITLE" --window-icon="$ICON" --width=560 --height=420 \
+    --text="Detect your hardware and fix drivers safely." --column="Action" \
+    "Show hardware report" "Driver suggestions" "Install a downloaded .deb package" \
+    "Open Software Manager (Debian repositories)" "Open Debian driver help in Firefox" \
+    "Save report to Desktop" 2>/dev/null) || exit 0
+  case "$CH" in
+    "Show hardware report") report | zenity --text-info --title="$TITLE — Report" --width=760 --height=600 2>/dev/null ;;
+    "Driver suggestions") zenity --info --title="$TITLE" --width=520 --text="$(suggest)" 2>/dev/null ;;
+    "Install a downloaded .deb package")
+      F=$(zenity --file-selection --title="Choose a .deb package" --filename="$HOME/Downloads/" --file-filter="Debian packages | *.deb" 2>/dev/null) || continue
+      A=$(dpkg-deb -f "$F" Architecture 2>/dev/null)
+      if [ "$A" != "amd64" ] && [ "$A" != "all" ]; then
+        zenity --error --text="This package is for '$A', not amd64. It cannot be installed." 2>/dev/null; continue
+      fi
+      gdebi-gtk "$F" ;;  # shows package details; asks admin password via PolicyKit
+    "Open Software Manager (Debian repositories)") pkexec synaptic & ;;
+    "Open Debian driver help in Firefox") firefox "https://wiki.debian.org/Firmware" & ;;
+    "Save report to Desktop") report > "$HOME/Desktop/navin-hardware-report.txt" && zenity --info --text="Saved to Desktop/navin-hardware-report.txt" 2>/dev/null ;;
+  esac
+done

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=NAVIN OS
+Description=NAVIN OS 1.0 boot splash — white background, blue N logo, blue progress bar
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/navin
+ScriptFile=/usr/share/plymouth/themes/navin/navin.script

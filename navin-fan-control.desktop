@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Fan & Cooling
+Exec=navin-fan-control
+Icon=weather-windy
+Categories=Settings;System;

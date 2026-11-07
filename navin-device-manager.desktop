@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Device Manager
+Exec=navin-device-manager
+Icon=computer
+Terminal=false
+Categories=System;

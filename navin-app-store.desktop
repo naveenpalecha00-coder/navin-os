@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN App Store
+Exec=navin-app-store
+Icon=system-software-install
+Terminal=false
+Categories=System;

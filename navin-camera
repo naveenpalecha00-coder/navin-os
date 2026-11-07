@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+mkdir -p "$HOME/Pictures/Camera" "$HOME/Videos/Camera"
+exec guvcview --image="$HOME/Pictures/Camera/photo-$(date +%Y%m%d-%H%M%S).jpg" --video="$HOME/Videos/Camera/video-$(date +%Y%m%d-%H%M%S).mkv" "$@"

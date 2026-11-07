@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Backup Center
+Comment=Back up and restore your files
+Exec=navin-backup
+Icon=deja-dup
+Terminal=false
+Categories=Utility;System;

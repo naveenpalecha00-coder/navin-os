@@ -1,0 +1,124 @@
+#!/bin/bash
+# NAVIN AI System Doctor — scans real system state, explains problems in Hindi/English,
+# and applies only whitelisted repairs after the user approves.
+# Offline engine: built-in rules. Online engine (optional): any OpenAI-compatible API
+# configured in ~/.config/navin/ai.conf (AI_URL, AI_KEY, AI_MODEL). Logs are never sent without consent.
+set -u
+T="NAVIN AI System Doctor"
+CONF="$HOME/.config/navin/ai.conf"
+REPAIR="pkexec /usr/local/lib/navin/navin-repair"
+ICON=/usr/share/pixmaps/navin-os-logo.png
+mkdir -p "$HOME/.config/navin"
+
+scan() {
+  ISSUES=()
+  nmcli -t -f WIFI g 2>/dev/null | grep -q disabled && ISSUES+=("wifi|Wi-Fi band hai / Wi-Fi is turned off")
+  rfkill list 2>/dev/null | grep -q "Soft blocked: yes" && ISSUES+=("wifi|Wireless blocked (rfkill) / Airplane mode on")
+  nmcli -t -f STATE g 2>/dev/null | grep -qv '^connected' && ISSUES+=("network|Internet connected nahi hai / No internet connection")
+  systemctl is-active --quiet NetworkManager || ISSUES+=("network|NetworkManager service band hai")
+  systemctl is-active --quiet bluetooth 2>/dev/null || ISSUES+=("bluetooth|Bluetooth service band hai / Bluetooth service stopped")
+  if ! pactl info >/dev/null 2>&1; then ISSUES+=("sound|Sound server nahi chal raha / Audio server not running")
+  elif pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | grep -q yes; then ISSUES+=("unmute|Speaker mute hai / Audio is muted"); fi
+  dpkg --audit 2>/dev/null | grep -q . && ISSUES+=("packages|Adhure/toote packages / Broken packages")
+  F=$(systemctl --failed --plain --no-legend 2>/dev/null | awk '{print $1}' | tr '\n' ' ')
+  [ -n "$F" ] && ISSUES+=("services|Fail hui services: $F")
+  USE=$(df --output=pcent / | tail -1 | tr -dc 0-9); [ "${USE:-0}" -ge 90 ] && ISSUES+=("clean|Disk ${USE}% bhar gayi / Disk almost full")
+  MEM=$(free | awk '/Mem:/{printf "%d", $7*100/$2}'); [ "${MEM:-100}" -le 10 ] && ISSUES+=("ram|RAM kam bachi hai (${MEM}% free) / Low memory")
+  timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q no && ISSUES+=("time|Time sync band hai / Clock not synced")
+  lspci -k 2>/dev/null | grep -A3 -Ei 'network|wireless' | grep -q 'Kernel driver in use' || ISSUES+=("driver|Wi-Fi driver load nahi hua / Wi-Fi driver missing (Driver Center kholo)")
+}
+
+fix() {
+  case "$1" in
+    unmute)  pactl set-sink-mute @DEFAULT_SINK@ 0 && pactl set-sink-volume @DEFAULT_SINK@ 60% ;;
+    sound)   systemctl --user restart pipewire pipewire-pulse wireplumber ;;
+    ram)     zenity --info --title="$T" --text="Bhaari apps band karo. Task Manager khol raha hoon."; xfce4-taskmanager & ;;
+    driver)  navin-driver-center & ;;
+    *)       $REPAIR "$1" ;;
+  esac
+}
+
+run_scan() {
+  zenity --notification --text="System check ho raha hai..." 2>/dev/null &
+  scan
+  if [ ${#ISSUES[@]} -eq 0 ]; then
+    zenity --info --title="$T" --window-icon=$ICON --text="✅ Koi problem nahi mili. Sab theek hai!\nNo problems found."; return
+  fi
+  ARGS=(); for i in "${ISSUES[@]}"; do ARGS+=(TRUE "${i%%|*}" "${i#*|}"); done
+  SEL=$(zenity --list --checklist --title="$T" --window-icon=$ICON --width=720 --height=420 \
+    --text="Ye problems mili. Jinhe fix karna hai select karo (password: navin):" \
+    --column="Fix" --column="ID" --column="Problem" --hide-column=2 --print-column=2 --separator=" " "${ARGS[@]}") || return
+  for a in $SEL; do
+    if fix "$a"; then R+="✅ $a fixed\n"; else R+="❌ $a fix nahi hua\n"; fi
+  done
+  zenity --info --title="$T" --text="Repair result:\n${R:-}\n\nLog: /var/log/navin-doctor.log"
+  R=""
+}
+
+offline_answer() {
+  q=$(echo "$1" | tr 'A-Z' 'a-z')
+  case "$q" in
+    *wifi*|*wi-fi*|*internet*|*net*)  echo "wifi|Wi-Fi/Internet: radio on karke NetworkManager restart karunga." ;;
+    *sound*|*awaz*|*audio*|*speaker*|*mute*) echo "sound|Sound: audio server restart + unmute karunga." ;;
+    *bluetooth*) echo "bluetooth|Bluetooth: unblock karke service restart karunga." ;;
+    *package*|*install*|*apt*|*dpkg*) echo "packages|Packages: dpkg --configure -a aur apt -f install chalaunga." ;;
+    *update*) echo "upgrade|System update: apt update + upgrade chalaunga." ;;
+    *slow*|*dhima*|*hang*|*ram*) echo "clean|Slow system: cache saaf karunga aur Task Manager kholunga." ;;
+    *disk*|*space*|*storage*) echo "clean|Disk space: apt cache aur purane logs saaf karunga." ;;
+    *print*) echo "printer|Printer: CUPS service restart karunga." ;;
+    *time*|*clock*|*samay*) echo "time|Clock: internet time sync on karunga." ;;
+    *driver*|*graphics*|*touchpad*) echo "driver|Drivers: NAVIN Driver Center kholunga." ;;
+    *) echo "scan|Main poora system scan karta hoon." ;;
+  esac
+}
+
+online_answer() {
+  . "$CONF"
+  CTX="$(uname -r); $(nmcli -t g 2>/dev/null); failed: $(systemctl --failed --plain --no-legend | awk '{print $1}' | tr '\n' ' ')"
+  SYS="You are NAVIN AI System Doctor inside NAVIN OS (Debian 12, XFCE). Reply in the user's language (Hindi or English), short. End with one line 'ACTION: <id>' where id is one of: wifi network bluetooth sound unmute packages upgrade clean printer services time driver scan none."
+  BODY=$(jq -n --arg m "${AI_MODEL:-gpt-4o-mini}" --arg s "$SYS" --arg u "$1 [system: $CTX]" '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$u}]}')
+  curl -s -m 30 "${AI_URL:-https://api.openai.com/v1/chat/completions}" -H "Authorization: Bearer $AI_KEY" -H "Content-Type: application/json" -d "$BODY" | jq -r '.choices[0].message.content // empty'
+}
+
+chat() {
+  while true; do
+    Q=$(zenity --entry --title="$T — Chat" --width=560 --text="Apni problem likho (Hindi ya English).\nExample: 'wifi nahi chal raha', 'sound nahi aa rahi'" ) || return
+    [ -z "$Q" ] && continue
+    ANS=""; ACT=""
+    if [ -f "$CONF" ] && grep -q AI_KEY "$CONF"; then
+      ANS=$(online_answer "$Q"); ACT=$(echo "$ANS" | grep -o 'ACTION: *[a-z-]*' | awk '{print $2}')
+    fi
+    if [ -z "$ANS" ]; then R=$(offline_answer "$Q"); ACT=${R%%|*}; ANS="(Offline AI) ${R#*|}"; fi
+    if [ -n "$ACT" ] && [ "$ACT" != none ]; then
+      zenity --question --title="$T" --width=520 --text="$ANS\n\nKya main ye fix abhi chalaun?" --ok-label="Haan, fix karo" --cancel-label="Nahi" || continue
+      if [ "$ACT" = scan ]; then run_scan; elif fix "$ACT"; then zenity --info --title="$T" --text="✅ Fix ho gaya. Check karke batao."; else zenity --error --title="$T" --text="❌ Fix nahi hua. Log: /var/log/navin-doctor.log"; fi
+    else zenity --info --title="$T" --width=520 --text="$ANS"; fi
+  done
+}
+
+settings() {
+  V=$(zenity --forms --title="$T — Online AI (optional)" --text="Online AI ke liye API details (OpenAI-compatible). Khali chhodo to offline AI chalega." \
+    --add-entry="API URL" --add-password="API Key" --add-entry="Model") || return
+  IFS='|' read -r U K M <<< "$V"
+  printf 'AI_URL=%q\nAI_KEY=%q\nAI_MODEL=%q\n' "${U:-https://api.openai.com/v1/chat/completions}" "$K" "${M:-gpt-4o-mini}" > "$CONF"; chmod 600 "$CONF"
+  zenity --info --text="Saved. Key sirf aapke computer par hai."
+}
+
+case "${1:-}" in
+  --scan) run_scan; exit ;;
+  --chat) chat; exit ;;
+  --check)  # background monitor: notify only
+    scan; [ ${#ISSUES[@]} -gt 0 ] && notify-send -i $ICON "NAVIN AI System Doctor" "${#ISSUES[@]} problem mili — click Start → NAVIN AI Doctor"; exit 0 ;;
+esac
+
+while true; do
+  C=$(zenity --list --title="$T" --window-icon=$ICON --width=520 --height=380 --text="Namaste! Main aapke system ki problems dhoondh kar fix karta hoon." \
+    --column="Option" "🔍 Scan & Auto-Fix" "💬 Chat with AI Doctor" "📜 Repair history" "⚙️ Online AI settings" "🚪 Close") || exit 0
+  case "$C" in
+    *Scan*) run_scan ;;
+    *Chat*) chat ;;
+    *history*) zenity --text-info --title="Repair history" --width=700 --height=420 --filename=/var/log/navin-doctor.log 2>/dev/null || zenity --info --text="Abhi tak koi repair nahi hua." ;;
+    *settings*) settings ;;
+    *) exit 0 ;;
+  esac
+done

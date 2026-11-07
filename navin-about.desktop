@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=About NAVIN OS
+Comment=Version and hardware
+Exec=navin-about
+Icon=help-about
+Terminal=false
+Categories=System;

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN AI Doctor monitor
+Exec=sh -c 'sleep 120; while true; do navin-ai-doctor --check; sleep 1800; done'
+OnlyShowIn=XFCE;
+NoDisplay=true

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Camera
+Exec=navin-camera
+Icon=camera-web
+Terminal=false
+Categories=AudioVideo;

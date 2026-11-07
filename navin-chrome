@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+CACHE=/var/cache/navin/chrome/$(id -u)
+install -d -m 0700 "$CACHE"
+for browser in google-chrome-stable chromium; do
+  command -v "$browser" >/dev/null || continue
+  exec "$browser" --disk-cache-dir="$CACHE" --disk-cache-size=67108864 --enable-features=VaapiVideoDecoder,VaapiVideoEncoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy "$@"
+done
+notify-send NAVIN 'No browser is installed'; exit 1
