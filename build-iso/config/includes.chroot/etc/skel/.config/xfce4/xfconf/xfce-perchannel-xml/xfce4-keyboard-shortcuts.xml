@@ -3,10 +3,20 @@
   <property name="commands" type="empty">
     <property name="custom" type="empty">
       <property name="override" type="bool" value="true"/>
-      <property name="&lt;Super&gt;space" type="string" value="navin-assistant"/>
+      <property name="&lt;Super&gt;space" type="string" value="navin-ai-desktop"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="xfce4-terminal"/>
       <property name="&lt;Super&gt;e" type="string" value="thunar"/>
+      <property name="&lt;Super&gt;p" type="string" value="navin-display-switcher"/>
+      <property name="&lt;Super&gt;v" type="string" value="xfce4-clipman-history"/>
+      <property name="&lt;Super&gt;k" type="string" value="navin-search"/>
+      <property name="&lt;Super&gt;&lt;Shift&gt;s" type="string" value="xfce4-screenshooter -r -c"/>
       <property name="Print" type="string" value="xfce4-screenshooter -f"/>
     </property>
   </property>
+  <property name="xfwm4" type="empty"><property name="custom" type="empty">
+    <property name="&lt;Super&gt;Left" type="string" value="tile_left_key"/>
+    <property name="&lt;Super&gt;Right" type="string" value="tile_right_key"/>
+    <property name="&lt;Super&gt;Up" type="string" value="maximize_window_key"/>
+    <property name="&lt;Super&gt;Down" type="string" value="hide_window_key"/>
+  </property></property>
 </channel>

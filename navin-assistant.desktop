@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=NAVIN AI Assistant
-Comment=Ask anything (hold Space 5 s or Super+Space)
-Exec=navin-assistant
-Icon=/usr/share/pixmaps/navin-os-logo.png
-Categories=Utility;

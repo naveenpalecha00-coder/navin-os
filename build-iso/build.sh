@@ -12,8 +12,8 @@ lb clean --purge || true
 lb config
 lb build
 
-ISO=$(ls -1 navin-os-amd64.hybrid.iso *.iso 2>/dev/null | head -n1)
+ISO=$(find . -maxdepth 1 -type f -name "*.iso" -print -quit)
 [ -f "$ISO" ] || { echo "ISO not produced"; exit 1; }
-mv -f "$ISO" navin-os-1.0-x86_64.iso
+if [ "$ISO" != "./navin-os-1.0-x86_64.iso" ]; then mv -f "$ISO" navin-os-1.0-x86_64.iso; fi
 sha256sum navin-os-1.0-x86_64.iso | tee navin-os-1.0-x86_64.iso.sha256
 ls -lh navin-os-1.0-x86_64.iso

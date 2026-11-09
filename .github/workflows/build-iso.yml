@@ -32,6 +32,9 @@ jobs:
             -v "$GITHUB_WORKSPACE:/work" -w /work/build-iso \
             debian:bookworm bash ./build.sh
 
+      - name: Package verified OTA tools
+        run: python3 build-iso/package-update.py
+
       - name: Verify ISO
         id: verify
         run: |
@@ -54,8 +57,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0-build.${{ github.run_number }}
-          name: NAVIN OS 1.0 (build ${{ github.run_number }})
+          tag_name: v1.0-build.8
+          name: NAVIN OS 1.0 (Build 8)
           make_latest: true
           body: |
             NAVIN OS 1.0 — Debian 12 Bookworm base, x86_64 hybrid ISO (UEFI + Legacy BIOS).
@@ -66,3 +69,5 @@ jobs:
           files: |
             build-iso/navin-os-1.0-x86_64.iso
             build-iso/navin-os-1.0-x86_64.iso.sha256
+            build-iso/navin-update.tar.gz
+            build-iso/navin-update.tar.gz.sha256

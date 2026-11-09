@@ -1,0 +1,54 @@
+#!/usr/bin/python3
+import os,sys,pathlib,hashlib,tarfile,tempfile,shutil,json,urllib.request
+from navin_logic import safe_patch_path
+if os.geteuid()!=0:sys.exit('Administrator privileges required')
+if len(sys.argv)!=4:sys.exit('Expected archive, checksum and build')
+source=pathlib.Path(sys.argv[1]); digest=sys.argv[2]; build=int(sys.argv[3]); current=int(pathlib.Path('/etc/navin/build').read_text())
+if build<=current:sys.exit('Refusing downgrade or duplicate patch')
+if source.stat().st_size>100*1024*1024:sys.exit('Patch too large')
+# Trust the fixed publisher repository, not a digest supplied by an unprivileged caller.
+request=urllib.request.Request('https://api.github.com/repos/naveenpalecha00-coder/navin-os/releases/tags/v1.0-build.'+str(build),headers={'Accept':'application/vnd.github+json','User-Agent':'NAVIN-OS-OTA'})
+with urllib.request.urlopen(request,timeout=30) as response:release=json.load(response)
+if release.get('draft') or release.get('prerelease'):sys.exit('Release is not stable')
+asset=next((a for a in release.get('assets',[]) if a.get('name')=='navin-update.tar.gz'),None)
+if not asset or asset.get('digest')!='sha256:'+digest:sys.exit('Patch lacks matching publisher GitHub asset digest; refusing installation')
+# Read once into root-owned staging to prevent caller modifying it after verification.
+with tempfile.TemporaryDirectory(prefix='navin-patch-') as folder:
+ staged=pathlib.Path(folder)/'patch.tar.gz'; shutil.copyfile(source,staged)
+ if hashlib.sha256(staged.read_bytes()).hexdigest()!=digest:sys.exit('Checksum mismatch')
+ with tarfile.open(staged) as archive:
+  members=archive.getmembers()
+  if sum(m.size for m in members)>200*1024*1024:sys.exit('Expanded patch too large')
+  for m in members:
+   if not m.isfile() or not safe_patch_path(m.name):sys.exit('Unsafe patch entry: '+m.name)
+   target=pathlib.Path('/')/m.name
+   if target.is_symlink() or any(p.is_symlink() for p in target.parents):sys.exit('Unsafe destination symlink')
+  backup=pathlib.Path('/var/backups/navin')/(str(current)+'-'+str(build)); backup.mkdir(parents=True,exist_ok=True)
+  targets=[]
+  # Prepare every payload and backup before changing the installed system.
+  for m in members:
+   target=pathlib.Path('/')/m.name; old=backup/m.name
+   if old.is_symlink() or any(p.is_symlink() for p in old.parents):sys.exit('Unsafe backup destination')
+   if target.exists():old.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(target,old)
+   payload=pathlib.Path(folder)/'payload'/m.name; payload.parent.mkdir(parents=True,exist_ok=True)
+   stream=archive.extractfile(m)
+   if stream is None:sys.exit('Missing file body')
+   with open(payload,'wb') as f:shutil.copyfileobj(stream,f)
+   targets.append((target,old,payload,m.mode & 0o777))
+  applied=[]
+  try:
+   for target,old,payload,mode in targets:
+    target.parent.mkdir(parents=True,exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=target.parent,delete=False) as f:
+     temporary=pathlib.Path(f.name)
+     with open(payload,'rb') as body:shutil.copyfileobj(body,f)
+     f.flush(); os.fsync(f.fileno())
+    os.chmod(temporary,mode); os.replace(temporary,target); applied.append((target,old))
+   pathlib.Path('/etc/navin/build').write_text(str(build)+'\n')
+  except Exception:
+   for target,old in reversed(applied):
+    if old.exists():shutil.copy2(old,target)
+    else:target.unlink(missing_ok=True)
+   pathlib.Path('/etc/navin/build').write_text(str(current)+'\n')
+   raise
+print('NAVIN patch applied. Existing files backed up in /var/backups/navin. Restart when ready.')

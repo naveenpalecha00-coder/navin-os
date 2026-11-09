@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Welcome to NAVIN OS
-Comment=Getting started
-Exec=navin-welcome
-Icon=/usr/share/pixmaps/navin-os-logo.png
-Terminal=false
-Categories=System;

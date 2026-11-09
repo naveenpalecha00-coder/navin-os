@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=NAVIN Session Init
-Exec=/usr/local/bin/navin-session-init
-NoDisplay=true
-X-GNOME-Autostart-enabled=true

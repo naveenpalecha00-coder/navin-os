@@ -4,3 +4,6 @@ for f in "$HOME"/Desktop/*.desktop; do [ -f "$f" ] || continue; chmod +x "$f"; g
 xfconf-query -c xfwm4 -p /general/scroll_workspaces -n -t bool -s false 2>/dev/null
 xfconf-query -c xfce4-desktop -p /desktop-icons/single-click -n -t bool -s true 2>/dev/null
 navin-mic-fix &
+xfconf-query -c thunar -p /misc-single-click -n -t bool -s true 2>/dev/null
+setxkbmap -layout us,in -variant ,hin-kagapa -option grp:alt_shift_toggle
+/usr/local/lib/navin/navin-session-daemon &

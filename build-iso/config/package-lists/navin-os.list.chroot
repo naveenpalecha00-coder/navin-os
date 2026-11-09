@@ -32,7 +32,7 @@ blueman
 # ---- X11 & Desktop ----
 xorg
 xserver-xorg-video-all
-xserver-xorg-input-all
+xserver-xorg-input-libinput
 xfce4
 xfce4-terminal
 xfce4-screenshooter
@@ -124,8 +124,6 @@ redshift
 tlp
 xfce4-clipman-plugin
 xfce4-screenshooter
-gnome-software
-gnome-software-plugin-flatpak
 flatpak
 memtest86+
 xfce4-datetime-plugin
@@ -134,7 +132,6 @@ xfce4-datetime-plugin
 wine
 wine64
 winetricks
-preload
 xinput
 x11-utils
 sound-theme-freedesktop
@@ -144,7 +141,6 @@ pulseaudio-utils
 alsa-utils
 alsa-ucm-conf
 xserver-xorg-input-libinput
-xserver-xorg-input-synaptics
 onboard
 lm-sensors
 xdotool
@@ -160,3 +156,25 @@ gstreamer1.0-libav
 xfce4-xkb-plugin
 espeak-ng
 xclip
+
+# ---- Build 8 GTK/WebKit, hardware, Vulkan ----
+python3-gi
+python3-requests
+python3-xlib
+python3-evdev
+gir1.2-gtk-3.0
+gir1.2-webkit2-4.1
+gir1.2-vte-2.91
+python3-cairo
+python3-gi-cairo
+guvcview
+v4l-utils
+libspa-0.2-bluetooth
+pipewire-audio
+brightnessctl
+linux-cpupower
+mesa-vulkan-drivers
+libvulkan1
+vulkan-tools
+ffmpeg
+psmisc

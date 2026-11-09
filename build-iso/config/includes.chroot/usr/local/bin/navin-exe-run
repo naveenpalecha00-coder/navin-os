@@ -1,6 +1,9 @@
 #!/bin/bash
-# Run/install a Windows .exe with Wine; Wine creates Start-menu/desktop shortcuts automatically.
-f="$1"; [ -f "$f" ] || exit 1
-export WINEPREFIX="$HOME/.wine"
-[ -d "$WINEPREFIX" ] || zenity --notification --text="Windows support pehli baar set ho raha hai..." &
-case "${f,,}" in *.msi) exec wine msiexec /i "$f" ;; *) exec wine "$f" ;; esac
+set -euo pipefail
+f="${1:-}"; [ -f "$f" ] || exit 1
+export WINEPREFIX="$HOME/.wine-navin64" WINEARCH=win64
+if [ ! -d "$WINEPREFIX" ]; then
+ wineboot --init
+ if command -v dxvk-setup >/dev/null && vulkaninfo --summary >/dev/null 2>&1; then dxvk-setup install || notify-send NAVIN 'DXVK setup failed; WineD3D will be used'; fi
+fi
+case "${f,,}" in *.msi) exec wine msiexec /i "$f";; *.exe) exec wine "$f";; *) exit 2;; esac

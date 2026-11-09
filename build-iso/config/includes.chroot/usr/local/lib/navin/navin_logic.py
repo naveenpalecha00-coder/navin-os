@@ -16,4 +16,5 @@ def safe_patch_path(value):
  from pathlib import PurePosixPath
  p=PurePosixPath(value)
  allowed=("usr/local/bin/", "usr/local/lib/navin/", "usr/share/navin/", "usr/share/applications/navin-", "etc/navin/build", "etc/X11/xorg.conf.d/40-navin-", "etc/sysctl.d/98-navin-", "etc/xdg/picom.conf")
- return not p.is_absolute() and ".." not in p.parts and any(value.startswith(a) for a in allowed)
+ exact=("etc/navin/build", "etc/xdg/picom.conf")
+ return not p.is_absolute() and ".." not in p.parts and (value in exact or any(value.startswith(a) for a in allowed if a not in exact))

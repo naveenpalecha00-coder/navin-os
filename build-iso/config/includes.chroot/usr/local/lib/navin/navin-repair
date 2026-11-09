@@ -20,6 +20,8 @@ case "$A" in
   firewall-off) ufw --force disable ;;
   battery-saver) tlp bat 2>/dev/null || tlp start ;;
   balanced)   tlp start ;;
+  ram-boost) before=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); sync; echo 3 > /proc/sys/vm/drop_caches; after=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); echo "$(( (after-before)/1024 )) MB available-memory change" ;;
+  remove) shift; [ "$#" -gt 0 ] || exit 2; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || exit 2; done; apt-get remove -y "$@" ;;
   install)    shift; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "bad package $p"; exit 2; }; done; apt-get install -y "$@" ;;
   *) echo "Unknown or unsafe action: $A"; log DENIED "$A"; exit 2 ;;
 esac

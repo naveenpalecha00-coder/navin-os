@@ -32,17 +32,19 @@ class Store(Window):
   scroll=Gtk.ScrolledWindow(); self.rows=Gtk.ListBox(); scroll.add(self.rows); self.box.pack_start(scroll,True,True,0)
   self.progress=Gtk.ProgressBar(); self.box.pack_start(self.progress,False,False,0)
   self.output=Gtk.TextView(editable=False,monospace=True); log=Gtk.ScrolledWindow(); log.set_min_content_height(100); log.add(self.output); self.box.pack_start(log,False,True,0)
+  self.button('Refresh catalogue',self.refresh)
   self.busy=False; self.status.set_text('Reading APT catalogue…'); self.finish(); self.refresh()
  def refresh(self):
   def get():
    packages=sorted({p for items in self.catalog.values() for p in items})
-   data=run(['apt-cache','show',*packages]); available={}
+   result=subprocess.run(['apt-cache','show',*packages],capture_output=True,text=True)
+   if not result.stdout.strip():raise RuntimeError(result.stderr.strip() or 'APT metadata unavailable. Refresh catalogue after updating package lists.')
+   data=result.stdout; available={}
    for block in data.split('\n\n'):
     fields=dict(line.split(': ',1) for line in block.splitlines() if ': ' in line and not line.startswith(' '))
     if 'Package' in fields: available[fields['Package']]=fields.get('Description','')
    installed=run(['dpkg-query','-W','-f=${Package}\t${db:Status-Status}\n'])
    return available,{x.split('\t')[0] for x in installed.splitlines() if x.endswith('\tinstalled')}
-  def done(value): pass
   def task():
    try:
     self.available,self.installed=get(); GLib.idle_add(self.render)
@@ -195,7 +197,7 @@ class Search(Window):
  def activate(self,_,row):self.actions[row.get_index()](); self.destroy()
 class Updater(Window):
  def __init__(self):
-  super().__init__('NAVIN System Updater'); self.remote=None; self.progress=Gtk.ProgressBar(); self.box.pack_start(self.progress,False,False,0); self.check=self.button('Check GitHub releases',self.query); self.install=self.button('Download & apply verified patch',self.apply); self.install.set_sensitive(False); self.button('Debian package updates',lambda:launch(['x-terminal-emulator','-e','sudo','apt-get','update'])); self.restart=self.button('Restart Now',lambda:launch(['systemctl','reboot'])); self.restart.set_sensitive(False); self.finish(); self.query()
+  super().__init__('NAVIN System Updater'); self.remote=None; self.progress=Gtk.ProgressBar(); self.box.pack_start(self.progress,False,False,0); self.check=self.button('Check GitHub releases',self.query); self.install=self.button('Download & apply verified patch',self.apply); self.install.set_sensitive(False); self.button('Debian package updates',lambda:launch(['x-terminal-emulator','-e','sudo','/usr/local/lib/navin/navin-repair','upgrade'])); self.restart=self.button('Restart Now',lambda:launch(['systemctl','reboot'])); self.restart.set_sensitive(False); self.finish(); self.query()
  def query(self):
   def fetch():
    req=urllib.request.Request('https://api.github.com/repos/'+REPO+'/releases',headers={'Accept':'application/vnd.github+json','User-Agent':'NAVIN-OS-Updater'})

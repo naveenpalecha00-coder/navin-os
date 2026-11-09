@@ -1,8 +1,0 @@
-#!/bin/bash
-# Space held 5s -> NAVIN AI.  Left Ctrl held 5s -> on-screen keyboard. Reads X key state, no root.
-s=0; c=0
-while sleep 0.25; do
-  st=$(xinput query-state "Virtual core keyboard" 2>/dev/null)
-  if grep -q 'key\[65\]=down' <<<"$st"; then s=$((s+1)); [ $s -eq 20 ] && { pgrep -f navin-assistant >/dev/null || navin-assistant & }; else s=0; fi
-  if grep -qE 'key\[(37|105)\]=down' <<<"$st"; then c=$((c+1)); [ $c -eq 20 ] && { pgrep -x onboard >/dev/null && pkill -x onboard || onboard & }; else c=0; fi
-done

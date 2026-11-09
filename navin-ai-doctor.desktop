@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=NAVIN AI System Doctor
-Comment=Find and fix system problems, chat in Hindi/English
-Exec=navin-ai-doctor
-Icon=/usr/share/pixmaps/navin-os-logo.png
-Terminal=false
-Categories=System;Settings;

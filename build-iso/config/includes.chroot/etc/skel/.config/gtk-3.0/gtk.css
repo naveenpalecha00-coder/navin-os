@@ -3,8 +3,9 @@
 @define-color theme_selected_bg_color #1677F2;
 @define-color accent_bg_color #1677F2;
 
-.xfce4-panel { border-top: 1px solid rgba(0, 0, 0, 0.06); }
-.xfce4-panel button { border-radius: 10px; }
+.xfce4-panel { background-color: rgba(255,255,255,0.82); border: 1px solid rgba(22,119,242,0.2); border-radius: 18px; margin: 8px; }
+.xfce4-panel button { border-radius: 10px; transition: 150ms ease; }
+.xfce4-panel button:hover { padding: 4px; }
 .xfce4-panel button:checked, .xfce4-panel button:hover { background-color: rgba(22, 119, 242, 0.12); }
 window.background { background-color: #FFFFFF; }
 .sidebar, placessidebar, .thunar .sidebar { background-color: #F8FAFF; }

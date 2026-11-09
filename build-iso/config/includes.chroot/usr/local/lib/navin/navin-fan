@@ -1,14 +1,21 @@
 #!/bin/bash
-# NAVIN OS fan/thermal mode (root). Usage: navin-fan silent|auto|turbo
-M=$1; ok=0
-case $M in silent) gb=1; pp=low-power; sl=0; gov=powersave;; turbo) gb=2; pp=performance; sl=2; gov=performance;; *) gb=0; pp=balanced; sl=1; gov=schedutil;; esac
-for f in /sys/devices/platform/samsung-galaxybook/fan_mode /sys/devices/platform/samsung-galaxybook/performance_mode; do [ -w "$f" ] && echo $gb > "$f" && ok=1; done
-[ -w /sys/devices/platform/samsung/performance_level ] && echo $([ $sl = 0 ] && echo silent || ([ $sl = 2 ] && echo overclock || echo normal)) > /sys/devices/platform/samsung/performance_level && ok=1
-if [ -w /sys/firmware/acpi/platform_profile ]; then
-  ch=$(cat /sys/firmware/acpi/platform_profile_choices); case " $ch " in *" $pp "*) ;; *) [ $M = silent ] && pp=quiet; [ $M = auto ] && pp=balanced;; esac
-  echo $pp > /sys/firmware/acpi/platform_profile 2>/dev/null && ok=1
-fi
-for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo $gov > $g 2>/dev/null || echo powersave > $g 2>/dev/null; done
-[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ] && echo $([ $M = silent ] && echo 1 || echo 0) > /sys/devices/system/cpu/intel_pstate/no_turbo
-for p in /sys/class/hwmon/hwmon*/pwm1; do [ -w "$p" ] || continue; echo 1 > ${p}_enable 2>/dev/null; echo $([ $M = silent ] && echo 90 || ([ $M = turbo ] && echo 255 || echo 160)) > $p && ok=1; done
-echo $ok
+set -u
+case "${1:-}" in silent) profile=quiet; governor=powersave;; auto) profile=balanced; governor=schedutil;; turbo) profile=performance; governor=performance;; *) exit 2;; esac
+ok=0
+for path in /sys/firmware/acpi/platform_profile /sys/devices/platform/samsung-galaxybook/fan_mode; do
+ [ -w "$path" ] || continue
+ if [ "$path" = /sys/firmware/acpi/platform_profile ]; then
+  choices=$(cat /sys/firmware/acpi/platform_profile_choices)
+  if [ "$profile" = quiet ] && [[ " $choices " != *' quiet '* ]]; then profile=low-power; fi
+  [[ " $choices " = *" $profile "* ]] && printf '%s' "$profile" > "$path" && ok=1
+ else
+  # Do not guess Samsung firmware's numeric modes; ACPI profile is preferred.
+  echo 'Samsung fan_mode detected; unsupported numeric ABI, using CPU/ACPI control.' >&2
+ fi
+done
+for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+ [ -w "$f" ] || continue
+ choices=$(cat "${f%/*}/scaling_available_governors")
+ [[ " $choices " = *" $governor "* ]] && printf '%s' "$governor" > "$f"
+done
+echo "$ok"

@@ -1,9 +1,0 @@
-#!/bin/bash
-# About NAVIN OS — real system information.
-. /etc/os-release
-CPU=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ //')
-RAM=$(free -h | awk '/Mem:/{print $2}')
-DISK=$(df -h / | awk 'NR==2{print $3" used of "$2}')
-GPU=$(lspci 2>/dev/null | grep -Ei 'vga|3d' | cut -d: -f3 | head -1)
-zenity --info --title="About NAVIN OS" --window-icon=/usr/share/pixmaps/navin-os-logo.png --width=480 --icon-name=navin-os-logo \
-  --text="<span size='x-large'><b>NAVIN OS 1.0</b></span>\nYour PC. Your OS. Your Freedom.\nCreated by Navin Palecha\n\n<b>Base:</b> ${PRETTY_NAME}\n<b>Kernel:</b> $(uname -r)\n<b>Desktop:</b> XFCE\n<b>CPU:</b> ${CPU}\n<b>GPU:</b>${GPU}\n<b>RAM:</b> ${RAM}\n<b>Disk:</b> ${DISK}\n<b>Uptime:</b> $(uptime -p)\n\ngithub.com/naveenpalecha00-coder/navin-os"

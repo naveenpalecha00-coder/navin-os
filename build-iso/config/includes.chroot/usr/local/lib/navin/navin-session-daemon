@@ -3,6 +3,7 @@ import subprocess,time,pathlib,os
 from Xlib import display, XK
 from navin_logic import HOLD_SECONDS
 connection=display.Display(); keys={name:connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('space','Control_L','Control_R')}; started={}; fired=set()
+last_privacy=0
 usb=set(pathlib.Path('/sys/bus/usb/devices').glob('*')); last_bt=0
 while True:
  try:
@@ -19,6 +20,14 @@ while True:
   now=set(pathlib.Path('/sys/bus/usb/devices').glob('*'))
   if now!=usb:
    sound='device-added.oga' if len(now)>len(usb) else 'device-removed.oga'; subprocess.Popen(['paplay','/usr/share/sounds/freedesktop/stereo/'+sound]); usb=now
+  if time.monotonic()-last_privacy>3:
+   last_privacy=time.monotonic()
+   status=subprocess.run(['pactl','list','source-outputs'],capture_output=True,text=True,timeout=3).stdout
+   active_mic='Source Output #' in status
+   videos=list(pathlib.Path('/dev').glob('video*'))
+   active_camera=bool(videos and subprocess.run(['fuser',*map(str,videos)],capture_output=True,text=True,timeout=3).stdout.strip())
+   if active_mic or active_camera:
+    subprocess.Popen(['notify-send','--hint=string:x-canonical-private-synchronous:navin-privacy','-t','3500','Privacy',('Microphone active' if active_mic else '')+(' · Camera active' if active_camera else '')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   # Reconnect trusted, paired earbuds only; never newly pair devices automatically.
   if time.monotonic()-last_bt>60:
    last_bt=time.monotonic()
