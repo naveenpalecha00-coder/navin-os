@@ -22,7 +22,7 @@ lb config noauto \
   --bootloaders "grub-efi,syslinux" \
   --debian-installer none \
   --memtest memtest86+ \
-  --chroot-squashfs-compression-type zstd \
+  --chroot-squashfs-compression-type xz \
   --image-name navin-os \
   --iso-application "NAVIN OS" \
   --iso-publisher "Navin Palecha" \
