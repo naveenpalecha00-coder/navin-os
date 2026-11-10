@@ -5,6 +5,7 @@ from Xlib import display, XK
 from navin_logic import HOLD_SECONDS
 connection=display.Display(); keys={name:connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('space','Control_L','Control_R')}; started={}; fired=set()
 last_privacy=0
+thermal_level='ok'
 usb=set(pathlib.Path('/sys/bus/usb/devices').glob('*')); last_bt=0
 while True:
  try:
@@ -24,6 +25,14 @@ while True:
    sound='device-added.oga' if len(now)>len(usb) else 'device-removed.oga'; subprocess.Popen(['paplay','/usr/share/sounds/freedesktop/stereo/'+sound]); usb=now
   if time.monotonic()-last_privacy>10:
    last_privacy=time.monotonic()
+   # NAVIN OS 1.2: overheating warnings from the root thermal guard (/run/navin/thermal.json)
+   try:
+    import json as _j
+    t=_j.loads(pathlib.Path('/run/navin/thermal.json').read_text()); lvl=t.get('level','ok')
+    if lvl!=thermal_level and lvl in ('hot','critical'):
+     subprocess.Popen(['notify-send','-u','critical','-i','temperature','Overheating','CPU %s °C · GPU %s °C. Cooling profile enabled; close heavy apps and check air vents.'%(t.get('cpu_c'),t.get('gpu_c') or '-')])
+    thermal_level=lvl
+   except Exception:pass
    status=subprocess.run(['pactl','list','source-outputs'],capture_output=True,text=True,timeout=3).stdout
    active_mic='Source Output #' in status
    videos=list(pathlib.Path('/dev').glob('video*'))

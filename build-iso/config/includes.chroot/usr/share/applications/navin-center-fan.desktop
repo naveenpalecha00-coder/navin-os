@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Fan Control
+Comment=NAVIN System Center — Fan Control
+Exec=navin-center fan
+Icon=temperature
+Terminal=false
+Categories=System;Settings;

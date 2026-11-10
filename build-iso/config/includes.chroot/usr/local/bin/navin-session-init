@@ -1,14 +1,27 @@
 #!/bin/bash
 # NAVIN OS login tasks: trust desktop icons (no "untrusted launcher" popup), fix mic, no scroll-to-switch-desktop
+LIVE=0; [ -d /run/live ] && LIVE=1
+PROFILE=$(cat /run/navin/memprofile 2>/dev/null || echo standard)
+# Installed system: the installer launcher belongs only to the live USB.
+[ "$LIVE" = 0 ] && rm -f "$HOME/Desktop/install-navin-os.desktop"
 for f in "$HOME"/Desktop/*.desktop; do [ -f "$f" ] || continue; chmod +x "$f"; gio set -t string "$f" metadata::xfce-exe-checksum "$(sha256sum "$f" | cut -d' ' -f1)" 2>/dev/null; done
 xfconf-query -c xfwm4 -p /general/scroll_workspaces -n -t bool -s false 2>/dev/null
 xfconf-query -c xfce4-desktop -p /desktop-icons/single-click -n -t bool -s true 2>/dev/null
 navin-mic-fix &
 xfconf-query -c thunar -p /misc-single-click -n -t bool -s true 2>/dev/null
 setxkbmap -layout us,in -variant ,hin-kagapa -option grp:alt_shift_toggle
+navin-touchpad apply >/dev/null 2>&1
 /usr/local/lib/navin/navin-session-daemon &
-# Build 10: foreground priority (root via sudo for nice -5; falls back to user limits), preload, theme engine
-sudo -n env DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" NAVIN_UID="$(id -u)" /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
-sleep 1; pgrep -f navin-focus-boost >/dev/null || /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
-/usr/local/lib/navin/navin-preload >/dev/null 2>&1 &
-[ "$(cat "$HOME/.config/navin/theme" 2>/dev/null || echo auto)" = auto ] && nice -n 19 navin-theme auto >/dev/null 2>&1 &
+# Compositor, focus boost and preload are skipped on 2 GB machines (lite profile) to keep RAM free.
+if [ "$PROFILE" != lite ]; then
+  pgrep -x picom >/dev/null || picom --config /etc/xdg/picom.conf >/dev/null 2>&1 &
+  sudo -n env DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" NAVIN_UID="$(id -u)" /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
+  sleep 1; pgrep -f navin-focus-boost >/dev/null || /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
+  /usr/local/lib/navin/navin-preload >/dev/null 2>&1 &
+fi
+[ "$(cat "$HOME/.config/navin/theme" 2>/dev/null || echo light)" = auto ] && nice -n 19 navin-theme auto >/dev/null 2>&1 &
+# Boot menu "Full Installation" (navin.install=1): open the real Calamares installer automatically.
+if [ "$LIVE" = 1 ] && grep -qw 'navin.install=1' /proc/cmdline && [ ! -f /run/user/$(id -u)/navin-installer-started ]; then
+  touch /run/user/$(id -u)/navin-installer-started
+  (sleep 4; install-debian || pkexec calamares) &
+fi

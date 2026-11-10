@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Recovery Utility
+Comment=NAVIN System Center — Recovery Utility
+Exec=navin-center recovery
+Icon=system-restart
+Terminal=false
+Categories=System;Settings;

@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+"""NAVIN Hardware Detection. navin-hwdetect [--json] [--apply] [--quiet]
+--apply (root, run at boot by navin-hwdetect.service): saves /var/lib/navin/hardware.json and
+loads only safe in-kernel drivers for detected-but-unbound touchpads. Never installs packages."""
+import sys, json, pathlib, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_hw
+
+args = sys.argv[1:]
+report = navin_hw.collect()
+if "--apply" in args:
+    log_path = pathlib.Path("/var/log/navin-hwdetect.log")
+    def log(msg):
+        with log_path.open("a") as f:
+            f.write(time.strftime("%F %T ") + msg + "\n")
+    navin_hw.apply(report, log)
+    if report["touchpad"]["modules"]:
+        time.sleep(2)
+        report = navin_hw.collect()
+    out = pathlib.Path("/var/lib/navin"); out.mkdir(parents=True, exist_ok=True)
+    (out / "hardware.json").write_text(json.dumps(report, indent=1))
+    log("detected: " + ", ".join(t["vendor"] + " " + t["bus"] for t in report["touchpad"]["touchpads"]) or "no touchpad")
+if "--json" in args:
+    print(json.dumps(report, indent=1))
+elif "--quiet" not in args:
+    d = report["dmi"]
+    print(f"Computer : {d['sys_vendor']} {d['product_name']} ({'laptop' if report['laptop'] else 'desktop'})")
+    print(f"CPU      : {report['cpu']['model']} · {report['cpu']['cores']} threads · {report['cpu']['arch']}")
+    print(f"Memory   : {report['memory']['total_kb']//1024} MB → {report['memory']['profile']} profile, ZRAM {report['memory']['zram_percent']}%")
+    print(f"Firmware : {'UEFI' if report['uefi'] else 'Legacy BIOS'} · Secure Boot {report['secure_boot']} · kernel {report['kernel']}")
+    for g in report["gpus"]:
+        print(f"GPU      : {g['vendor_name']} {g['description']} (driver: {g['driver'] or 'none'})")
+    for t in report["touchpad"]["touchpads"] or [{"name": "not detected", "vendor": "-", "bus": "-", "protocol": "-"}]:
+        print(f"Touchpad : {t['name']} · {t['vendor']} · {t['bus']} · {t['protocol']}")
+    for n in report["network"]:
+        print(f"Network  : {n['iface']} ({'Wi-Fi' if n['wireless'] else 'wired'}) driver {n['driver']}")
+    print(f"Bluetooth: {', '.join(report['bluetooth']) or 'not detected'}")
+    for a in report["audio"]:
+        print("Audio    :", a.strip())
+    for s in report["storage"]:
+        print("Storage  :", s)
+    for b in report["batteries"]:
+        print(f"Battery  : {b['name']} {b['capacity']}% {b['status']} · health {b['health_percent']}%")
+    for note in report["touchpad"]["notes"]:
+        print("Note     :", note)
+    for r in report["drivers"]:
+        print("Driver   :", (r["package"] or "-"), "—", r["reason"])

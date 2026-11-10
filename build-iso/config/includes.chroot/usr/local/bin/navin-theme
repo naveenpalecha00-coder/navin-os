@@ -20,7 +20,7 @@ dock() {
   done
   echo "$1" > "$CONF/dock-opacity"
 }
-case "${1:-auto}" in
+case "${1:-light}" in
   light|dark) echo "$1" > "$CONF/theme"; apply "$1" ;;
   dock) dock "${2:-70}" ;;
   auto)

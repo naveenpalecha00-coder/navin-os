@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Driver Manager
+Comment=NAVIN System Center — Driver Manager
+Exec=navin-center drivers
+Icon=jockey
+Terminal=false
+Categories=System;Settings;

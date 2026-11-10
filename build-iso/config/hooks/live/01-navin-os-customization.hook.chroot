@@ -3,17 +3,12 @@
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[navin-os] Build 8 Liquorix (signed official repository; Debian fallback kernel retained)"
-install -d -m 0755 /etc/apt/keyrings
-wget -q https://liquorix.net/liquorix-keyring.gpg -O /etc/apt/keyrings/liquorix-keyring.gpg
-chmod 0644 /etc/apt/keyrings/liquorix-keyring.gpg
-printf '%s\n' 'deb [arch=amd64 signed-by=/etc/apt/keyrings/liquorix-keyring.gpg] https://liquorix.net/debian bookworm main' > /etc/apt/sources.list.d/liquorix.list
-apt-get update
-apt-get install -y --no-install-recommends linux-image-liquorix-amd64
-# live-build discovers installed vmlinuz files when assembling the hybrid image.
-# Preserve kernel config evidence in the released report.
-mkdir -p /usr/share/navin
-{ dpkg-query -W 'linux-image*'; grep -HE 'CONFIG_(HZ_1000|NTSYNC|FUTEX|PREEMPT)=' /boot/config-* || true; } > /usr/share/navin/kernel-report.txt
+echo "[navin-os] 1.2 kernel: Debian 13 signed kernel (Secure Boot capable). Liquorix is unsigned and was removed."
+# One kernel keeps the ISO under GitHub's 2 GiB asset limit; the boot menu's Safe Graphics and
+# recovery entries are the fallback path instead of a second kernel.
+mkdir -p /usr/share/navin/reports
+{ dpkg-query -W 'linux-image*'; grep -HE 'CONFIG_(HZ|PREEMPT|PREEMPT_DYNAMIC|NTSYNC)=' /boot/config-* || true; } > /usr/share/navin/kernel-report.txt
+cp /usr/share/navin/kernel-report.txt /usr/share/navin/reports/kernel.txt
 
 echo "[navin-os] 1/9 Google Chrome (official Google APT repo)"
 install -d -m 0755 /etc/apt/keyrings
@@ -32,10 +27,10 @@ sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable
 apt-get clean
 
 echo "[navin-os] 2/9 OS branding"
-sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN OS 1.0 (Debian 12 Bookworm base)"/' /usr/lib/os-release
-grep -q '^NAVIN_OS_VERSION' /usr/lib/os-release || echo 'NAVIN_OS_VERSION="1.0"' >> /usr/lib/os-release
-printf 'NAVIN OS 1.0 \\n \\l\n\n' > /etc/issue
-echo "NAVIN OS 1.0" > /etc/issue.net
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN OS 1.2 (Debian 13 Trixie base)"/' /usr/lib/os-release
+grep -q '^NAVIN_OS_VERSION' /usr/lib/os-release || echo 'NAVIN_OS_VERSION="1.2"' >> /usr/lib/os-release
+printf 'NAVIN OS 1.2 \\n \\l\n\n' > /etc/issue
+echo "NAVIN OS 1.2" > /etc/issue.net
 echo "navin-os" > /etc/hostname
 
 echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
@@ -85,10 +80,10 @@ if [ -d /etc/calamares/branding/debian ]; then
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
   sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
   sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
-  sed -i 's/version:.*/version:             "1.0"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "1.0"/' "$D"
-  sed -i 's/versionedName:.*/versionedName:       "NAVIN OS 1.0"/' "$D"
-  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN OS 1.0"/' "$D"
+  sed -i 's/version:.*/version:             "1.2"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "1.2"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN OS 1.2"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN OS 1.2"/' "$D"
   sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
   sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
   sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
@@ -212,7 +207,7 @@ mkdir -p /etc/systemd/journald.conf.d; printf '[Journal]\nSystemMaxUse=32M\nRunt
 # Full Windows .exe support: 32-bit Wine layer + Vulkan for DXVK
 dpkg --add-architecture i386
 apt-get update
-apt-get install -y --no-install-recommends wine32:i386 libvulkan1:i386 mesa-vulkan-drivers:i386 || echo "[navin-os] WARNING: 32-bit Wine layer unavailable"
+apt-get install -y --no-install-recommends wine32:i386 libvulkan1:i386 mesa-vulkan-drivers:i386 || echo "[navin-os] WARNING: 32-bit Wine layer unavailable (re-tried from the optional list)"
 apt-get clean; rm -rf /var/lib/apt/lists/*
 # No shared API secret belongs in a public ISO. AI broker reads a root-provisioned
 # /etc/navin/api.key only; it never prompts desktop users or exposes keys to WebKit.
@@ -258,22 +253,38 @@ apt-get clean
 
 echo "[navin-os] Build 10: gestures, Turbo, Quick Share, Vault, Snapshot, System Pill, Bluetooth"
 apt-get update
-for p in touchegg xfdashboard xfce4-genmon-plugin qrencode gocryptfs timeshift; do
-  apt-get install -y --no-install-recommends "$p" || echo "[navin-os] WARNING: optional package $p unavailable"
+# Optional packages: installed one by one; anything unavailable is recorded, never silently ignored.
+mkdir -p /usr/share/navin/reports; : > /usr/share/navin/reports/missing-optional.txt
+for p in $(sed 's/#.*//' /usr/share/navin/optional-packages.list); do
+  apt-get install -y --no-install-recommends "$p" || echo "$p" >> /usr/share/navin/reports/missing-optional.txt
 done
-systemctl enable touchegg.service 2>/dev/null || true
 sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEnable\s*=.*/AutoEnable=true/; s/^#\?\s*ReconnectAttempts\s*=.*/ReconnectAttempts=7/; s/^#\?\s*ReconnectIntervals\s*=.*/ReconnectIntervals=1,2,4,8,16,32,64/' /etc/bluetooth/main.conf 2>/dev/null || true
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '10\n' > /etc/navin/build
+printf '12\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
-echo "[navin-os] Size guard: one kernel (Liquorix), no datacenter-NIC firmware"
-# Build 9 ISO was over GitHub's 2 GiB limit; two kernels+initrds and server firmware were the largest removable items.
-if ls /boot/vmlinuz-*liquorix* >/dev/null 2>&1; then
-  apt-get purge -y linux-image-amd64 $(dpkg-query -W -f='${Package}\n' 'linux-image-6.1*' 2>/dev/null) || true
+echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
+rm -f /etc/skel/.config/touchegg/touchegg.conf /etc/xdg/autostart/navin-picom.desktop
+chmod 0755 /usr/local/bin/navin-* /usr/local/sbin/navin-* /usr/local/lib/navin/navin-* /usr/lib/systemd/system-sleep/navin-input || true
+for s in navin-hwdetect navin-memprofile navin-power navin-gestures navin-thermal navin-boot-ok fstrim.timer; do systemctl enable "$s" 2>/dev/null || echo "[navin-os] WARNING: could not enable $s"; done
+systemctl enable thermald.service 2>/dev/null || true
+systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
+mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
+printf '1.2\n' > /etc/navin/version
+# Installed system boot menu (written into the target by Calamares' bootloader module)
+if [ -f /etc/default/grub ]; then
+  sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN OS"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
 fi
+# Desktop entries for System Center pages + shortcut editor on the Whisker menu
+update-desktop-database /usr/share/applications || true
+# Reports shipped inside the image and published with the release
+dpkg-query -W -f='${Package}\t${Version}\t${Installed-Size}\n' | sort > /usr/share/navin/reports/package-manifest.tsv
+. /etc/os-release; echo "base=$VERSION_CODENAME debian_version=$(cat /etc/debian_version) kernel=$(ls /boot/vmlinuz-* | xargs -n1 basename | tr '\n' ' ')" > /usr/share/navin/reports/base.txt
+
+echo "[navin-os] Size guard: one kernel, no datacenter-NIC firmware"
+# Build 9 ISO was over GitHub's 2 GiB limit; two kernels+initrds and server firmware were the largest removable items.
 for d in netronome mellanox qed cxgb4 bnx2x liquidio dpaa2 ice mrvl/prestera; do rm -rf "/lib/firmware/$d" "/usr/lib/firmware/$d"; done
 apt-get clean
 # Build 9 size guard: packages added after the first cleanup (32-bit Wine, DXVK) bring docs/locales back.

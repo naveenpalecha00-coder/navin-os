@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Boot Manager
+Comment=NAVIN System Center — Boot Manager
+Exec=navin-center boot
+Icon=grub-customizer
+Terminal=false
+Categories=System;Settings;

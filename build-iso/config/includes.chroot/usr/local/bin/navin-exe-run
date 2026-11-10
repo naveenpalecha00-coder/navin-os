@@ -2,6 +2,20 @@
 # NAVIN OS Build 9: double-click .exe / .msi runner (Wine 64+32-bit, DXVK when Vulkan works)
 set -uo pipefail
 f="${1:-}"; [ -f "$f" ] || { notify-send NAVIN "File not found"; exit 1; }
+# NAVIN OS 1.2: never run a Windows program silently. Ask once per file (SHA-256) unless the user trusts it.
+TRUST="$HOME/.config/navin/trusted-exe"; mkdir -p "${TRUST%/*}"; touch "$TRUST"
+sum=$(sha256sum "$f" | cut -d' ' -f1)
+if ! grep -qx "$sum" "$TRUST"; then
+ choice=$(zenity --list --radiolist --width 520 --height 300 --title "Run Windows program?" \
+   --text "<b>$(basename "$f")</b> is a Windows program. Only run software from sources you trust.\nCompatibility with Wine is not guaranteed." \
+   --column "" --column "Choice" TRUE "Run once" FALSE "Always trust this file" FALSE "Show compatibility info" 2>/dev/null) || exit 0
+ case "$choice" in
+  "Always trust this file") echo "$sum" >> "$TRUST";;
+  "Show compatibility info") exec navin-exe-helper info "$f";;
+  "Run once") ;;
+  *) exit 0;;
+ esac
+fi
 export WINEPREFIX="$HOME/.wine-navin64" WINEARCH=win64 WINEDEBUG=-all WINEESYNC=1 WINEFSYNC=1
 if [ ! -d "$WINEPREFIX" ]; then
  notify-send -t 8000 NAVIN "Preparing Windows support (first run, about 1 minute)…"

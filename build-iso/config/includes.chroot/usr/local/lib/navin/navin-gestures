@@ -1,0 +1,79 @@
+#!/usr/bin/python3
+"""NAVIN OS 1.2 three-finger touchpad gestures (root service, python3-evdev + uinput).
+Debian 13 has no touchegg, so NAVIN reads the touchpad's BTN_TOOL_TRIPLETAP state and emits
+keyboard shortcuts through a virtual keyboard:
+  swipe left -> next workspace (Ctrl+Alt+Right)   swipe right -> previous workspace (Ctrl+Alt+Left)
+  swipe up   -> window overview (Super+W)        swipe down  -> show desktop (Super+D)"""
+import os, select, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import evdev
+from evdev import ecodes as e
+from navin_sys import classify_swipe
+
+os.nice(5)
+ACTIONS = {"left": (e.KEY_LEFTCTRL, e.KEY_LEFTALT, e.KEY_RIGHT), "right": (e.KEY_LEFTCTRL, e.KEY_LEFTALT, e.KEY_LEFT),
+           "up": (e.KEY_LEFTMETA, e.KEY_W), "down": (e.KEY_LEFTMETA, e.KEY_D)}
+ui = evdev.UInput({e.EV_KEY: sorted({k for v in ACTIONS.values() for k in v})}, name="navin-gestures")
+
+
+def touchpads():
+    found = []
+    for path in evdev.list_devices():
+        try:
+            d = evdev.InputDevice(path)
+            caps = d.capabilities()
+            if e.BTN_TOOL_TRIPLETAP in caps.get(e.EV_KEY, []) and e.ABS_X in dict(caps.get(e.EV_ABS, [])):
+                found.append(d)
+            else:
+                d.close()
+        except OSError:
+            pass
+    return found
+
+
+def combo(keys):
+    for k in keys:
+        ui.write(e.EV_KEY, k, 1)
+    ui.syn()
+    for k in reversed(keys):
+        ui.write(e.EV_KEY, k, 0)
+    ui.syn()
+
+
+state = {}
+devices = []
+last_scan = 0
+while True:
+    if not devices or time.monotonic() - last_scan > 30:
+        for d in devices:
+            d.close()
+        devices = touchpads(); last_scan = time.monotonic()
+        state = {d.fd: {"fingers": 0, "x": None, "y": None, "sx": None, "sy": None,
+                        "w": d.absinfo(e.ABS_X).max - d.absinfo(e.ABS_X).min,
+                        "h": d.absinfo(e.ABS_Y).max - d.absinfo(e.ABS_Y).min} for d in devices}
+        if not devices:
+            time.sleep(5); continue
+    try:
+        ready, _, _ = select.select(devices, [], [], 30)
+    except (OSError, ValueError):
+        devices = []; continue
+    for d in ready:
+        s = state[d.fd]
+        try:
+            for ev in d.read():
+                if ev.type == e.EV_ABS and ev.code in (e.ABS_X, e.ABS_Y):
+                    s["x" if ev.code == e.ABS_X else "y"] = ev.value
+                    if s["fingers"] >= 3 and s["sx"] is None and s["x"] is not None and s["y"] is not None:
+                        s["sx"], s["sy"] = s["x"], s["y"]
+                elif ev.type == e.EV_KEY and ev.code in (e.BTN_TOOL_TRIPLETAP, e.BTN_TOOL_QUADTAP):
+                    if ev.value == 1:
+                        s["fingers"] = 3; s["sx"] = s["sy"] = None
+                    elif s["fingers"] >= 3:
+                        if s["sx"] is not None:
+                            way = classify_swipe(s["x"] - s["sx"], s["y"] - s["sy"], s["w"], s["h"])
+                            if way:
+                                combo(ACTIONS[way])
+                        s["fingers"] = 0; s["sx"] = s["sy"] = None
+        except OSError:
+            devices = []
+            break

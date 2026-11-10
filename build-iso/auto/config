@@ -1,10 +1,10 @@
 #!/bin/sh
-# NAVIN OS 1.0 — live-build configuration (Debian 12 Bookworm, amd64, hybrid ISO)
+# NAVIN OS 1.2 — live-build configuration (Debian 13 Trixie, amd64, hybrid ISO, UEFI Secure Boot + legacy BIOS)
 set -e
 
 lb config noauto \
   --mode debian \
-  --distribution bookworm \
+  --distribution trixie \
   --architectures amd64 \
   --linux-flavours amd64 \
   --archive-areas "main contrib non-free non-free-firmware" \
@@ -20,12 +20,13 @@ lb config noauto \
   --firmware-binary false \
   --binary-images iso-hybrid \
   --bootloaders "grub-efi,syslinux" \
+  --uefi-secure-boot auto \
   --debian-installer none \
   --memtest memtest86+ \
   --chroot-squashfs-compression-type xz \
   --image-name navin-os \
   --iso-application "NAVIN OS" \
   --iso-publisher "Navin Palecha" \
-  --iso-volume "NAVIN_OS_1_0" \
+  --iso-volume "NAVIN_OS_1_2" \
   --bootappend-live "boot=live components persistence quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 username=navin user-fullname=Navin hostname=navin-os locales=en_US.UTF-8 keyboard-layouts=us" \
   "${@}"

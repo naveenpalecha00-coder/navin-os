@@ -1,0 +1,12 @@
+[Unit]
+Description=NAVIN OS thermal guard (monitoring, safe cooling, firmware fan restore)
+
+[Service]
+ExecStart=/usr/local/lib/navin/navin-thermal
+ExecStopPost=/usr/local/lib/navin/navin-fan restore
+Restart=on-failure
+RestartSec=10
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

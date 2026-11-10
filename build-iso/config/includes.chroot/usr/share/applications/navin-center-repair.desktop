@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN System Repair
+Comment=NAVIN System Center — System Repair
+Exec=navin-center repair
+Icon=applications-utilities
+Terminal=false
+Categories=System;Settings;

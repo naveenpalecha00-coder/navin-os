@@ -1,28 +1,123 @@
 #!/bin/sh
-# NAVIN OS: simple, branded boot menu (GRUB for UEFI, isolinux for BIOS). Runs in the binary tree before the ISO is made.
-set +e
-for f in boot/grub/grub.cfg boot/grub/config.cfg boot/grub/install_start.cfg; do
-  [ -f "$f" ] || continue
-  sed -i \
-    -e 's/Live system (amd64 fail-safe mode)/NAVIN OS - Safe Graphics Mode/g' \
-    -e 's/Live system (amd64)/Start NAVIN OS/g' \
-    -e 's/Live system/Start NAVIN OS/g' \
-    -e 's/Utilities\.\.\./Tools (Memory test, Hardware)/g' \
-    -e 's/^set timeout=.*/set timeout=5/' \
-    "$f"
-  # fail-safe entry: add nomodeset so it works on problem GPUs
-  sed -i '/Safe Graphics/,/initrd/ s/\(linux .*vmlinuz[^ ]*\)/\1 nomodeset/' "$f"
-done
-grep -q '^set timeout=' boot/grub/grub.cfg 2>/dev/null || sed -i '1i set timeout=5\nset default=0' boot/grub/grub.cfg 2>/dev/null
-for f in isolinux/*.cfg; do
-  [ -f "$f" ] || continue
-  sed -i \
-    -e 's/Live system (amd64 fail-safe mode)/NAVIN OS - Safe Graphics Mode/g' \
-    -e 's/Live system (amd64)/Start NAVIN OS/g' \
-    -e 's/Live system/Start NAVIN OS/g' \
-    -e 's/^timeout .*/timeout 50/' \
-    "$f"
-done
-grep -rl 'Debian GNU/Linux' boot/grub isolinux 2>/dev/null | xargs -r sed -i 's#Debian GNU/Linux 12 (bookworm)#NAVIN OS 1.0#g'
-echo "[navin-os] boot menu branded"
-exit 0
+# NAVIN OS 1.2 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
+#   Live Mode — Try NAVIN OS          (default, boots straight to the live desktop)
+#   Full Installation — Install ...   (same live system + navin.install=1 -> Calamares opens)
+#   Safe Graphics                     (nomodeset, for black screens)
+# Arrow keys move, Enter starts, timeout 5 s. Light NAVIN theme with pale-blue selection.
+set -e
+python3 - <<'PY'
+import pathlib, re, struct, zlib
+
+def png(path, w, h, rgb):
+    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+    def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN OS 1.2", "Full Installation - Install NAVIN OS 1.2", "Safe Graphics - NAVIN OS (black screen fix)"
+block = re.compile(r"menuentry\s+([\"'])(.*?)\1([^{]*)\{(.*?)\n\}", re.S)
+
+def fix_grub(text):
+    out, done = [], False
+    pos = 0
+    for m in block.finditer(text):
+        out.append(text[pos:m.start()]); pos = m.end()
+        title, rest, body = m.group(2), m.group(3), m.group(4)
+        if "fail-safe" in title.lower() or "safe graphics" in title.lower():
+            body = re.sub(r"^(\s*linux\s+\S+)(.*)$", lambda x: x.group(1) + (x.group(2) if "nomodeset" in x.group(2) else x.group(2) + " nomodeset"), body, flags=re.M)
+            out.append(f'menuentry "{SAFE}"{rest}{{{body}\n}}')
+        elif not done and ("live" in title.lower() or "navin" in title.lower()) and "linux" in body:
+            done = True
+            out.append(f'menuentry "{LIVE}"{rest}{{{body}\n}}')
+            inst = re.sub(r"^(\s*linux\s+.*)$", r"\1 navin.install=1", body, count=1, flags=re.M)
+            out.append(f'\nmenuentry "{INSTALL}" --hotkey=i {{{inst}\n}}')
+        else:
+            out.append(m.group(0))
+    out.append(text[pos:])
+    text = "".join(out)
+    text = re.sub(r"^set timeout=.*$", "set timeout=5", text, flags=re.M)
+    if "set timeout=" not in text:
+        text = "set default=0\nset timeout=5\n" + text
+    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN OS 1.2").replace("Utilities...", "Tools (memory test, hardware)")
+
+changed = 0
+for f in ("boot/grub/grub.cfg", "boot/grub/config.cfg", "boot/grub/install_start.cfg"):
+    p = pathlib.Path(f)
+    if p.exists():
+        new = fix_grub(p.read_text()); changed += new != p.read_text(); p.write_text(new)
+
+theme = pathlib.Path("boot/grub/live-theme")
+if theme.is_dir():
+    for part in ("c", "n", "s", "e", "w", "ne", "nw", "se", "sw"):
+        png(theme / f"select_{part}.png", 8, 8, (22, 119, 242))
+    (theme / "theme.txt").write_text('''desktop-color: "#F4F7FB"
+title-text: "NAVIN OS 1.2"
+title-color: "#111111"
+message-color: "#333333"
++ boot_menu {
+  left = 22%
+  top = 28%
+  width = 56%
+  height = 44%
+  item_color = "#111111"
+  selected_item_color = "#FFFFFF"
+  item_height = 34
+  item_padding = 10
+  item_spacing = 6
+  selected_item_pixmap_style = "select_*.png"
+}
++ progress_bar {
+  id = "__timeout__"
+  left = 22%
+  top = 76%
+  width = 56%
+  height = 6
+  fg_color = "#1677F2"
+  bg_color = "#DCE6F5"
+  border_color = "#DCE6F5"
+}
++ label {
+  left = 0
+  top = 82%
+  width = 100%
+  align = "center"
+  color = "#555555"
+  text = "Up/Down: choose    Enter: start    Debian 13 Trixie base    Your PC. Your OS. Your Freedom."
+}
+''')
+else:
+    g = pathlib.Path("boot/grub/grub.cfg")
+    if g.exists():
+        g.write_text("set menu_color_normal=black/light-gray\nset menu_color_highlight=white/blue\n" + g.read_text())
+
+# ISOLINUX (legacy BIOS)
+live = pathlib.Path("isolinux/live.cfg")
+if live.exists():
+    text = live.read_text()
+    blocks = re.split(r"\n(?=label )", text)
+    out, done = [], False
+    for b in blocks:
+        if "fail-safe" in b.lower():
+            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN OS (black screen fix)", b)
+            b = re.sub(r"^(\s*append .*)$", lambda x: x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset", b, flags=re.M)
+            out.append(b)
+        elif not done and b.startswith("label") and "append" in b:
+            done = True
+            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN OS 1.2", b))
+            inst = re.sub(r"^label (\S+)", r"label \1-install", b, flags=re.M)
+            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN OS 1.2", inst)
+            inst = re.sub(r"^\s*menu default\s*\n", "", inst, flags=re.M)
+            inst = re.sub(r"^(\s*append .*)$", r"\1 navin.install=1", inst, count=1, flags=re.M)
+            out.append(inst)
+        else:
+            out.append(b)
+    live.write_text("\n".join(out)); changed += 1
+for f in pathlib.Path("isolinux").glob("*.cfg"):
+    t = f.read_text()
+    t = re.sub(r"^timeout .*$", "timeout 50", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN OS 1.2")
+    f.write_text(t)
+std = pathlib.Path("isolinux/stdmenu.cfg")
+if std.exists():
+    png(pathlib.Path("isolinux/splash.png"), 640, 480, (244, 247, 251))
+    std.write_text(std.read_text() + "\nmenu color title * #ff111111 #00000000 none\nmenu color sel * #ffffffff #ff1677f2 none\nmenu color unsel * #ff111111 #00000000 none\nmenu color hotsel * #ffffffff #ff1677f2 none\nmenu color hotkey * #ff1677f2 #00000000 none\nmenu color tabmsg * #ff555555 #00000000 none\nmenu color timeout_msg * #ff555555 #00000000 none\nmenu color timeout * #ff1677f2 #00000000 none\nmenu color border * #00000000 #00000000 none\n")
+print(f"[navin-os] boot menu: Live Mode / Full Installation / Safe Graphics written ({changed} files)")
+PY

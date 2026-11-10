@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN System Monitor
+Comment=NAVIN System Center — System Monitor
+Exec=navin-center monitor
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Settings;

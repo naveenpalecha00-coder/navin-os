@@ -1,0 +1,114 @@
+#!/usr/bin/python3
+"""NAVIN Keyboard Shortcuts: search, edit, add, remove, conflict check, reset to NAVIN defaults,
+and keyboard accessibility (Sticky/Slow/Bounce keys). Changes are written live through xfconf."""
+import gi, subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk
+from navin_sys import parse_shortcuts, find_conflicts, search_shortcuts, normalize_accel
+
+CH = "xfce4-keyboard-shortcuts"; SKEL = "/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml"
+
+
+def q(*a):
+    return subprocess.run(["xfconf-query", "-c", CH, *a], capture_output=True, text=True).stdout
+
+
+def current():
+    out = []
+    for sec in ("commands", "xfwm4"):
+        for line in q("-p", f"/{sec}/custom", "-l", "-v").splitlines():
+            path, _, val = line.partition(" ")
+            accel = path.split("/custom/", 1)[-1]
+            if accel != "override":
+                out.append((sec, accel, val.strip()))
+    return out
+
+
+def set_binding(sec, accel, value):
+    subprocess.run(["xfconf-query", "-c", CH, "-p", f"/{sec}/custom/{accel}", "-n", "-t", "string", "-s", value])
+    subprocess.run(["xfconf-query", "-c", CH, "-p", f"/{sec}/custom/override", "-n", "-t", "bool", "-s", "true"])
+
+
+def remove(sec, accel):
+    subprocess.run(["xfconf-query", "-c", CH, "-p", f"/{sec}/custom/{accel}", "-r"])
+
+
+class Win(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="NAVIN Keyboard Shortcuts"); self.set_default_size(760, 600); self.connect("destroy", Gtk.main_quit)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); box.set_border_width(14); self.add(box)
+        self.search = Gtk.SearchEntry(placeholder_text="Search shortcuts (e.g. Super+E or terminal)"); self.search.connect("search-changed", lambda *_: self.fill()); box.pack_start(self.search, False, False, 0)
+        self.store = Gtk.ListStore(str, str, str, str); view = Gtk.TreeView(model=self.store); self.view = view
+        for i, t in enumerate(("Shortcut", "Action", "Type")):
+            view.append_column(Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i))
+        sc = Gtk.ScrolledWindow(); sc.add(view); box.pack_start(sc, True, True, 0)
+        self.warn = Gtk.Label(xalign=0, wrap=True); box.pack_start(self.warn, False, False, 0)
+        bar = Gtk.Box(spacing=6)
+        for label, fn in (("Add", self.add_shortcut), ("Change key", self.change), ("Remove", self.delete), ("Reset to defaults", self.reset)):
+            b = Gtk.Button(label=label); b.connect("clicked", lambda _, f=fn: f()); bar.pack_start(b, False, False, 0)
+        box.pack_start(bar, False, False, 0)
+        acc = Gtk.Box(spacing=12); acc.pack_start(Gtk.Label(label="Accessibility:"), False, False, 0)
+        for prop, label in (("/StickyKeys", "Sticky keys"), ("/SlowKeys", "Slow keys"), ("/BounceKeys", "Bounce keys")):
+            cb = Gtk.CheckButton(label=label)
+            cb.set_active(subprocess.run(["xfconf-query", "-c", "accessibility", "-p", prop], capture_output=True, text=True).stdout.strip() == "true")
+            cb.connect("toggled", lambda c, p=prop: subprocess.run(["xfconf-query", "-c", "accessibility", "-p", p, "-n", "-t", "bool", "-s", str(c.get_active()).lower()]))
+            acc.pack_start(cb, False, False, 0)
+        box.pack_start(acc, False, False, 0); self.fill(); self.show_all()
+
+    def fill(self):
+        items = current(); shown = search_shortcuts(items, self.search.get_text()) if self.search.get_text() else items
+        self.store.clear()
+        for sec, accel, val in sorted(shown, key=lambda s: normalize_accel(s[1])):
+            self.store.append([normalize_accel(accel), val, "Window manager" if sec == "xfwm4" else "Command", sec + "\t" + accel])
+        c = find_conflicts(items)
+        self.warn.set_text(("⚠ Conflicts: " + "; ".join(f"{k} → {', '.join(v)}" for k, v in c.items())) if c else "✔ No shortcut conflicts.")
+
+    def selected(self):
+        m, it = self.view.get_selection().get_selected()
+        return m[it][3].split("\t") if it else None
+
+    def capture(self):
+        d = Gtk.Dialog(title="Press the new shortcut", transient_for=self, modal=True); d.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        lbl = Gtk.Label(label="Press keys now… (Esc cancels)", margin=24); d.get_content_area().add(lbl); got = {}
+        def key(_, ev):
+            if ev.keyval == Gdk.KEY_Escape:
+                d.response(Gtk.ResponseType.CANCEL); return True
+            mods = ev.state & Gtk.accelerator_get_default_mod_mask()
+            name = Gdk.keyval_name(ev.keyval)
+            if name in ("Control_L", "Control_R", "Shift_L", "Shift_R", "Alt_L", "Alt_R") or (name in ("Super_L", "Super_R") and mods):
+                return True
+            got["a"] = Gtk.accelerator_name(ev.keyval, mods); d.response(Gtk.ResponseType.OK); return True
+        d.connect("key-press-event", key); d.show_all(); r = d.run(); d.destroy()
+        return got.get("a") if r == Gtk.ResponseType.OK else None
+
+    def add_shortcut(self):
+        d = Gtk.Dialog(title="New shortcut command", transient_for=self, modal=True); d.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Next", Gtk.ResponseType.OK)
+        e = Gtk.Entry(placeholder_text="Command, e.g. mousepad"); d.get_content_area().add(e); d.show_all(); ok = d.run() == Gtk.ResponseType.OK; cmd = e.get_text().strip(); d.destroy()
+        if ok and cmd:
+            a = self.capture()
+            if a:
+                set_binding("commands", a, cmd); self.fill()
+
+    def change(self):
+        s = self.selected()
+        if not s:
+            return
+        sec, old = s; val = next(v for x, a, v in current() if x == sec and a == old); a = self.capture()
+        if a:
+            remove(sec, old); set_binding(sec, a, val); self.fill()
+
+    def delete(self):
+        s = self.selected()
+        if s:
+            remove(*s); self.fill()
+
+    def reset(self):
+        for sec, accel, _ in current():
+            remove(sec, accel)
+        for sec, accel, val in parse_shortcuts(open(SKEL).read()):
+            set_binding(sec, accel, val)
+        self.fill()
+
+
+Win(); Gtk.main()

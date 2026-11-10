@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Performance Center
+Comment=NAVIN System Center — Performance Center
+Exec=navin-center performance
+Icon=preferences-system-performance
+Terminal=false
+Categories=System;Settings;

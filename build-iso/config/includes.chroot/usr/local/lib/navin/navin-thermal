@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+"""NAVIN OS 1.2 thermal guard (root). Every 5 s: CPU/GPU temperatures and fan RPM -> /run/navin/thermal.json.
+At 90 C (hot) it switches to the cooling profile; it restores firmware fan control below 78 C and when it stops.
+Firmware thermal protection is never overridden; at 98 C the firmware/kernel shutdown limits stay in charge."""
+import json, os, pathlib, signal, subprocess, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+from navin_hw import hwmon, thermal_level
+
+os.nice(10)
+FAN = "/usr/local/lib/navin/navin-fan"
+CPU = ("coretemp", "k10temp", "zenpower", "cpu_thermal", "acpitz", "thinkpad")
+GPU = ("amdgpu", "nouveau", "radeon", "i915", "xe")
+STATE = pathlib.Path("/run/navin/thermal.json"); STATE.parent.mkdir(parents=True, exist_ok=True)
+engaged = False
+
+
+def stop(*_):
+    if engaged:
+        subprocess.run([FAN, "restore"], capture_output=True)
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, stop); signal.signal(signal.SIGINT, stop)
+while True:
+    s = hwmon()
+    cpu = [t["c"] for x in s if x["name"] in CPU for t in x["temps"] if 0 < t["c"] < 130]
+    gpu = [t["c"] for x in s if x["name"] in GPU for t in x["temps"] if 0 < t["c"] < 130]
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader"], capture_output=True, text=True, timeout=3).stdout
+        gpu += [float(v) for v in out.split() if v.replace(".", "").isdigit()]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    temp = max(cpu) if cpu else None
+    level = thermal_level(max([temp or 0] + gpu) if (cpu or gpu) else None)
+    if level in ("hot", "critical") and not engaged:
+        subprocess.run([FAN, "cooling"], capture_output=True); engaged = True
+    elif engaged and (temp or 0) < 78 and all(g < 78 for g in gpu):
+        subprocess.run([FAN, "restore"], capture_output=True); engaged = False
+    fans = [{"sensor": x["name"], **f} for x in s for f in x["fans"]]
+    STATE.write_text(json.dumps({"time": int(time.time()), "cpu_c": temp, "gpu_c": max(gpu) if gpu else None,
+                                 "level": level, "safety_cooling": engaged, "fans": fans}))
+    time.sleep(5)

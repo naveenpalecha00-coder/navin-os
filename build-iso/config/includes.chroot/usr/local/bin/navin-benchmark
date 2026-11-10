@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+"""NAVIN OS 1.2 repeatable benchmarks.
+  navin-benchmark run [--stability MINUTES]   -> ~/navin-benchmarks/<time>.json
+  navin-benchmark compare BEFORE.json AFTER.json
+Measures: boot & login time, idle CPU, RAM use, app and file-manager launch time, graphics FPS,
+disk write/read, memory pressure during an optional stress run. Touchpad latency needs a person
+moving a finger, so it is recorded as 'manual' with the libinput command to run."""
+import json, os, pathlib, re, shutil, subprocess, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+from navin_sys import compare_benchmarks, parse_systemd_analyze
+
+OUT = pathlib.Path.home() / "navin-benchmarks"
+
+
+def sh(args, timeout=60):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def cpu_idle_percent(seconds=5):
+    def snap():
+        v = list(map(int, open("/proc/stat").readline().split()[1:]))
+        return sum(v), v[3] + v[4]
+    t1, i1 = snap(); time.sleep(seconds); t2, i2 = snap()
+    return round(100 * (1 - (i2 - i1) / max(1, t2 - t1)), 1)
+
+
+def launch_time(cmd, wm_class):
+    if not shutil.which(cmd[0]) or not shutil.which("xdotool"):
+        return None
+    start = time.monotonic(); p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    wid = sh(["xdotool", "search", "--sync", "--onlyvisible", "--class", wm_class], timeout=30).split()
+    took = round(time.monotonic() - start, 2) if wid else None
+    for w in wid:
+        sh(["xdotool", "windowclose", w], 5)
+    try:
+        p.terminate()
+    except OSError:
+        pass
+    return took
+
+
+def psi_full():
+    try:
+        return float(re.search(r"full avg10=([\d.]+)", open("/proc/pressure/memory").read()).group(1))
+    except (OSError, AttributeError):
+        return None
+
+
+def run(stability_min=0):
+    r = {"time": time.strftime("%F %T"), "kernel": os.uname().release}
+    r["boot_s"] = parse_systemd_analyze(sh(["systemd-analyze", "time"]))
+    session = sh(["ps", "-o", "etimes=", "-C", "xfce4-session"]).split()
+    if session:
+        r["login_s"] = round(float(open("/proc/uptime").read().split()[0]) - int(session[0]), 1)
+    r["cpu_idle_percent"] = cpu_idle_percent()
+    mem = dict(re.findall(r"(\w+):\s+(\d+)", open("/proc/meminfo").read()))
+    r["ram_used_mb"] = (int(mem["MemTotal"]) - int(mem["MemAvailable"])) // 1024
+    r["app_launch_s"] = launch_time(["mousepad"], "mousepad")
+    r["thunar_launch_s"] = launch_time(["thunar", str(pathlib.Path.home())], "thunar")
+    gl = sh(["glmark2", "--off-screen", "-b", "build", "-b", "texture", "-b", "shading"], 300) if shutil.which("glmark2") else ""
+    m = re.search(r"glmark2 Score:\s*(\d+)", gl)
+    if m:
+        r["graphics_score"] = int(m.group(1))
+    else:
+        g = sh(["timeout", "12", "glxgears"], 20)
+        fps = [float(x) for x in re.findall(r"=\s*([\d.]+) FPS", g)]
+        r["graphics_fps"] = round(max(fps), 1) if fps else None
+    test = pathlib.Path.home() / ".cache/navin-bench.bin"; test.parent.mkdir(parents=True, exist_ok=True)
+    w = subprocess.run(["dd", "if=/dev/zero", f"of={test}", "bs=4M", "count=64", "conv=fdatasync"], capture_output=True, text=True).stderr
+    rd = subprocess.run(["dd", f"if={test}", "of=/dev/null", "bs=4M", "iflag=direct"], capture_output=True, text=True).stderr
+    test.unlink(missing_ok=True)
+    def mbps(text):
+        m = re.search(r"([\d.,]+) ([MG])B/s", text)
+        return round(float(m.group(1).replace(",", ".")) * (1024 if m.group(2) == "G" else 1), 1) if m else None
+    r["disk_write_mbps"], r["disk_read_mbps"] = mbps(w), mbps(rd)
+    r["touchpad"] = "manual: sudo libinput measure touchpad-tap / libinput debug-events --verbose"
+    if stability_min:
+        if shutil.which("stress-ng"):
+            p = subprocess.Popen(["stress-ng", "--cpu", "0", "--vm", "1", "--vm-bytes", "60%", "--timeout", f"{stability_min}m"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            peak = 0.0
+            while p.poll() is None:
+                peak = max(peak, psi_full() or 0); time.sleep(5)
+            r["max_psi_full"] = peak
+            r["hung_tasks"] = len(re.findall(r"blocked for more than", sh(["journalctl", "-k", "-b", "--no-pager"])))
+            r["stability_minutes"] = stability_min
+        else:
+            r["stability"] = "stress-ng not installed"
+    return r
+
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if a[:1] == ["compare"] and len(a) == 3:
+        res = compare_benchmarks(json.loads(pathlib.Path(a[1]).read_text()), json.loads(pathlib.Path(a[2]).read_text()))
+        for k, v in res.items():
+            mark = {True: "better", False: "worse", None: "same"}[v["better"]]
+            print(f"{k:20} {v['before']:>10} -> {v['after']:>10}  ({v['change_percent']}%) {mark}")
+    elif a[:1] == ["run"]:
+        mins = int(a[a.index("--stability") + 1]) if "--stability" in a else 0
+        res = run(mins); OUT.mkdir(exist_ok=True)
+        path = OUT / (time.strftime("%Y%m%d-%H%M%S") + ".json"); path.write_text(json.dumps(res, indent=1))
+        print(json.dumps(res, indent=1)); print("saved", path)
+    else:
+        print(__doc__); sys.exit(2)

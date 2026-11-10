@@ -37,3 +37,12 @@ qemu-system-x86_64 -enable-kvm -m 4096 -smp 2 -cdrom navin-os-1.0-x86_64.iso -bo
 - OTA trusts the publisher repository and requires GitHub's asset SHA-256 digest; it does not accept an arbitrary caller checksum as authorization. It backs up files and rolls back caught write errors; power-loss atomicity is not guaranteed.
 - NAVIN AI has five client endpoints but service `/v1/models` currently returns HTTP 404; root-owned per-device authorization is required and no shared secret is shipped.
 - Idle RAM and compatibility targets need VM and physical hardware measurements. Calamares storage/password safety is retained, not replaced by a forced five-step/blank-password installer.
+
+## NAVIN OS 1.2 — Debian 13 Trixie (branch `navin-1.2-trixie`)
+- Built only from the `navin-1.2-trixie` branch; `main` keeps Debian 12 Build 10 for rollback.
+- CI order: unit tests → GUI smoke test on Debian 13 → package check against the official Debian 13 archive
+  (`tools/check-packages.py`) → ISO build in `debian:trixie` → size/SHA-256/Secure Boot check → QEMU boot tests
+  (BIOS 2 GB, UEFI 4 GB, UEFI Secure Boot) → build report → TEST pre-release `v1.2-trixie-test` only if BIOS and UEFI boots pass.
+- New tools: `navin-hwdetect`, `navin-touchpad`, `navin-gestures`, `navin-power`, `navin-memprofile`, `navin-fan`
+  (safe profiles), `navin-thermal`, `navin-center` (10 system tools), `navin-shortcuts`, `navin-benchmark`, Flathub in the App Store.
+- Hardware quality gates (installer, touchpads, Wi-Fi/audio, GPUs, fans, long stability) still need real computers; see docs/.

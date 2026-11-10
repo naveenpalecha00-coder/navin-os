@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Hardware Manager
+Comment=NAVIN System Center — Hardware Manager
+Exec=navin-center hardware
+Icon=computer
+Terminal=false
+Categories=System;Settings;

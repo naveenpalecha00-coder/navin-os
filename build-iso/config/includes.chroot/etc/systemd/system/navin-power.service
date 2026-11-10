@@ -1,0 +1,10 @@
+[Unit]
+Description=NAVIN OS saved CPU power profile
+After=tlp.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/navin-power apply
+
+[Install]
+WantedBy=multi-user.target

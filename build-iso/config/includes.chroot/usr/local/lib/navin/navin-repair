@@ -21,7 +21,16 @@ case "$A" in
   battery-saver) tlp bat 2>/dev/null || tlp start ;;
   balanced)   tlp start ;;
   ram-boost) before=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); sync; echo 3 > /proc/sys/vm/drop_caches; after=$(awk '/MemAvailable:/{print $2}' /proc/meminfo); echo "$(( (after-before)/1024 )) MB available-memory change" ;;
-  remove) shift; [ "$#" -gt 0 ] || exit 2; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || exit 2; done; apt-get remove -y "$@" ;;
+  remove) shift; [ "$#" -gt 0 ] || exit 2; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || exit 2; done; apt-get remove -y "$@" && apt-get autoremove -y ;;
+  # ---- NAVIN OS 1.2 System Center actions ----
+  module)     m="${2:-}"; case " i2c_hid_acpi hid_multitouch psmouse elan_i2c hid_generic i2c_designware_platform btusb thinkpad_acpi dell_smm_hwmon coretemp k10temp " in *" $m "*) modprobe "$m" && echo "loaded $m";; *) echo "module not allowed: $m"; exit 2;; esac ;;
+  memprofile) case "${2:-}" in auto|lite|balanced|standard) mkdir -p /etc/navin; echo "$2" > /etc/navin/memprofile; echo "RAM profile $2 applies at next boot";; *) exit 2;; esac ;;
+  fstrim)     systemctl enable --now fstrim.timer; fstrim -av ;;
+  smart)      for d in $(lsblk -dno NAME,TYPE | awk '$2=="disk"{print $1}'); do echo "== /dev/$d"; smartctl -H -A "/dev/$d" | grep -E 'overall-health|SMART Health|Percentage Used|Reallocated_Sector|Power_On_Hours|Media and Data Integrity' || echo "SMART not supported"; done ;;
+  grub-timeout) [[ "${2:-}" =~ ^[0-9]{1,2}$ ]] || exit 2; [ -d /run/live ] && { echo "Live session: install first"; exit 2; }; sed -i "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$2/" /etc/default/grub && update-grub ;;
+  grub-update) [ -d /run/live ] && { echo "Live session: install first"; exit 2; }; update-grub ;;
+  initramfs)  [ -d /run/live ] && { echo "Live session: install first"; exit 2; }; update-initramfs -u -k all ;;
+  flatpak-update) flatpak update -y --noninteractive ;;
   install)    shift; for p in "$@"; do [[ "$p" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "bad package $p"; exit 2; }; done; apt-get install -y "$@" ;;
   *) echo "Unknown or unsafe action: $A"; log DENIED "$A"; exit 2 ;;
 esac

@@ -2,6 +2,12 @@
 # NAVIN OS: guarantee the 'navin' user exists with NO password (user sets one in Settings) and can autologin.
 # Runs every boot before LightDM (safe on installed systems: only fixes a missing/locked account).
 set -e
+# NAVIN OS 1.2 security: only the live USB session gets the passwordless 'navin' user and
+# passwordless admin. On an installed system remove those live-only rules and exit.
+if [ ! -d /run/live ]; then
+  rm -f /etc/sudoers.d/navin-nopasswd /etc/polkit-1/rules.d/49-navin-nopasswd.rules
+  exit 0
+fi
 U=navin
 if ! id "$U" >/dev/null 2>&1; then
   useradd -m -s /bin/bash -c "Navin" "$U"

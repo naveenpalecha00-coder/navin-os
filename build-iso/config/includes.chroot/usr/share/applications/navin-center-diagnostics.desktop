@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Hardware Diagnostics
+Comment=NAVIN System Center — Hardware Diagnostics
+Exec=navin-center diagnostics
+Icon=dialog-information
+Terminal=false
+Categories=System;Settings;

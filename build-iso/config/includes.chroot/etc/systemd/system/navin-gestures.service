@@ -1,0 +1,12 @@
+[Unit]
+Description=NAVIN OS three-finger touchpad gestures
+After=systemd-udev-trigger.service
+
+[Service]
+ExecStart=/usr/local/lib/navin/navin-gestures
+Restart=on-failure
+RestartSec=5
+Nice=5
+
+[Install]
+WantedBy=graphical.target

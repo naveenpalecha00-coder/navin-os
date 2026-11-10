@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Flathub Apps
+Comment=Search and install Flatpak apps from Flathub
+Exec=navin-app-store flathub
+Icon=flatpak
+Terminal=false
+Categories=System;PackageManager;

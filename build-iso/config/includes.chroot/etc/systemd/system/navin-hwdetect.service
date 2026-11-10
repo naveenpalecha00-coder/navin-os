@@ -1,0 +1,12 @@
+[Unit]
+Description=NAVIN OS hardware detection (touchpad, GPU, firmware report)
+After=systemd-udev-trigger.service systemd-modules-load.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/navin-hwdetect --apply --quiet
+TimeoutSec=40
+
+[Install]
+WantedBy=multi-user.target

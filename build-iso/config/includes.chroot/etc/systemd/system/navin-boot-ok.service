@@ -1,0 +1,11 @@
+[Unit]
+Description=NAVIN OS virtual-machine boot test marker
+After=display-manager.service
+ConditionVirtualization=vm
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/navin/navin-boot-ok
+
+[Install]
+WantedBy=graphical.target

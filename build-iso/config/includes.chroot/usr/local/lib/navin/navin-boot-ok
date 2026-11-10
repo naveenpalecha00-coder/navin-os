@@ -1,0 +1,9 @@
+#!/bin/sh
+# NAVIN OS 1.2 automated boot test marker. Runs ONLY inside a virtual machine that has a serial
+# port (GitHub Actions QEMU test). Real hardware returns immediately.
+systemd-detect-virt -q --vm || exit 0
+[ -c /dev/ttyS0 ] || exit 0
+sleep 25
+s(){ systemctl is-active "$1" 2>/dev/null; }
+msg="NAVIN_BOOT_OK os=$(. /etc/os-release; echo "$VERSION_CODENAME") kernel=$(uname -r) uefi=$([ -d /sys/firmware/efi ] && echo yes || echo no) lightdm=$(s lightdm) xorg=$(pgrep -x Xorg >/dev/null && echo up || echo down) desktop=$(pgrep -x xfce4-session >/dev/null && echo up || echo down) network=$(s NetworkManager) hwdetect=$(systemctl show -p Result --value navin-hwdetect) calamares=$(command -v calamares >/dev/null && echo yes || echo no) failed_units=$(systemctl --failed --no-legend | wc -l) mem_used_mb=$(free -m | awk '/Mem:/{print $3}')"
+timeout 5 sh -c "echo '$msg' > /dev/ttyS0; systemctl --failed --no-legend > /dev/ttyS0" || true

@@ -16,7 +16,6 @@ nano
 less
 xdg-user-dirs
 xdg-utils
-policykit-1
 polkitd
 lightdm-gtk-greeter
 udisks2
@@ -107,7 +106,6 @@ curl
 wget
 git
 htop
-neofetch
 plymouth
 plymouth-themes
 plymouth-label
@@ -189,3 +187,17 @@ xserver-xorg-core
 mesa-va-drivers
 intel-media-va-driver
 mesa-utils
+
+# ---- NAVIN OS 1.2 (Debian 13 Trixie) ----
+# polkit-1 / neofetch were removed in Debian 13: pkexec + polkitd and fastfetch replace them.
+pkexec
+fastfetch
+# Secure Boot chain (Microsoft-signed shim -> Debian-signed GRUB -> Debian-signed kernel)
+shim-signed
+grub-efi-amd64-signed
+mokutil
+# System Center, gestures, shortcuts
+python3-psutil
+rofi
+wmctrl
+dmidecode

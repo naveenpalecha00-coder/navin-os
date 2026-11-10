@@ -1,21 +1,40 @@
 #!/bin/bash
+# NAVIN OS 1.2 fan & thermal profiles (root). Safety rules:
+#  * never stop a fan and never set a fan slower than firmware automatic control
+#  * only "cooling" raises fan speed, through thinkpad_acpi or writable hwmon PWM
+#  * "restore" (also run on any error and when navin-thermal stops) hands control back to BIOS/EC
+#   navin-fan status | silent | balanced | cooling | auto | restore      (legacy: turbo = cooling)
 set -u
-case "${1:-}" in silent) profile=quiet; governor=powersave;; auto) profile=balanced; governor=schedutil;; turbo) profile=performance; governor=performance;; *) exit 2;; esac
-ok=0
-for path in /sys/firmware/acpi/platform_profile /sys/devices/platform/samsung-galaxybook/fan_mode; do
- [ -w "$path" ] || continue
- if [ "$path" = /sys/firmware/acpi/platform_profile ]; then
-  choices=$(cat /sys/firmware/acpi/platform_profile_choices)
-  if [ "$profile" = quiet ] && [[ " $choices " != *' quiet '* ]]; then profile=low-power; fi
-  [[ " $choices " = *" $profile "* ]] && printf '%s' "$profile" > "$path" && ok=1
- else
-  # Do not guess Samsung firmware's numeric modes; ACPI profile is preferred.
-  echo 'Samsung fan_mode detected; unsupported numeric ABI, using CPU/ACPI control.' >&2
- fi
-done
-for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
- [ -w "$f" ] || continue
- choices=$(cat "${f%/*}/scaling_available_governors")
- [[ " $choices " = *" $governor "* ]] && printf '%s' "$governor" > "$f"
-done
-echo "$ok"
+ORIG=/run/navin/fan-orig; mkdir -p /run/navin
+TP=/proc/acpi/ibm/fan
+plat(){ local f=/sys/firmware/acpi/platform_profile c; [ -w $f ] || return 1; for c in "$@"; do grep -qw "$c" ${f}_choices && { echo "$c" > $f; return 0; }; done; return 1; }
+gov(){ for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do grep -qw "$1" "${f%/*}/scaling_available_governors" 2>/dev/null && echo "$1" > "$f"; done; }
+pwms(){ for p in /sys/class/hwmon/hwmon*/pwm[0-9]; do [ -w "$p" ] && [ -w "${p}_enable" ] && echo "$p"; done; }
+control(){ if [ -w $TP ] && grep -q '^commands:.*level' $TP; then echo thinkpad; elif [ -n "$(pwms)" ]; then echo hwmon-pwm; elif [ -w /sys/firmware/acpi/platform_profile ]; then echo platform-profile; else echo none; fi; }
+restore(){
+  [ -w $TP ] && echo 'level auto' > $TP 2>/dev/null
+  if [ -f $ORIG ]; then while read -r p en; do [ -w "${p}_enable" ] && echo "$en" > "${p}_enable" 2>/dev/null; done < $ORIG; rm -f $ORIG; fi
+  for p in $(pwms); do [ "$(cat "${p}_enable")" = 1 ] && echo 2 > "${p}_enable" 2>/dev/null; done
+  return 0
+}
+trap 'restore' ERR
+case "${1:-status}" in
+  status)
+    echo "control=$(control)"
+    echo "platform=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo n/a)"
+    [ -r $TP ] && grep -E '^(status|speed|level):' $TP | tr -s '\t ' ' '
+    for h in /sys/class/hwmon/hwmon*; do [ -d "$h" ] || continue; n=$(cat $h/name); for f in $h/fan*_input; do [ -f "$f" ] && echo "fan $n $(basename ${f%_input})=$(cat $f) rpm"; done; done
+    exit 0;;
+  silent) restore; plat quiet low-power cool balanced; gov powersave; echo "silent: firmware keeps fan control; low-power platform profile";;
+  balanced|auto) restore; plat balanced; /usr/local/bin/navin-power apply >/dev/null 2>&1; echo "$1: BIOS/EC automatic fan control";;
+  cooling|turbo)
+    plat cool balanced
+    gov powersave
+    case "$(control)" in
+      thinkpad) echo 'level 7' > $TP && echo "cooling: ThinkPad fan level 7";;
+      hwmon-pwm) : > $ORIG; for p in $(pwms); do echo "$p $(cat ${p}_enable)" >> $ORIG; echo 1 > "${p}_enable" && echo 255 > "$p"; done; echo "cooling: PWM fans at maximum";;
+      *) echo "cooling: no safe fan-speed interface; using cool/low-heat CPU settings only (monitoring mode)";;
+    esac;;
+  restore) restore; echo "restored BIOS/EC automatic fan control";;
+  *) echo "usage: navin-fan status|silent|balanced|cooling|auto|restore" >&2; exit 2;;
+esac

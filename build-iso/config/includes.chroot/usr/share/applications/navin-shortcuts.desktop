@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Keyboard Shortcuts
+Comment=Search, edit, check conflicts and reset shortcuts
+Exec=navin-shortcuts
+Icon=preferences-desktop-keyboard-shortcuts
+Terminal=false
+Categories=Settings;

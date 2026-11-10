@@ -1,0 +1,12 @@
+[Unit]
+Description=NAVIN OS memory profile (2 GB lite / 4 GB balanced / 8 GB+ standard)
+DefaultDependencies=no
+After=local-fs.target
+Before=zramswap.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/navin-memprofile
+
+[Install]
+WantedBy=sysinit.target

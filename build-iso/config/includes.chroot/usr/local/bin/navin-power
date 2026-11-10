@@ -1,0 +1,41 @@
+#!/bin/bash
+# NAVIN OS 1.2 CPU power profiles.
+#   navin-power status | set powersave|balanced|performance|auto | apply
+# auto = TLP chooses by power source (AC/battery). Manual profiles force TLP mode, then set
+# governor, energy-performance preference and ACPI platform profile only where the hardware offers them.
+set -u
+STATE=/var/lib/navin/power-profile
+cur(){ cat "$STATE" 2>/dev/null || echo auto; }
+put(){ [ -w "$1" ] && printf '%s' "$2" > "$1" 2>/dev/null; }
+choose(){ local file=$1; shift; local list; list=" $(cat "$file" 2>/dev/null) "; for c in "$@"; do [[ "$list" == *" $c "* ]] && { echo "$c"; return; }; done; }
+apply(){
+  local p=$1 gov epp plat
+  case "$p" in
+    auto) command -v tlp >/dev/null && tlp start >/dev/null; return 0;;
+    powersave) command -v tlp >/dev/null && tlp bat >/dev/null; gov="powersave"; epp="power balance_power"; plat="low-power quiet cool balanced";;
+    balanced) command -v tlp >/dev/null && tlp ac >/dev/null; gov="schedutil powersave"; epp="balance_performance default"; plat="balanced";;
+    performance) command -v tlp >/dev/null && tlp ac >/dev/null; gov="performance"; epp="performance"; plat="performance balanced-performance balanced";;
+    *) echo "unknown profile $p" >&2; return 2;;
+  esac
+  for d in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
+    g=$(choose "$d/scaling_available_governors" $gov); [ -n "$g" ] && put "$d/scaling_governor" "$g"
+    e=$(choose "$d/energy_performance_available_preferences" $epp); [ -n "$e" ] && put "$d/energy_performance_preference" "$e"
+  done
+  pp=$(choose /sys/firmware/acpi/platform_profile_choices $plat); [ -n "$pp" ] && put /sys/firmware/acpi/platform_profile "$pp"
+  return 0
+}
+case "${1:-status}" in
+  status)
+    f=/sys/devices/system/cpu/cpu0/cpufreq
+    echo "profile=$(cur)"
+    echo "governor=$(cat $f/scaling_governor 2>/dev/null || echo n/a)"
+    echo "epp=$(cat $f/energy_performance_preference 2>/dev/null || echo n/a)"
+    echo "platform=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo n/a)"
+    echo "freq_mhz=$(( $(cat $f/scaling_cur_freq 2>/dev/null || echo 0) / 1000 ))"
+    echo "ac=$(cat /sys/class/power_supply/A*/online 2>/dev/null | head -1 || echo n/a)";;
+  set) [ "$(id -u)" = 0 ] || exec pkexec "$0" set "${2:-}"
+       case "${2:-}" in powersave|balanced|performance|auto) ;; *) echo "use powersave|balanced|performance|auto" >&2; exit 2;; esac
+       mkdir -p "${STATE%/*}"; echo "$2" > "$STATE"; apply "$2" && echo "Power profile: $2";;
+  apply) apply "$(cur)";;
+  *) echo "usage: navin-power status|set PROFILE|apply" >&2; exit 2;;
+esac

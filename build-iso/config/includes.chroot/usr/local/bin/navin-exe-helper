@@ -15,5 +15,12 @@ case "${1:-}" in
       for v in vcrun2022 vcrun2019; do winetricks -q --unattended "$v" && break; done
       winetricks -q --unattended d3dx9 d3dcompiler_47 xact
       echo; echo "Done. Close this window."' ;;
-  *) echo "usage: navin-exe-helper turbo FILE | runtimes"; exit 2 ;;
+  info)
+    f="${2:-}"; [ -f "$f" ] || exit 1
+    kind=$(file -b "$f"); arch="unknown"; case "$kind" in *PE32+*) arch="64-bit";; *PE32*) arch="32-bit";; *MSI*|*Composite*) arch="Windows Installer (MSI)";; esac
+    zenity --info --width 460 --title "Windows compatibility" --text "<b>$(basename "$f")</b>\n\nType: $arch\nWine: $(wine --version 2>/dev/null || echo 'not installed')\nDXVK (DirectX→Vulkan): $(vulkaninfo --summary >/dev/null 2>&1 && echo available || echo 'not available, WineD3D is used')\n\nNot every Windows program works with Wine. Check the program on appdb.winehq.org before relying on it. Anti-cheat games and kernel drivers do not work." ;;
+  uninstall)
+    [ -d "$WINEPREFIX" ] || { zenity --info --text "No Windows programs are installed."; exit 0; }
+    wine uninstaller ;;
+  *) echo "usage: navin-exe-helper turbo FILE | runtimes | info FILE | uninstall"; exit 2 ;;
 esac

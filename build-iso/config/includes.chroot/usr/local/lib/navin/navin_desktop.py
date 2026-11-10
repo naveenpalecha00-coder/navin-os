@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import gi, os, sys, json, subprocess, threading, pathlib, urllib.request, ast, operator, time, secrets
+import gi, os, re, sys, json, subprocess, threading, pathlib, urllib.request, ast, operator, time, secrets
 from navin_logic import package_name, release_build, BUILD, REPO
 
 gi.require_version('Gtk', '3.0')
@@ -9,6 +9,9 @@ def run(args):
  p=subprocess.run(args, capture_output=True, text=True)
  if p.returncode: raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'Command failed')
  return p.stdout.strip()
+def status(args):
+ try: return run(args)
+ except Exception: return ''
 def launch(args): subprocess.Popen(args)
 class Window(Gtk.Window):
  def __init__(self,title):
@@ -32,7 +35,7 @@ class Store(Window):
   scroll=Gtk.ScrolledWindow(); self.rows=Gtk.ListBox(); scroll.add(self.rows); self.box.pack_start(scroll,True,True,0)
   self.progress=Gtk.ProgressBar(); self.box.pack_start(self.progress,False,False,0)
   self.output=Gtk.TextView(editable=False,monospace=True); log=Gtk.ScrolledWindow(); log.set_min_content_height(100); log.add(self.output); self.box.pack_start(log,False,True,0)
-  self.button('Refresh catalogue',self.refresh)
+  self.button('Refresh catalogue',self.refresh); self.button('Flathub apps (Flatpak)…',lambda:launch(['navin-app-store','flathub']))
   self.busy=False; self.status.set_text('Reading APT catalogue…'); self.finish(); self.refresh()
  def refresh(self):
   def get():
@@ -87,6 +90,68 @@ class Store(Window):
   b=self.output.get_buffer(); b.insert(b.get_end_iter(),line)
  def complete(self,rc,error=''):
   self.busy=False; self.progress.set_fraction(1 if rc==0 else 0); self.status.set_text('Transaction finished' if rc==0 else 'APT failed: '+error); self.refresh()
+class Flathub(Window):
+ """Real Flatpak/Flathub search, install, update, remove and launch with streamed progress."""
+ def __init__(self):
+  super().__init__('NAVIN App Store — Flathub'); self.set_default_size(780,640); self.busy=False; self.installed=set()
+  self.search=Gtk.SearchEntry(placeholder_text='Search Flathub (e.g. spotify, gimp, obs)'); self.search.connect('activate',lambda _:self.find()); self.box.pack_start(self.search,False,False,0)
+  scroll=Gtk.ScrolledWindow(); self.rows=Gtk.ListBox(); scroll.add(self.rows); self.box.pack_start(scroll,True,True,0)
+  self.progress=Gtk.ProgressBar(show_text=True); self.box.pack_start(self.progress,False,False,0)
+  self.output=Gtk.TextView(editable=False,monospace=True); log=Gtk.ScrolledWindow(); log.set_min_content_height(110); log.add(self.output); self.box.pack_start(log,False,True,0)
+  bar=Gtk.Box(spacing=6); self.box.pack_start(bar,False,False,0); self.button('Show installed',self.list_installed,bar); self.button('Update all Flatpak apps',lambda:self.transaction(['update','-y','--noninteractive'],'Update'),bar)
+  self.finish(); self.status.set_text('Type a name and press Enter. Apps come from Flathub; each is sandboxed.'); self.list_installed()
+ def flatpak(self,*a): return run(['flatpak',*a])
+ def list_installed(self):
+  def get(): return [l.split('\t') for l in self.flatpak('list','--app','--columns=application,name,version').splitlines() if l.strip()]
+  def show(rows):
+   self.installed={r[0] for r in rows}; self.render([(r[0],r[1] if len(r)>1 else r[0],'Installed '+(r[2] if len(r)>2 else ''),'') for r in rows]); self.status.set_text(f'{len(rows)} Flatpak apps installed')
+  threading.Thread(target=lambda:self._bg(get,show),daemon=True).start()
+ def _bg(self,fn,done):
+  try: v=fn(); GLib.idle_add(done,v)
+  except Exception as e: GLib.idle_add(self.status.set_text,str(e))
+ def find(self):
+  q=self.search.get_text().strip()
+  if not q: return
+  self.status.set_text('Searching Flathub…')
+  def get():
+   out=self.flatpak('search','--columns=application,name,description,version',q)
+   return [(l.split('\t')+['','','',''])[:4] for l in out.splitlines() if '\t' in l]
+  def show(rows):
+   self.render([(a,n,v,d) for a,n,d,v in rows][:60]); self.status.set_text(f'{len(rows)} results on Flathub' if rows else 'No results (check internet; Flathub data downloads on first search)')
+  threading.Thread(target=lambda:self._bg(get,show),daemon=True).start()
+ def render(self,items):
+  for c in self.rows.get_children(): self.rows.remove(c)
+  for app,name,ver,desc in items:
+   r=Gtk.Box(spacing=8); r.set_border_width(8); l=Gtk.Label(label=f'{name}  ({app}) {ver}\n{desc}',xalign=0); l.set_line_wrap(True); l.set_max_width_chars(60); r.pack_start(l,True,True,0)
+   inst=app in self.installed; b=Gtk.Button(label='Remove' if inst else 'Install'); b.set_sensitive(not self.busy)
+   b.connect('clicked',lambda _,a=app,i=inst:self.transaction(['uninstall','-y','--noninteractive',a] if i else ['install','-y','--noninteractive','flathub',a],('Remove ' if i else 'Install ')+a))
+   r.pack_end(b,False,False,0)
+   if inst: self.button('Open',lambda a=app:launch(['flatpak','run',a]),r)
+   self.rows.add(r)
+  self.rows.show_all()
+ def transaction(self,args,title):
+  if self.busy: return
+  d=Gtk.MessageDialog(transient_for=self,modal=True,message_type=Gtk.MessageType.QUESTION,buttons=Gtk.ButtonsType.OK_CANCEL,text=title+'?'); ok=d.run()==Gtk.ResponseType.OK; d.destroy()
+  if not ok: return
+  self.busy=True; self.output.get_buffer().set_text(''); self.progress.set_fraction(0)
+  def task():
+   p=subprocess.Popen(['flatpak',*args],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+   buf=''
+   while True:
+    ch=p.stdout.read(1)
+    if not ch: break
+    buf+=ch
+    if ch in '\r\n':
+     line=buf.strip(); buf=''
+     m=re.search(r'(\d{1,3})%',line)
+     if m: GLib.idle_add(self.progress.set_fraction,int(m.group(1))/100)
+     if line: GLib.idle_add(self.append,line+'\n')
+   rc=p.wait(); GLib.idle_add(self.done,rc)
+  threading.Thread(target=task,daemon=True).start()
+ def append(self,line):
+  b=self.output.get_buffer(); b.insert(b.get_end_iter(),line)
+ def done(self,rc):
+  self.busy=False; self.progress.set_fraction(1 if rc==0 else 0); self.status.set_text('Finished' if rc==0 else f'Flatpak failed (exit {rc}) — see the log above'); self.list_installed()
 class Controls(Window):
  def __init__(self):
   super().__init__('NAVIN Control Center')
@@ -98,12 +163,12 @@ class Controls(Window):
    self.box.pack_start(Gtk.Label(label=title,xalign=0),False,False,0); scale=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0 if title=='Volume' else 5,100,1); scale.set_value(initial); scale.connect('value-changed',lambda s,f=fn:self.work(lambda:f(s.get_value()))); self.box.pack_start(scale,False,False,0)
   self.button('Night Light',self.night); self.button('Mobile hotspot',self.hotspot); self.button('RAM booster',lambda:self.work(lambda:run(['pkexec','/usr/local/lib/navin/navin-repair','ram-boost'])))
   self.button('Fan & Cooling',lambda:launch(['navin-fan-control'])); self.button('Devices',lambda:launch(['navin-device-manager'])); self.button('Privacy kill switch',self.privacy)
-  self.turbo=self.button('Turbo Mode: '+('ON' if run(['navin-turbo','status'])=='on' else 'OFF'),self.toggle_turbo)
+  self.turbo=self.button('Turbo Mode: '+('ON' if status(['navin-turbo','status'])=='on' else 'OFF'),self.toggle_turbo)
   for label,cmd in [('Quick Share',['navin-quick-share']),('Screen recorder',['navin-recorder']),('Snipping tool',['xfce4-screenshooter','-r','-c']),('Snapshot & restore',['navin-snapshot']),('Private Vault',['navin-vault']),('Theme & dock glass',['navin-theme','menu'])]:
    self.button(label,lambda c=cmd:launch(c))
   self.finish(); GLib.timeout_add_seconds(5,self.battery); self.battery()
  def toggle_turbo(self):
-  self.work(lambda:run(['navin-turbo','toggle']),lambda _:self.turbo.set_label('Turbo Mode: '+('ON' if run(['navin-turbo','status'])=='on' else 'OFF')))
+  self.work(lambda:run(['navin-turbo','toggle']),lambda _:self.turbo.set_label('Turbo Mode: '+('ON' if status(['navin-turbo','status'])=='on' else 'OFF')))
  def volume(self):
   try:return int(run(['pactl','get-sink-volume','@DEFAULT_SINK@']).split('%')[0].split()[-1])
   except:return 50
@@ -139,10 +204,10 @@ class Controls(Window):
 class Fan(Window):
  def __init__(self):
   super().__init__('NAVIN Fan & Cooling'); self.sensor=Gtk.Label(xalign=0); self.sensor.set_line_wrap(True); self.box.pack_start(self.sensor,True,True,0)
-  for mode in ('silent','auto','turbo'):self.button(mode.title(),lambda m=mode:self.work(lambda:run(['pkexec','/usr/local/lib/navin/navin-fan',m]),lambda s:self.status.set_text('Firmware profile applied' if s=='1' else 'CPU governor applied where supported; fan remains firmware controlled')))
+  for mode in ('silent','balanced','cooling','auto','restore'):self.button(mode.title(),lambda m=mode:self.work(lambda:run(['pkexec','/usr/local/lib/navin/navin-fan',m])))
   self.finish(); GLib.timeout_add_seconds(3,self.refresh); self.refresh()
  def refresh(self):
-  try:self.sensor.set_text(run(['sensors']))
+  try:self.sensor.set_text(run(['/usr/local/lib/navin/navin-fan','status'])+'\n\n'+run(['sensors']))
   except:self.sensor.set_text('Thermal sensors not exposed by this hardware')
   return True
 class Devices(Window):
@@ -242,7 +307,7 @@ class Updater(Window):
  def applied(self,text):self.status.set_text(text); self.restart.set_sensitive(True); launch(['notify-send','NAVIN updated','Restart when ready'])
 class Welcome(Window):
  def __init__(self):
-  super().__init__('Welcome to NAVIN OS Build 8'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
+  super().__init__('Welcome to NAVIN OS 1.2'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
   for label,cmd in [('Connect Wi-Fi','nm-connection-editor'),('NAVIN AI','navin-ai-desktop'),('App Store','navin-app-store'),('Install NAVIN OS','install-debian')]:self.button(label,lambda c=cmd:launch([c]))
   self.button('Done',self.destroy); self.finish(); launch(['paplay','/usr/share/sounds/freedesktop/stereo/desktop-login.oga'])
 mode=sys.argv[1] if len(sys.argv)>1 else 'controls'
@@ -250,5 +315,6 @@ if mode=='welcome' and '--autostart' in sys.argv:
  flag=pathlib.Path.home()/'.config/navin/welcome-done'
  if flag.exists():sys.exit(0)
  flag.parent.mkdir(parents=True,exist_ok=True); flag.touch()
-classes={'store':Store,'controls':Controls,'fan':Fan,'devices':Devices,'display':Display,'search':Search,'updater':Updater,'welcome':Welcome}
+if mode=='store' and 'flathub' in sys.argv: mode='flathub'
+classes={'flathub':Flathub,'store':Store,'controls':Controls,'fan':Fan,'devices':Devices,'display':Display,'search':Search,'updater':Updater,'welcome':Welcome}
 classes[mode](); Gtk.main()
