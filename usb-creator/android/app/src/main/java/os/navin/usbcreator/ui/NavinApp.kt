@@ -84,7 +84,7 @@ fun NavinApp(vm: MainViewModel) {
         OptionsSection(s, vm)
         Button(
             onClick = { vm.ask(Confirm.WRITE) },
-            enabled = !s.busy && s.drive != null && s.drive.writeProtected.not() && s.image != null && s.imageError == null,
+            enabled = !s.busy && s.drive?.writeProtected == false && s.image != null && s.imageError == null,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(12.dp),
         ) { Text("START — ERASE & MAKE BOOTABLE", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
@@ -205,7 +205,7 @@ private fun FormatSection(s: UiState, vm: MainViewModel) {
                 FilterChip(selected = s.clusterSectors == v, onClick = { vm.setCluster(v) }, label = { Text(l) }, enabled = !s.busy)
             }
         }
-        OutlinedButton(onClick = { vm.ask(Confirm.FORMAT) }, enabled = !s.busy && s.drive != null && s.drive.writeProtected.not(), modifier = Modifier.fillMaxWidth()) { Text("Format drive as FAT32") }
+        OutlinedButton(onClick = { vm.ask(Confirm.FORMAT) }, enabled = !s.busy && s.drive?.writeProtected == false, modifier = Modifier.fillMaxWidth()) { Text("Format drive as FAT32") }
         if (s.drive != null && s.drive.blockSize != Fat32Formatter.SECTOR) Text("This drive uses ${s.drive.blockSize}-byte sectors; formatting is not supported for it.", color = Palette.Danger, fontSize = 12.sp)
     }
 }
