@@ -32,7 +32,7 @@ import os.navin.usbcreator.usb.UsbMassStorage
 import java.io.IOException
 
 data class DriveEntry(val id: Int, val name: String, val hasPermission: Boolean)
-data class OpenDrive(val id: Int, val label: String, val sizeBytes: Long, val blockSize: Int, val removable: Boolean)
+data class OpenDrive(val id: Int, val label: String, val sizeBytes: Long, val blockSize: Int, val removable: Boolean, val writeProtected: Boolean = false)
 data class ImageSel(val uri: Uri, val name: String, val size: Long, val info: ImageInfo)
 
 sealed interface TaskState {
@@ -148,7 +148,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 storage = s
                 removed = false
                 val label = listOf(s.vendor, s.product).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "USB drive" }
-                _state.update { it.copy(connecting = false, driveError = null, drive = OpenDrive(device.deviceId, label, s.sizeBytes, s.blockSize, s.removable)) }
+                _state.update { it.copy(connecting = false, driveError = null, drive = OpenDrive(device.deviceId, label, s.sizeBytes, s.blockSize, s.removable, s.writeProtected)) }
             } catch (e: IOException) {
                 _state.update { it.copy(connecting = false, drive = null, driveError = e.message) }
             } catch (e: SecurityException) {
@@ -201,12 +201,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (s.busy || s.imageError != null) return
         ask(null)
         cancel = false
-        _state.update { it.copy(task = TaskState.Running("Writing ${img.name}", null)) }
+        _state.update { it.copy(task = TaskState.Running("Erasing and writing ${img.name}", null)) }
         job = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = ctx.contentResolver.openInputStream(img.uri)?.use { input ->
                     var last = 0L
-                    ImageWriter(dev).write(input, img.size, s.verify, { p -> last = post(p, last, "Writing ${img.name}") }, { cancel })
+                    ImageWriter(dev).write(input, img.size, s.verify, { p -> last = post(p, last, "Erasing and writing ${img.name}") }, { cancel })
                 } ?: throw IOException("Could not open the image file.")
                 val official = try {
                     Network.officialIsoHashes()[result.imageSha256]?.let { "✓ Matches the official NAVIN OS release $it" }
@@ -226,6 +226,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(task = if (removed) TaskState.Failed("The USB drive was disconnected while writing. It is incomplete — reconnect it and write again.") else TaskState.Cancelled) }
             } catch (e: Exception) {
                 _state.update { it.copy(task = TaskState.Failed(if (removed) "The USB drive was disconnected while writing. It is incomplete — reconnect it and write again." else e.message ?: "Writing failed.")) }
+                reopenAfterFailure()
             }
         }
     }
@@ -254,8 +255,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(task = TaskState.Cancelled) }
             } catch (e: Exception) {
                 _state.update { it.copy(task = TaskState.Failed(e.message ?: "Formatting failed.")) }
+                reopenAfterFailure()
             }
         }
+    }
+
+    /** After a failed erase/write the USB link may be stuck: reopen the same drive so START works again without replugging. */
+    private fun reopenAfterFailure() {
+        if (removed) return
+        val id = _state.value.drive?.id ?: return
+        val device = usb.deviceList.values.firstOrNull { it.deviceId == id } ?: return
+        if (usb.hasPermission(device)) connect(device)
     }
 
     /** Throttles progress updates to about 5 per second. */

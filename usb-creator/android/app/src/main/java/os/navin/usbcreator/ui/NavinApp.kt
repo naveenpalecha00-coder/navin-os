@@ -44,9 +44,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -87,10 +84,10 @@ fun NavinApp(vm: MainViewModel) {
         OptionsSection(s, vm)
         Button(
             onClick = { vm.ask(Confirm.WRITE) },
-            enabled = !s.busy && s.drive != null && s.image != null && s.imageError == null,
+            enabled = !s.busy && s.drive != null && s.drive.writeProtected.not() && s.image != null && s.imageError == null,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(12.dp),
-        ) { Text("START", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
+        ) { Text("START — ERASE & MAKE BOOTABLE", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
         FormatSection(s, vm)
         Compatibility()
     }
@@ -159,6 +156,7 @@ private fun DeviceSection(s: UiState, vm: MainViewModel) {
             }
         }
         s.driveError?.let { Text(it, color = Palette.Danger, fontSize = 13.sp) }
+        if (s.drive?.writeProtected == true) Text("This drive reports that it is write-protected, so it cannot be erased. Slide the lock switch on the card or adapter to unlocked, then unplug and reconnect it.", color = Palette.Danger, fontSize = 13.sp)
         Text("Only external USB drives are listed. The phone's own storage can never be selected or erased.", color = Palette.Muted, fontSize = 12.sp)
     }
 }
@@ -187,7 +185,7 @@ private fun OptionsSection(s: UiState, vm: MainViewModel) {
         KeyValue("Target system", info?.targetSystem ?: "—")
         KeyValue("File system", if (info != null) "Set by the image" else "—")
         KeyValue("Cluster size", if (info != null) "Set by the image" else "—")
-        KeyValue("Write mode", "Disk image (byte-for-byte)")
+        KeyValue("Write mode", "Erase drive, then disk image (byte-for-byte)")
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = s.verify, onCheckedChange = { vm.setVerify(it) }, enabled = !s.busy)
             Text("Verify the drive after writing (recommended)", fontSize = 14.sp)
@@ -207,7 +205,7 @@ private fun FormatSection(s: UiState, vm: MainViewModel) {
                 FilterChip(selected = s.clusterSectors == v, onClick = { vm.setCluster(v) }, label = { Text(l) }, enabled = !s.busy)
             }
         }
-        OutlinedButton(onClick = { vm.ask(Confirm.FORMAT) }, enabled = !s.busy && s.drive != null, modifier = Modifier.fillMaxWidth()) { Text("Format drive as FAT32") }
+        OutlinedButton(onClick = { vm.ask(Confirm.FORMAT) }, enabled = !s.busy && s.drive != null && s.drive.writeProtected.not(), modifier = Modifier.fillMaxWidth()) { Text("Format drive as FAT32") }
         if (s.drive != null && s.drive.blockSize != Fat32Formatter.SECTOR) Text("This drive uses ${s.drive.blockSize}-byte sectors; formatting is not supported for it.", color = Palette.Danger, fontSize = 12.sp)
     }
 }
@@ -279,7 +277,6 @@ private fun Compatibility() {
 
 @Composable
 private fun ConfirmErase(s: UiState, c: Confirm, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    var typed by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.Warning, contentDescription = null, tint = Palette.Danger) },
@@ -289,18 +286,20 @@ private fun ConfirmErase(s: UiState, c: Confirm, onConfirm: () -> Unit, onDismis
                 Text("Everything on this drive will be permanently erased:", color = Palette.Danger)
                 Card(colors = CardDefaults.cardColors(containerColor = Palette.PaleBlue)) {
                     Column(Modifier.padding(10.dp)) {
-                        Text("Drive: ${s.drive?.label}")
+                        Text("Drive: ${s.drive?.label}", fontWeight = FontWeight.Medium)
                         Text("Capacity: ${TransferStats.formatBytes(s.drive?.sizeBytes ?: 0)}")
                         Text(if (c == Confirm.WRITE) "Image: ${s.image?.name}" else "Format: FAT32, label ${Fat32Formatter.sanitizeLabel(s.label)}")
                     }
                 }
-                Text("Back up any files first. Type ERASE to continue:")
-                OutlinedTextField(value = typed, onValueChange = { typed = it.uppercase() }, singleLine = true)
+                Text(
+                    if (c == Confirm.WRITE) "One tap erases the drive, writes NAVIN OS${if (s.verify) ", checks every byte" else ""} and makes it bootable. Back up any files first."
+                    else "One tap erases the drive and formats it as FAT32. Back up any files first."
+                )
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm, enabled = typed.trim() == "ERASE", colors = ButtonDefaults.buttonColors(containerColor = Palette.Danger)) {
-                Text(if (c == Confirm.WRITE) "Erase and write" else "Erase and format")
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Palette.Danger)) {
+                Text(if (c == Confirm.WRITE) "Erase & make bootable" else "Erase and format")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

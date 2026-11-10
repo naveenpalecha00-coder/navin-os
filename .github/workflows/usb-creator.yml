@@ -112,7 +112,7 @@ jobs:
             echo
             echo "### What's included"
             echo "- Windows 10/11 (64-bit) app: USB drive detection, disk image mode (UEFI + Legacy BIOS for hybrid ISOs), FAT32 extract mode (GPT or MBR, UEFI), cluster size and volume label, live speed and time left, safe cancel, read-back verification, update check."
-            echo "- Android 7.0+ app: USB OTG drive detection, ISO from phone storage, byte-for-byte write, FAT32 format, progress, verification, safe handling of unplugging, update check."
+            echo "- Android 7.0+ app: USB OTG drive detection, ISO from phone storage, one-tap erase and bootable write (old partition tables incl. backup GPT wiped first), automatic retry for drives/OTG adapters that stall, write-protect detection, FAT32 format, progress, verification, safe handling of unplugging, update check."
             echo
             echo "### Notes"
             echo "- The Windows app asks for administrator rights (needed for raw disk access). It is not code-signed yet, so Windows SmartScreen may show \"Windows protected your PC\" - choose More info -> Run anyway."

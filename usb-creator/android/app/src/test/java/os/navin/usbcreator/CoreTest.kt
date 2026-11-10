@@ -100,7 +100,44 @@ class ImageWriterTest {
         try {
             ImageWriter(d).write(ByteArrayInputStream(img), img.size.toLong(), false, {}, { ++calls > 1 })
         } catch (_: InterruptedException) {}
-        assertNull(d.blocks[0L]) // the first MiB is written last, so a cancelled drive never looks bootable
+        // The old start of the drive is erased first and the image's first MiB is written last,
+        // so a cancelled drive has no partition table and never looks bootable.
+        assertTrue(d.block(0).all { it == 0.toByte() })
+    }
+
+    @Test fun eraseRemovesOldBackupGptAtEndOfDrive() {
+        val d = FakeDrive(16_384)
+        val oldGpt = ByteArray(512) { 0x45 }
+        "EFI PART".forEachIndexed { i, c -> oldGpt[i] = c.code.toByte() }
+        d.write(16_383, oldGpt, 0, 1)
+        d.write(0, ByteArray(512) { 0x11 }, 0, 1)
+        val img = hybridImage(2 * 1024 * 1024)
+        ImageWriter(d).write(ByteArrayInputStream(img), img.size.toLong(), true, {}, { false })
+        assertTrue(d.block(16_383).all { it == 0.toByte() })
+        assertArrayEquals(img.copyOf(512), d.block(0))
+    }
+
+    @Test fun eraseNeverOverwritesTheImage() {
+        val d = FakeDrive(4096) // 2 MiB drive, image fills almost all of it
+        val img = hybridImage(2 * 1024 * 1024 - 4096)
+        val r = ImageWriter(d).write(ByteArrayInputStream(img), img.size.toLong(), true, {}, { false })
+        assertTrue(r.verified)
+    }
+
+    @Test fun partitionTableIsTheLastWrite() {
+        val writes = ArrayList<Long>()
+        val d = object : BlockDevice {
+            val inner = FakeDrive(16_384)
+            override val blockSize = 512
+            override val blockCount = 16_384L
+            override fun read(lba: Long, buf: ByteArray, offset: Int, count: Int) = inner.read(lba, buf, offset, count)
+            override fun write(lba: Long, buf: ByteArray, offset: Int, count: Int) { writes += lba; inner.write(lba, buf, offset, count) }
+        }
+        val img = hybridImage(3 * 1024 * 1024)
+        ImageWriter(d).write(ByteArrayInputStream(img), img.size.toLong(), false, {}, { false })
+        assertEquals(0L, writes.first()) // erase
+        assertEquals(0L, writes.last())  // real partition table last
+        assertTrue(writes.contains(16_384L - 2048)) // backup GPT area erased
     }
 }
 
@@ -130,6 +167,22 @@ class ScsiTest {
         assertEquals(0x80.toByte(), c[12])
         assertEquals(0x28.toByte(), c[15])
     }
+
+    @Test fun unitAttentionIsRetried() = assertTrue(Scsi.isRetryable(Scsi.Sense(0x6, 0x28, 0)))
+    @Test fun becomingReadyIsRetried() = assertTrue(Scsi.isRetryable(Scsi.Sense(0x2, 0x04, 0x01)))
+    @Test fun writeProtectIsNotRetried() = assertFalse(Scsi.isRetryable(Scsi.Sense(0x7, 0x27, 0)))
+    @Test fun writeProtectMessage() = assertTrue(Scsi.describe(Scsi.Sense(0x7, 0x27, 0), 0x2A).contains("write-protected"))
+    @Test fun parsesFixedSense() {
+        val b = ByteArray(18); b[0] = 0x70; b[2] = 0x06; b[12] = 0x28
+        assertEquals(Scsi.Sense(6, 0x28, 0), Scsi.parseSense(b))
+    }
+    @Test fun rejectsInvalidSense() = assertNull(Scsi.parseSense(ByteArray(18)))
+    @Test fun modeSenseWriteProtectBit() {
+        val h = ByteArray(4); h[2] = 0x80.toByte()
+        assertTrue(Scsi.isWriteProtected(h)); assertFalse(Scsi.isWriteProtected(ByteArray(4)))
+    }
+    @Test fun commandSizeMatchesLinuxDefault() = assertEquals(240, Scsi.blocksPerCommand(512, 120 * 1024))
+    @Test fun commandSizeNeverZero() = assertEquals(1, Scsi.blocksPerCommand(4096, 1024))
 
     @Test fun largeLbaUses16ByteCommand() = assertEquals(0x8A.toByte(), Scsi.rw(true, 0x1_0000_0000L, 8)[0])
     @Test fun write10EncodesLbaBigEndian() {

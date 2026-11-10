@@ -9,8 +9,8 @@ data class Progress(val phase: String, val percent: Double, val bytesPerSecond: 
 data class WriteResult(val imageSha256: String, val verified: Boolean, val seconds: Long)
 
 /**
- * Copies a disk image byte-for-byte onto the USB drive. The first MiB (partition tables)
- * is written last, so an interrupted write never looks like a valid drive.
+ * Erases the drive's old partition tables, then copies a disk image byte-for-byte onto it.
+ * The first MiB (partition tables) is written last, so an interrupted write never looks like a valid drive.
  */
 class ImageWriter(private val dev: BlockDevice, private val clock: () -> Double = { System.nanoTime() / 1e9 }) {
     private val chunk = 1024 * 1024
@@ -25,6 +25,11 @@ class ImageWriter(private val dev: BlockDevice, private val clock: () -> Double 
         val padded = roundUp(length, bs)
         val sha = MessageDigest.getInstance("SHA-256")
         val stats = TransferStats(padded)
+
+        // 1. Erase: wipe the old partition tables at the start and the backup GPT at the end of the drive.
+        // Otherwise a PC's firmware can find the drive's previous GPT and refuse to boot the new image.
+        onProgress(Progress("Erasing", 0.0, 0.0, null, 0, padded))
+        erase(padded)
 
         val headBuf = ByteArray(head)
         val headLen = fill(image, headBuf)
@@ -72,6 +77,17 @@ class ImageWriter(private val dev: BlockDevice, private val clock: () -> Double 
             verified = true
         }
         return WriteResult(imageHash, verified, (clock() - start).toLong())
+    }
+
+    private fun erase(imageEnd: Long) {
+        val bs = dev.blockSize
+        val zeros = ByteArray(head)
+        val zeroBlocks = head / bs
+        dev.write(0, zeros, 0, minOf(zeroBlocks.toLong(), dev.blockCount).toInt())
+        val tailFrom = maxOf(imageEnd / bs, dev.blockCount - zeroBlocks)
+        val tailBlocks = (dev.blockCount - tailFrom).toInt()
+        if (tailBlocks > 0) dev.write(tailFrom, zeros, 0, tailBlocks)
+        dev.flush()
     }
 
     private fun fill(s: InputStream, b: ByteArray): Int {
