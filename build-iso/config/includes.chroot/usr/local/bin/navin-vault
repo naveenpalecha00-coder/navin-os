@@ -1,0 +1,24 @@
+#!/bin/bash
+# NAVIN OS Build 10: encrypted Private Vault (gocryptfs, AES-256-GCM).
+# Encrypted data: ~/.navin-vault  ·  Unlocked folder: ~/Vault
+CIPHER="$HOME/.navin-vault"; MOUNT="$HOME/Vault"
+command -v gocryptfs >/dev/null || { zenity --error --text "gocryptfs is missing. Install it from App Store."; exit 1; }
+mkdir -p "$MOUNT"
+if mountpoint -q "$MOUNT"; then
+  fusermount -u "$MOUNT" && notify-send -i changes-prevent "NAVIN Vault" "Vault locked"; exit 0
+fi
+if [ ! -f "$CIPHER/gocryptfs.conf" ]; then
+  pw=$(zenity --password --title "Create NAVIN Vault password") || exit 0
+  pw2=$(zenity --password --title "Repeat password") || exit 0
+  [ -n "$pw" ] && [ "$pw" = "$pw2" ] || { zenity --error --text "Passwords did not match."; exit 1; }
+  mkdir -p "$CIPHER"
+  printf '%s' "$pw" | gocryptfs -init -q -passfile /dev/stdin "$CIPHER" || { zenity --error --text "Vault creation failed."; exit 1; }
+  zenity --warning --text "Vault created. If you forget this password, the files cannot be recovered."
+else
+  pw=$(zenity --password --title "Unlock NAVIN Vault") || exit 0
+fi
+if printf '%s' "$pw" | gocryptfs -q -idle 30m -passfile /dev/stdin "$CIPHER" "$MOUNT"; then
+  notify-send -i changes-allow "NAVIN Vault" "Unlocked at ~/Vault (auto-locks after 30 min idle)"; thunar "$MOUNT" &
+else
+  zenity --error --text "Wrong password."
+fi

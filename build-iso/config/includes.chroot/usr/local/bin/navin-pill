@@ -1,0 +1,18 @@
+#!/bin/bash
+# NAVIN OS Build 10: Dynamic System Pill for the top panel (xfce4-genmon-plugin).
+# Shows CPU, RAM, battery, mic/camera in-use dot and Turbo state. Click toggles Turbo.
+S="${XDG_RUNTIME_DIR:-/tmp}/navin-pill.cpu"
+read -r _ u n s i w q sq st _ < /proc/stat
+total=$((u+n+s+i+w+q+sq+st)); idle=$((i+w))
+if [ -f "$S" ]; then read -r pt pi < "$S"; dt=$((total-pt)); cpu=$(( dt>0 ? (100*(dt-(idle-pi)))/dt : 0 )); else cpu=0; fi
+echo "$total $idle" > "$S"
+ram=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{printf "%d",(t-a)*100/t}' /proc/meminfo)
+bat=""; for b in /sys/class/power_supply/BAT*/capacity; do [ -f "$b" ] && bat=" · 🔋$(cat "$b")%" && break; done
+priv=""
+pactl list short source-outputs 2>/dev/null | grep -q . && priv=" 🟠"
+fuser /dev/video* >/dev/null 2>&1 && priv="$priv 🟢"
+turbo=""; [ "$(navin-turbo status)" = on ] && turbo="⚡ "
+echo "<txt> ${turbo}CPU ${cpu}% · RAM ${ram}%${bat}${priv} </txt>"
+echo "<tool>NAVIN System Pill — click to toggle Turbo Mode
+🟠 = microphone in use · 🟢 = camera in use</tool>"
+echo "<txtclick>navin-turbo toggle</txtclick>"

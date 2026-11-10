@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Snapshot & Restore
+Comment=1-click system restore point
+Exec=navin-snapshot
+Icon=document-revert
+Terminal=false
+Categories=System;Utility;

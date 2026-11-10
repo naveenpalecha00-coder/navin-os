@@ -256,6 +256,19 @@ for app in navin-ai-desktop navin-camera navin-app-store navin-control-center; d
 done
 apt-get clean
 
+echo "[navin-os] Build 10: gestures, Turbo, Quick Share, Vault, Snapshot, System Pill, Bluetooth"
+apt-get update
+for p in touchegg xfdashboard xfce4-genmon-plugin qrencode gocryptfs timeshift; do
+  apt-get install -y --no-install-recommends "$p" || echo "[navin-os] WARNING: optional package $p unavailable"
+done
+systemctl enable touchegg.service 2>/dev/null || true
+sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEnable\s*=.*/AutoEnable=true/; s/^#\?\s*ReconnectAttempts\s*=.*/ReconnectAttempts=7/; s/^#\?\s*ReconnectIntervals\s*=.*/ReconnectIntervals=1,2,4,8,16,32,64/' /etc/bluetooth/main.conf 2>/dev/null || true
+sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
+systemctl enable ufw.service 2>/dev/null || true
+chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
+printf '10\n' > /etc/navin/build
+update-desktop-database /usr/share/applications || true
+
 echo "[navin-os] Size guard: one kernel (Liquorix), no datacenter-NIC firmware"
 # Build 9 ISO was over GitHub's 2 GiB limit; two kernels+initrds and server firmware were the largest removable items.
 if ls /boot/vmlinuz-*liquorix* >/dev/null 2>&1; then

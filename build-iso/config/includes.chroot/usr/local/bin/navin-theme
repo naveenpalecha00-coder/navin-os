@@ -1,0 +1,40 @@
+#!/bin/bash
+# NAVIN OS Build 10: Theme Engine.
+#   navin-theme auto        -> light 07:00-18:59, dark otherwise (checks every 10 min, cheap)
+#   navin-theme light|dark  -> fixed theme      navin-theme dock 0-100 -> dock glass opacity
+#   navin-theme menu        -> simple chooser
+CONF="$HOME/.config/navin"; mkdir -p "$CONF"
+apply() {
+  local gtk icon
+  if [ "$1" = dark ]; then gtk=Arc-Dark; icon=Papirus-Dark; else gtk=Arc; icon=Papirus-Light; fi
+  [ "$(xfconf-query -c xsettings -p /Net/ThemeName 2>/dev/null)" = "$gtk" ] && return
+  xfconf-query -c xsettings -p /Net/ThemeName -n -t string -s "$gtk"
+  xfconf-query -c xsettings -p /Net/IconThemeName -n -t string -s "$icon"
+  xfconf-query -c xfwm4 -p /general/theme -n -t string -s "$gtk"
+}
+dock() {
+  local a; a=$(awk -v v="$1" 'BEGIN{if(v<0)v=0;if(v>100)v=100;printf "%.2f",v/100}')
+  for p in 1 2; do
+    xfconf-query -c xfce4-panel -p /panels/panel-$p/background-style -n -t uint -s 1
+    xfconf-query -c xfce4-panel -p /panels/panel-$p/background-rgba -n -t double -s 0.08 -t double -s 0.10 -t double -s 0.16 -t double -s "$a"
+  done
+  echo "$1" > "$CONF/dock-opacity"
+}
+case "${1:-auto}" in
+  light|dark) echo "$1" > "$CONF/theme"; apply "$1" ;;
+  dock) dock "${2:-70}" ;;
+  auto)
+    echo auto > "$CONF/theme"
+    [ -f "$CONF/dock-opacity" ] && dock "$(cat "$CONF/dock-opacity")"
+    while [ "$(cat "$CONF/theme" 2>/dev/null)" = auto ]; do
+      h=$((10#$(date +%H))); if [ "$h" -ge 7 ] && [ "$h" -lt 19 ]; then apply light; else apply dark; fi
+      sleep 600
+    done ;;
+  menu)
+    c=$(zenity --list --title "NAVIN Theme" --column Option "Auto (day light / night dark)" Light Dark "Dock glass opacity" --height 260) || exit 0
+    case "$c" in
+      Light) "$0" light ;; Dark) "$0" dark ;;
+      Dock*) v=$(zenity --scale --title "Dock glass opacity" --min-value 20 --max-value 100 --value "$(cat "$CONF/dock-opacity" 2>/dev/null || echo 70)") && "$0" dock "$v" ;;
+      *) setsid "$0" auto >/dev/null 2>&1 & ;;
+    esac ;;
+esac

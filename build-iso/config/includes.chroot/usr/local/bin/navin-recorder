@@ -1,0 +1,22 @@
+#!/bin/bash
+# NAVIN OS Build 10: lightweight screen recorder (screen + system audio + mic).
+# Run once to start, run again (or Super+Shift+R) to stop. Saves to ~/Videos.
+PID="${XDG_RUNTIME_DIR:-/tmp}/navin-recorder.pid"
+if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+  kill -INT "$(cat "$PID")"; rm -f "$PID"
+  notify-send -i media-record "NAVIN Recorder" "Recording saved in Videos"
+  exit 0
+fi
+mkdir -p "$HOME/Videos"
+OUT="$HOME/Videos/NAVIN-recording-$(date +%Y%m%d-%H%M%S).mp4"
+SIZE=$(xdpyinfo | awk '/dimensions:/ {print $2; exit}')
+SINK=$(pactl get-default-sink 2>/dev/null)
+AUDIO=(); MAP=()
+if [ -n "$SINK" ]; then
+  AUDIO=(-f pulse -i "$SINK.monitor" -f pulse -i default)
+  MAP=(-filter_complex "[1:a][2:a]amix=inputs=2:duration=longest[a]" -map 0:v -map "[a]" -c:a aac -b:a 128k)
+fi
+nice -n 5 ffmpeg -loglevel error -f x11grab -framerate 30 -video_size "${SIZE:-1920x1080}" -i "${DISPLAY:-:0}" \
+  "${AUDIO[@]}" "${MAP[@]}" -c:v libx264 -preset ultrafast -crf 26 -pix_fmt yuv420p "$OUT" &
+echo $! > "$PID"
+notify-send -i media-record "NAVIN Recorder" "Recording started — press Super+Shift+R to stop"

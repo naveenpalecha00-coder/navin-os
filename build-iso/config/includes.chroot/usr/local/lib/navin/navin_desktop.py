@@ -98,7 +98,12 @@ class Controls(Window):
    self.box.pack_start(Gtk.Label(label=title,xalign=0),False,False,0); scale=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0 if title=='Volume' else 5,100,1); scale.set_value(initial); scale.connect('value-changed',lambda s,f=fn:self.work(lambda:f(s.get_value()))); self.box.pack_start(scale,False,False,0)
   self.button('Night Light',self.night); self.button('Mobile hotspot',self.hotspot); self.button('RAM booster',lambda:self.work(lambda:run(['pkexec','/usr/local/lib/navin/navin-repair','ram-boost'])))
   self.button('Fan & Cooling',lambda:launch(['navin-fan-control'])); self.button('Devices',lambda:launch(['navin-device-manager'])); self.button('Privacy kill switch',self.privacy)
+  self.turbo=self.button('Turbo Mode: '+('ON' if run(['navin-turbo','status'])=='on' else 'OFF'),self.toggle_turbo)
+  for label,cmd in [('Quick Share',['navin-quick-share']),('Screen recorder',['navin-recorder']),('Snipping tool',['xfce4-screenshooter','-r','-c']),('Snapshot & restore',['navin-snapshot']),('Private Vault',['navin-vault']),('Theme & dock glass',['navin-theme','menu'])]:
+   self.button(label,lambda c=cmd:launch(c))
   self.finish(); GLib.timeout_add_seconds(5,self.battery); self.battery()
+ def toggle_turbo(self):
+  self.work(lambda:run(['navin-turbo','toggle']),lambda _:self.turbo.set_label('Turbo Mode: '+('ON' if run(['navin-turbo','status'])=='on' else 'OFF')))
  def volume(self):
   try:return int(run(['pactl','get-sink-volume','@DEFAULT_SINK@']).split('%')[0].split()[-1])
   except:return 50

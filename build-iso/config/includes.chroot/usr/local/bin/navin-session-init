@@ -7,3 +7,8 @@ navin-mic-fix &
 xfconf-query -c thunar -p /misc-single-click -n -t bool -s true 2>/dev/null
 setxkbmap -layout us,in -variant ,hin-kagapa -option grp:alt_shift_toggle
 /usr/local/lib/navin/navin-session-daemon &
+# Build 10: foreground priority (root via sudo for nice -5; falls back to user limits), preload, theme engine
+sudo -n env DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" NAVIN_UID="$(id -u)" /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
+sleep 1; pgrep -f navin-focus-boost >/dev/null || /usr/local/lib/navin/navin-focus-boost >/dev/null 2>&1 &
+/usr/local/lib/navin/navin-preload >/dev/null 2>&1 &
+[ "$(cat "$HOME/.config/navin/theme" 2>/dev/null || echo auto)" = auto ] && nice -n 19 navin-theme auto >/dev/null 2>&1 &

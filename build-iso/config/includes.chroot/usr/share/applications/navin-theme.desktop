@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Theme
+Comment=Auto dark/light and dock glass
+Exec=navin-theme menu
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=System;Utility;

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Turbo Mode
+Comment=One click maximum speed / balanced
+Exec=navin-turbo toggle
+Icon=speedometer
+Terminal=false
+Categories=System;Utility;

@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+"""NAVIN Quick Share (Build 10): share files with any phone/PC on the same Wi-Fi.
+Opens a private link (random token) + QR code. The phone browser can download the
+shared files and upload files back into ~/Downloads/NAVIN Share. Stops when closed."""
+import html, os, secrets, shutil, socket, subprocess, sys, threading, urllib.parse
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+
+PORT = 8765
+TOKEN = secrets.token_urlsafe(8)
+INBOX = Path.home() / 'Downloads' / 'NAVIN Share'
+INBOX.mkdir(parents=True, exist_ok=True)
+SHARED = [Path(p).resolve() for p in sys.argv[1:] if Path(p).is_file()]
+
+def lan_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try: s.connect(('10.255.255.255', 1)); return s.getsockname()[0]
+    except OSError: return '127.0.0.1'
+    finally: s.close()
+
+PAGE = """<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><title>NAVIN Quick Share</title>
+<style>body{font-family:sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}a{color:#7aa2ff}li{margin:10px 0}
+.card{background:#151c35;border-radius:16px;padding:18px;margin-bottom:16px}button,input{font-size:16px}</style>
+<h2>NAVIN Quick Share</h2><div class=card><h3>Files from PC</h3><ul>%s</ul></div>
+<div class=card><h3>Send to PC</h3><input type=file id=f multiple><button onclick=up()>Upload</button><p id=s></p></div>
+<script>async function up(){const fs=document.getElementById('f').files;for(const f of fs){document.getElementById('s').textContent='Sending '+f.name+'…';
+const r=await fetch('/upload?t=%s&name='+encodeURIComponent(f.name),{method:'PUT',body:f});document.getElementById('s').textContent=r.ok?'Sent ✓ '+f.name:'Failed'}}</script>"""
+
+class Handler(BaseHTTPRequestHandler):
+    def ok(self):
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if q.get('t', [''])[0] != TOKEN:
+            self.send_error(403); return None
+        return q
+    def do_GET(self):
+        q = self.ok()
+        if q is None: return
+        if 'f' in q:
+            idx = int(q['f'][0]) if q['f'][0].isdigit() else -1
+            if not 0 <= idx < len(SHARED): self.send_error(404); return
+            p = SHARED[idx]
+            self.send_response(200); self.send_header('Content-Length', str(p.stat().st_size))
+            self.send_header('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + urllib.parse.quote(p.name)); self.end_headers()
+            with p.open('rb') as fh: shutil.copyfileobj(fh, self.wfile)
+            return
+        items = ''.join(f'<li><a href="/?t={TOKEN}&f={i}">{html.escape(p.name)}</a></li>' for i, p in enumerate(SHARED)) or '<li>No files selected on PC</li>'
+        body = (PAGE % (items, TOKEN)).encode()
+        self.send_response(200); self.send_header('Content-Type', 'text/html; charset=utf-8'); self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+    def do_PUT(self):
+        q = self.ok()
+        if q is None: return
+        name = os.path.basename(q.get('name', ['file'])[0]) or 'file'
+        target = INBOX / name
+        n = 1
+        while target.exists(): target = INBOX / f'{target.stem} ({n}){target.suffix}'; n += 1
+        remaining = int(self.headers.get('Content-Length', 0))
+        with target.open('wb') as out:
+            while remaining > 0:
+                chunk = self.rfile.read(min(1 << 20, remaining))
+                if not chunk: break
+                out.write(chunk); remaining -= len(chunk)
+        subprocess.Popen(['notify-send', 'NAVIN Quick Share', f'Received {target.name}'])
+        self.send_response(200); self.end_headers()
+    def log_message(self, *a): pass
+
+def main():
+    subprocess.run(['sudo', '-n', 'ufw', 'allow', f'{PORT}/tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    server = ThreadingHTTPServer(('0.0.0.0', PORT), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f'http://{lan_ip()}:{PORT}/?t={TOKEN}'
+    qr = Path(os.environ.get('XDG_RUNTIME_DIR', '/tmp')) / 'navin-share-qr.png'
+    subprocess.run(['qrencode', '-s', '8', '-o', str(qr), url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    text = f'Scan with your phone camera (same Wi-Fi):\n{url}\n\nReceived files go to: {INBOX}\nClose this window to stop sharing.'
+    try:
+        if qr.exists():
+            subprocess.run(['yad', '--title=NAVIN Quick Share', f'--image={qr}', f'--text={text}', '--button=Stop sharing:0', '--center'])
+        else:
+            subprocess.run(['zenity', '--info', '--title=NAVIN Quick Share', f'--text={text}', '--ok-label=Stop sharing'])
+    finally:
+        server.shutdown()
+        subprocess.run(['sudo', '-n', 'ufw', 'delete', 'allow', f'{PORT}/tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+if __name__ == '__main__':
+    main()

@@ -9,8 +9,8 @@ spec.loader.exec_module(logic)
 
 class Rules(unittest.TestCase):
     def test_build(self):
-        self.assertEqual(logic.BUILD, 9)
-        self.assertEqual(logic.release_build('v1.0-build.9'), 9)
+        self.assertEqual(logic.BUILD, 10)
+        self.assertEqual(logic.release_build('v1.0-build.10'), 10)
     def test_hold(self):
         self.assertEqual(logic.HOLD_SECONDS, 5)
     def test_voices(self):
@@ -29,6 +29,14 @@ class Rules(unittest.TestCase):
         self.assertEqual(values['vm.dirty_bytes'], '50331648')
         self.assertEqual(values['vm.vfs_cache_pressure'], '50')
         self.assertEqual(values['vm.swappiness'], '100')
+
+    def test_turbo_and_tools_present(self):
+        for tool in ('navin-turbo', 'navin-quick-share', 'navin-recorder', 'navin-vault', 'navin-snapshot', 'navin-theme', 'navin-pill', 'navin-exe-helper'):
+            self.assertTrue((ROOT / 'config/includes.chroot/usr/local/bin' / tool).is_file(), tool)
+    def test_gestures(self):
+        conf = (ROOT / 'config/includes.chroot/etc/skel/.config/touchegg/touchegg.conf').read_text()
+        self.assertIn('fingers="3" direction="UP"', conf)
+        self.assertIn('type="PINCH" fingers="4"', conf)
 
 if __name__ == '__main__':
     unittest.main()

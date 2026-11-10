@@ -1,0 +1,15 @@
+#!/bin/bash
+# NAVIN OS Build 10: 1-click system Snapshot & Rollback (Timeshift, rsync mode).
+if grep -qw 'boot=live' /proc/cmdline; then
+  zenity --info --title "NAVIN Snapshot" --text "Snapshots work after NAVIN OS is installed to a disk.\nIn the live USB session nothing is changed permanently." ; exit 0
+fi
+command -v timeshift >/dev/null || { zenity --error --text "Timeshift is not installed. Open App Store and install 'timeshift'."; exit 1; }
+choice=$(zenity --list --title "NAVIN Snapshot & Restore" --column Action \
+  "Create restore point now" "Restore / manage snapshots" --height 220) || exit 0
+case "$choice" in
+  "Create restore point now")
+    ( sudo -n timeshift --create --comments "NAVIN 1-click $(date '+%F %R')" --tags O 2>&1 || pkexec timeshift --create --comments "NAVIN 1-click" --tags O ) \
+      | zenity --progress --pulsate --auto-close --no-cancel --title "NAVIN Snapshot" --text "Creating restore point…"
+    notify-send "NAVIN Snapshot" "Restore point created" ;;
+  *) pkexec timeshift-launcher || timeshift-launcher ;;
+esac

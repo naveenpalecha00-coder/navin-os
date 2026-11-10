@@ -1,0 +1,5 @@
+Command=/usr/local/bin/navin-pill
+UseLabel=0
+Text=
+UpdatePeriod=3000
+Font=Noto Sans Bold 9

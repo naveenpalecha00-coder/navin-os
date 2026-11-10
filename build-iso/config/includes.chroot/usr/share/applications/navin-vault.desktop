@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Private Vault
+Comment=Encrypted private folder
+Exec=navin-vault
+Icon=changes-prevent
+Terminal=false
+Categories=System;Utility;

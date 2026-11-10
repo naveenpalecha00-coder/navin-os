@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Screen Recorder
+Comment=Record screen with sound (run again to stop)
+Exec=navin-recorder
+Icon=media-record
+Terminal=false
+Categories=System;Utility;

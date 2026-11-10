@@ -10,6 +10,11 @@
       <property name="&lt;Super&gt;v" type="string" value="xfce4-clipman-history"/>
       <property name="&lt;Super&gt;k" type="string" value="navin-search"/>
       <property name="&lt;Super&gt;&lt;Shift&gt;s" type="string" value="xfce4-screenshooter -r -c"/>
+      <property name="&lt;Primary&gt;&lt;Shift&gt;s" type="string" value="xfce4-screenshooter -r -c"/>
+      <property name="&lt;Super&gt;&lt;Shift&gt;r" type="string" value="navin-recorder"/>
+      <property name="&lt;Super&gt;t" type="string" value="navin-turbo toggle"/>
+      <property name="&lt;Super&gt;&lt;Shift&gt;q" type="string" value="navin-quick-share"/>
+      <property name="&lt;Super&gt;l" type="string" value="navin-vault"/>
       <property name="Print" type="string" value="xfce4-screenshooter -f"/>
     </property>
   </property>

@@ -1,0 +1,19 @@
+#!/bin/bash
+# NAVIN OS Build 10: Wine 1-click helper (right-click menu on .exe/.msi).
+#   navin-exe-helper turbo FILE     -> Turbo Mode on, run app, Turbo off after it exits
+#   navin-exe-helper runtimes       -> install DirectX 9 / D3DCompiler / VC++ runtimes
+export WINEPREFIX="$HOME/.wine-navin64" WINEARCH=win64 WINEDEBUG=-all
+case "${1:-}" in
+  turbo)
+    navin-turbo on
+    navin-exe-run "$2"
+    navin-turbo off ;;
+  runtimes)
+    [ -d "$WINEPREFIX" ] || wineboot --init >/dev/null 2>&1
+    xfce4-terminal --hold --title "NAVIN: Windows runtimes" -x sh -c '
+      echo "Installing Windows runtimes (needs internet, 5-15 minutes)..."
+      for v in vcrun2022 vcrun2019; do winetricks -q --unattended "$v" && break; done
+      winetricks -q --unattended d3dx9 d3dcompiler_47 xact
+      echo; echo "Done. Close this window."' ;;
+  *) echo "usage: navin-exe-helper turbo FILE | runtimes"; exit 2 ;;
+esac

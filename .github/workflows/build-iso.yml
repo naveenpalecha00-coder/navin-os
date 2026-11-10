@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-iso-9
+  group: build-iso-10
   cancel-in-progress: true
 
 jobs:
@@ -57,9 +57,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0-build.9
-          name: NAVIN OS 1.0 (Build 9)
-          make_latest: false
+          tag_name: v1.0-build.10
+          name: NAVIN OS 1.0 (Build 10)
+          make_latest: true
           body: |
             NAVIN OS 1.0 — Debian 12 Bookworm base, x86_64 hybrid ISO (UEFI + Legacy BIOS).
 

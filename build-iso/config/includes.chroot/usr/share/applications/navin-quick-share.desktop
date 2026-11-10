@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Quick Share
+Comment=Send files to phone or PC over Wi-Fi
+Exec=navin-quick-share %F
+Icon=document-send
+Terminal=false
+Categories=System;Utility;

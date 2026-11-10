@@ -1,0 +1,12 @@
+#!/bin/bash
+# NAVIN OS Build 10: Smart App Preload. After login settles, warm the page cache with
+# Chrome, Files, Terminal and NAVIN tools at idle CPU/IO priority, only if RAM allows.
+sleep 25
+avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+[ "${avail:-0}" -ge 1500 ] || exit 0
+exec ionice -c3 nice -n 19 sh -c '
+  for f in /opt/google/chrome/chrome /opt/google/chrome/*.so /opt/google/chrome/*.pak /usr/lib/chromium/chromium \
+           /usr/bin/thunar /usr/lib/x86_64-linux-gnu/libthunar* /usr/bin/xfce4-terminal /usr/lib/x86_64-linux-gnu/libvte* \
+           /usr/local/lib/navin/*.py /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so*; do
+    [ -f "$f" ] && cat "$f" > /dev/null
+  done' 2>/dev/null
