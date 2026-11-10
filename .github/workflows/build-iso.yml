@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-iso
+  group: build-iso-9
   cancel-in-progress: true
 
 jobs:
@@ -59,7 +59,7 @@ jobs:
         with:
           tag_name: v1.0-build.9
           name: NAVIN OS 1.0 (Build 9)
-          make_latest: true
+          make_latest: false
           body: |
             NAVIN OS 1.0 — Debian 12 Bookworm base, x86_64 hybrid ISO (UEFI + Legacy BIOS).
 
