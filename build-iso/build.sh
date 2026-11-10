@@ -10,6 +10,8 @@ apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin gru
 chmod +x auto/* config/hooks/live/* config/includes.chroot/usr/local/bin/* config/includes.chroot/usr/local/sbin/* config/includes.chroot/usr/local/lib/navin/*
 lb clean --purge || true
 lb config
+# Build 9 size guard: 1 MiB xz blocks + x86 BCJ filter shrink the squashfs (Build 8 was 2.06 GB of a 2.147 GB limit).
+export MKSQUASHFS_OPTIONS="-b 1M -Xbcj x86"
 lb build
 
 ISO=$(find . -maxdepth 1 -type f -name "*.iso" -print -quit)

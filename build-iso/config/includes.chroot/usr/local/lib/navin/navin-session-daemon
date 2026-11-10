@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import subprocess,time,pathlib,os
+os.nice(10)
 from Xlib import display, XK
 from navin_logic import HOLD_SECONDS
 connection=display.Display(); keys={name:connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('space','Control_L','Control_R')}; started={}; fired=set()
@@ -17,10 +18,11 @@ while True:
      cmd=['navin-ai-desktop'] if name=='space' else (['pkill','-x','onboard'] if subprocess.run(['pgrep','-x','onboard'],stdout=subprocess.DEVNULL).returncode==0 else ['onboard'])
      subprocess.Popen(cmd)
    else:started.pop(name,None); fired.discard(name)
-  now=set(pathlib.Path('/sys/bus/usb/devices').glob('*'))
+  tick=getattr(connection,'_navin_tick',0)+1; connection._navin_tick=tick
+  now=set(pathlib.Path('/sys/bus/usb/devices').glob('*')) if tick%5==0 else usb
   if now!=usb:
    sound='device-added.oga' if len(now)>len(usb) else 'device-removed.oga'; subprocess.Popen(['paplay','/usr/share/sounds/freedesktop/stereo/'+sound]); usb=now
-  if time.monotonic()-last_privacy>3:
+  if time.monotonic()-last_privacy>10:
    last_privacy=time.monotonic()
    status=subprocess.run(['pactl','list','source-outputs'],capture_output=True,text=True,timeout=3).stdout
    active_mic='Source Output #' in status
@@ -38,4 +40,4 @@ while True:
     d=subprocess.run(['bluetoothctl','info',parts[1]],capture_output=True,text=True,timeout=5).stdout
     if 'Connected: no' in d and 'Paired: yes' in d and ('Audio Sink' in d or 'Headset' in d):subprocess.Popen(['bluetoothctl','connect',parts[1]],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  except Exception:pass
- time.sleep(.2)
+ time.sleep(.25)

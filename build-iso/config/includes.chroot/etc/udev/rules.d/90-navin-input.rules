@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{power/control}="on", ATTRS{bInterfaceClass}=="03"

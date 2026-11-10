@@ -52,7 +52,9 @@ lightdm-gtk-greeter-settings
 picom
 arc-theme
 papirus-icon-theme
-fonts-noto
+fonts-noto-core
+fonts-noto-ui-core
+fonts-noto-mono
 fonts-noto-color-emoji
 fonts-dejavu
 
@@ -178,3 +180,12 @@ libvulkan1
 vulkan-tools
 ffmpeg
 psmisc
+
+# ---- NAVIN OS Build 9: anti-hang, input, GPU ----
+earlyoom
+irqbalance
+acpid
+xserver-xorg-core
+mesa-va-drivers
+intel-media-va-driver
+mesa-utils

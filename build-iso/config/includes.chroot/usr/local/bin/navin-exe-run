@@ -1,9 +1,13 @@
 #!/bin/bash
-set -euo pipefail
-f="${1:-}"; [ -f "$f" ] || exit 1
-export WINEPREFIX="$HOME/.wine-navin64" WINEARCH=win64
+# NAVIN OS Build 9: double-click .exe / .msi runner (Wine 64+32-bit, DXVK when Vulkan works)
+set -uo pipefail
+f="${1:-}"; [ -f "$f" ] || { notify-send NAVIN "File not found"; exit 1; }
+export WINEPREFIX="$HOME/.wine-navin64" WINEARCH=win64 WINEDEBUG=-all WINEESYNC=1 WINEFSYNC=1
 if [ ! -d "$WINEPREFIX" ]; then
- wineboot --init
- if command -v dxvk-setup >/dev/null && vulkaninfo --summary >/dev/null 2>&1; then dxvk-setup install || notify-send NAVIN 'DXVK setup failed; WineD3D will be used'; fi
+ notify-send -t 8000 NAVIN "Preparing Windows support (first run, about 1 minute)…"
+ wineboot --init >/dev/null 2>&1
+ if command -v dxvk-setup >/dev/null && vulkaninfo --summary >/dev/null 2>&1; then dxvk-setup install >/dev/null 2>&1 || notify-send NAVIN 'DXVK setup failed; WineD3D will be used'; fi
 fi
+command -v wine32 >/dev/null 2>&1 || [ -x /usr/lib/wine/wine ] || notify-send NAVIN "32-bit Windows layer missing; some older apps may not start"
+cd "$(dirname "$f")"
 case "${f,,}" in *.msi) exec wine msiexec /i "$f";; *.exe) exec wine "$f";; *) exit 2;; esac

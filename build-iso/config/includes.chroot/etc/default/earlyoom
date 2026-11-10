@@ -1,0 +1,2 @@
+# NAVIN OS: kill the biggest runaway app before RAM fills, never the desktop
+EARLYOOM_ARGS="-m 5 -s 10 -r 0 -n --avoid '(^|/)(Xorg|xfwm4|xfce4-panel|xfce4-session|lightdm|picom|systemd|pipewire|wireplumber)$' --prefer '(^|/)(chrome|chromium|wine.*|.*\.exe)$'"

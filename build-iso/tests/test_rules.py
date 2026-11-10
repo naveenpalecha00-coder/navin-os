@@ -9,8 +9,8 @@ spec.loader.exec_module(logic)
 
 class Rules(unittest.TestCase):
     def test_build(self):
-        self.assertEqual(logic.BUILD, 8)
-        self.assertEqual(logic.release_build('v1.0-build.8'), 8)
+        self.assertEqual(logic.BUILD, 9)
+        self.assertEqual(logic.release_build('v1.0-build.9'), 9)
     def test_hold(self):
         self.assertEqual(logic.HOLD_SECONDS, 5)
     def test_voices(self):
@@ -25,10 +25,10 @@ class Rules(unittest.TestCase):
         config = (ROOT / 'config/includes.chroot/etc/sysctl.d/98-navin-speed.conf').read_text()
         import re
         values = dict(re.findall(r'([\w.]+)\s*=\s*(\d+)', config))
-        self.assertEqual(values['vm.dirty_background_ratio'], '3')
-        self.assertEqual(values['vm.dirty_ratio'], '6')
+        self.assertEqual(values['vm.dirty_background_bytes'], '16777216')
+        self.assertEqual(values['vm.dirty_bytes'], '50331648')
         self.assertEqual(values['vm.vfs_cache_pressure'], '50')
-        self.assertEqual(values['vm.swappiness'], '10')
+        self.assertEqual(values['vm.swappiness'], '100')
 
 if __name__ == '__main__':
     unittest.main()
