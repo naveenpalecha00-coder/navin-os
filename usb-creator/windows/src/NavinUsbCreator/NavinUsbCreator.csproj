@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>NavinUsbCreator</AssemblyName>
+    <RootNamespace>NavinUsbCreator</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>NAVIN USB Creator</Product>
+    <Company>Navin Palecha</Company>
+    <Copyright>Navin Palecha</Copyright>
+    <Description>Creates bootable NAVIN OS USB drives</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="DiscUtils.Iso9660" Version="0.16.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NavinUsb.Core\NavinUsb.Core.csproj" />
+  </ItemGroup>
+</Project>

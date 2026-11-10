@@ -1,0 +1,134 @@
+name: Build NAVIN USB Creator
+
+on:
+  push:
+    branches: [main]
+    paths: ["usb-creator/**", ".github/workflows/usb-creator.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: usb-creator
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Read version
+        id: v
+        shell: bash
+        run: echo "version=$(tr -d '[:space:]' < usb-creator/VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Safety and logic tests
+        run: dotnet test usb-creator/windows/tests/NavinUsb.Core.Tests/NavinUsb.Core.Tests.csproj -c Release
+      - name: Build single-file Windows app
+        shell: bash
+        run: |
+          dotnet publish usb-creator/windows/src/NavinUsbCreator/NavinUsbCreator.csproj -c Release -r win-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+            -p:Version=${{ steps.v.outputs.version }} -o out
+          mkdir -p dist
+          cp out/NavinUsbCreator.exe "dist/navin-usb-creator-${{ steps.v.outputs.version }}-win-x64.exe"
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Read version
+        id: v
+        run: echo "version=$(tr -d '[:space:]' < usb-creator/VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/navin-release.p12"
+            echo "NAVIN_KEYSTORE_PATH=$RUNNER_TEMP/navin-release.p12" >> "$GITHUB_ENV"
+            echo "SIGNING=release" >> "$GITHUB_ENV"
+          else
+            echo "SIGNING=debug" >> "$GITHUB_ENV"
+            echo "::warning::ANDROID_KEYSTORE_B64 secret missing - APK signed with a temporary debug key"
+          fi
+      - name: Unit tests and release APK
+        env:
+          NAVIN_VERSION: ${{ steps.v.outputs.version }}
+          NAVIN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          NAVIN_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          NAVIN_KEY_ALIAS: navin
+        run: gradle -p usb-creator/android --no-daemon --stacktrace testReleaseUnitTest assembleRelease
+      - name: Check signature
+        run: |
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          APK=usb-creator/android/app/build/outputs/apk/release/app-release.apk
+          "$APKSIGNER" verify --print-certs "$APK"
+          mkdir -p dist
+          cp "$APK" "dist/navin-usb-creator-${{ steps.v.outputs.version }}.apk"
+          echo "$SIGNING" > dist/android-signing.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+
+  release:
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums and release notes
+        id: notes
+        run: |
+          V="$(tr -d '[:space:]' < usb-creator/VERSION)"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          SIGNING="$(cat dist/android-signing.txt)"; rm dist/android-signing.txt
+          cd dist && sha256sum * > SHA256SUMS.txt && cd ..
+          {
+            echo "## NAVIN USB Creator $V"
+            echo
+            echo "Creates bootable NAVIN OS USB drives on Windows and Android."
+            echo
+            echo "### What's included"
+            echo "- Windows 10/11 (64-bit) app: USB drive detection, disk image mode (UEFI + Legacy BIOS for hybrid ISOs), FAT32 extract mode (GPT or MBR, UEFI), cluster size and volume label, live speed and time left, safe cancel, read-back verification, update check."
+            echo "- Android 7.0+ app: USB OTG drive detection, ISO from phone storage, byte-for-byte write, FAT32 format, progress, verification, safe handling of unplugging, update check."
+            echo
+            echo "### Notes"
+            echo "- The Windows app asks for administrator rights (needed for raw disk access). It is not code-signed yet, so Windows SmartScreen may show \"Windows protected your PC\" - choose More info -> Run anyway."
+            if [ "$SIGNING" = "release" ]; then echo "- The Android APK is signed with the NAVIN release key."; else echo "- The Android APK is signed with a temporary key; uninstall the old version before installing a newer one."; fi
+            echo "- Built automatically by GitHub Actions. Hardware testing on real PCs and phones is still in progress."
+            echo
+            echo "### SHA-256"
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+          } > notes.md
+          cat notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: usb-creator-v${{ steps.notes.outputs.version }}
+          name: NAVIN USB Creator ${{ steps.notes.outputs.version }}
+          body_path: notes.md
+          files: dist/*
+          make_latest: "false"
