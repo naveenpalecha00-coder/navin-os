@@ -215,3 +215,8 @@ squashfs-tools
 grub2-common
 grub-efi-amd64-bin
 grub-pc-bin
+# ---- NAVIN 2.0: old laptops (Samsung RV411 class) and fast boot ----
+# Intel SNA X driver: used only on 1st-gen Intel graphics (gen4/gen5) by navin-hwdetect
+xserver-xorg-video-intel
+# lz4: fast start-up image compression (initramfs COMPRESS=lz4)
+lz4

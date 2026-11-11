@@ -1,0 +1,521 @@
+{
+ "version": "2.0",
+ "items": [
+  {
+   "category": "Touchpad",
+   "title": "Forced Synaptics InterTouch removed (it froze PS/2 touchpads on old laptops)",
+   "path": "build-iso/config/includes.chroot/etc/modprobe.d/navin-hw.conf",
+   "check": "no forced InterTouch"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Samsung laptops get the i8042 nomux/reset touchpad controller fix automatically",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "I8042_SAMSUNG"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Boot fix written to the installed boot menu only on Samsung laptops",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "90-navin-quirks.cfg"
+  },
+  {
+   "category": "Touchpad",
+   "title": "\"Old Laptop Mode\" entry in the live USB boot menu (UEFI and BIOS)",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "Old Laptop Mode"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad rescue: resets the PS/2 touchpad port without a reboot",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "check": "reconnect"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Rescue tries the native driver, then 3 basic modes that every touchpad understands",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "check": "exps imps bare"
+  },
+  {
+   "category": "Touchpad",
+   "title": "A working basic mode is remembered for the next boot",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "check": "navin-touchpad-rescue.conf"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Rescue runs by itself at boot when a laptop shows no touchpad",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-hwdetect",
+   "check": "navin-touchpad-rescue.service"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Rescue runs by itself after sleep/resume",
+   "path": "build-iso/config/includes.chroot/usr/lib/systemd/system-sleep/navin-input",
+   "check": "navin-touchpad-rescue"
+  },
+  {
+   "category": "Touchpad",
+   "title": "navin-touchpad doctor: touchpad, PS/2 port, driver errors and next step",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-touchpad",
+   "check": "doctor()"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Doctor counts \"lost sync\" touchpad errors (the cause of cursor stutter)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-touchpad",
+   "check": "lost sync"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Fn+F5 hint for Samsung's hardware touchpad switch",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-touchpad",
+   "check": "Fn+F5"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Boot fix can be turned on/off (navin-touchpad quirks on|off)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-quirks",
+   "check": "quirks-off"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Laptop & Touchpad page in System Center with Rescue / Boot fix buttons",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "def p_laptop"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Password prompt only once for touchpad rescue",
+   "path": "build-iso/config/includes.chroot/usr/share/polkit-1/actions/org.navin.repair.policy",
+   "check": "org.navin.touchpad-rescue"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Intel SNA driver for 1st-gen Intel graphics (GMA 4500 / Ironlake HD)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "AccelMethod"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "TearFree on old Intel graphics (no tearing, no stalls)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "TearFree"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Forced i915 framebuffer compression removed (screen freezes)",
+   "path": "build-iso/config/includes.chroot/etc/modprobe.d/navin-hw.conf",
+   "check": "framebuffer compression"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "No SATA link power saving on old laptops (disk freezes)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "SATA_LINKPWR_ON_BAT"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "No audio power-saving clicks or dropouts on Intel HD Audio",
+   "path": "build-iso/config/includes.chroot/etc/modprobe.d/navin-oldlaptop.conf",
+   "check": "power_save=0"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Hardware watchdogs that reset slow machines are not loaded",
+   "path": "build-iso/config/includes.chroot/etc/modprobe.d/navin-oldlaptop.conf",
+   "check": "iTCO_wdt"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "PC-speaker beeps off",
+   "path": "build-iso/config/includes.chroot/etc/modprobe.d/navin-oldlaptop.conf",
+   "check": "pcspkr"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "No turbo boost on battery for older CPUs (less heat)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "CPU_BOOST_ON_BAT"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Bluetooth and phones excluded from USB autosuspend",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "USB_EXCLUDE_BTUSB"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Daily package checks no longer start during login",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "RandomizedDelaySec=2h"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "System log size capped at 64 MB (less disk work)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "SystemMaxUse=64M"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Shutdown never waits more than 10 s for a stuck service",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "DefaultTimeoutStopSec=10s"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Chrome safe GPU mode on old Intel graphics",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-chrome",
+   "check": "--disable-gpu-rasterization"
+  },
+  {
+   "category": "No hang / no freeze",
+   "title": "Chrome uses fewer processes on 2 GB computers",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-chrome",
+   "check": "--renderer-process-limit=3"
+  },
+  {
+   "category": "Speed",
+   "title": "LZ4 memory compression on older CPUs (about 3x faster than zstd there)",
+   "path": "build-iso/config/includes.chroot/usr/local/sbin/navin-memprofile",
+   "check": "algo=lz4"
+  },
+  {
+   "category": "Speed",
+   "title": "BFQ disk scheduler for hard disks: mouse and desktop stay responsive during disk work",
+   "path": "build-iso/config/includes.chroot/etc/udev/rules.d/60-navin-iosched.rules",
+   "check": "bfq"
+  },
+  {
+   "category": "Speed",
+   "title": "mq-deadline for SATA SSDs, none for NVMe",
+   "path": "build-iso/config/includes.chroot/etc/udev/rules.d/60-navin-iosched.rules",
+   "check": "mq-deadline"
+  },
+  {
+   "category": "Speed",
+   "title": "1 MB read-ahead on hard disks (faster app start)",
+   "path": "build-iso/config/includes.chroot/etc/udev/rules.d/60-navin-iosched.rules",
+   "check": "read_ahead_kb"
+  },
+  {
+   "category": "Speed",
+   "title": "Light glass effects mode (compositor without shadows/previews)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-compositor",
+   "check": "run_lite"
+  },
+  {
+   "category": "Speed",
+   "title": "Light effects chosen automatically on old graphics and 2 GB RAM",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "\"compositor\": \"lite\""
+  },
+  {
+   "category": "Speed",
+   "title": "Old Laptop Mode boot entry forces light effects and Chrome safe mode",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "navin.oldlaptop=1"
+  },
+  {
+   "category": "Speed",
+   "title": "No saved sessions to restore at login",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml",
+   "check": "SaveOnExit"
+  },
+  {
+   "category": "Speed",
+   "title": "Event sounds off (less work on every click)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "EnableEventSounds"
+  },
+  {
+   "category": "Fast boot",
+   "title": "No \"waiting for resume device\" stall at boot",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "RESUME=none"
+  },
+  {
+   "category": "Fast boot",
+   "title": "LZ4 start-up image (decompresses faster on old CPUs)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "COMPRESS=lz4"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Boot no longer waits for the network",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "NetworkManager-wait-online.service"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Boot no longer waits for all devices to settle",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "systemd-udev-settle.service"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Installed boot menu waits 3 s instead of 5 s",
+   "path": "build-iso/config/includes.chroot/etc/default/grub.d/navin.cfg",
+   "check": "GRUB_TIMEOUT=3"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Live USB boot menu waits 3 s",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "set timeout=3"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Boot splash shows at once and does not wait for slow screens",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "ShowDelay=0"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Quieter boot (fewer console messages to draw)",
+   "path": "build-iso/config/includes.chroot/etc/default/grub.d/navin.cfg",
+   "check": "rd.udev.log_level=3"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Hardware detection limited to 20 s",
+   "path": "build-iso/config/includes.chroot/etc/systemd/system/navin-hwdetect.service",
+   "check": "TimeoutSec=20"
+  },
+  {
+   "category": "Fast boot",
+   "title": "Manual-page index timer off",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "man-db.timer"
+  },
+  {
+   "category": "Fan",
+   "title": "Fan speed slider in System Center",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "Gtk.Scale"
+  },
+  {
+   "category": "Fan",
+   "title": "navin-fan set 0..100 (0 = BIOS automatic)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-fan",
+   "check": "set 0..100"
+  },
+  {
+   "category": "Fan",
+   "title": "Slider never goes below 30 % or below what the BIOS was running",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "PWM_FLOOR"
+  },
+  {
+   "category": "Fan",
+   "title": "ThinkPad fan levels 1-7 from the slider",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "def thinkpad_level"
+  },
+  {
+   "category": "Fan",
+   "title": "Firmware cooling profile from the slider (quiet/balanced/performance)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "platform-profile"
+  },
+  {
+   "category": "Fan",
+   "title": "Laptops without fan control: slider limits CPU heat instead (shown clearly)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-fan",
+   "check": "heat-limit"
+  },
+  {
+   "category": "Fan",
+   "title": "Fan changes do not ask for a password every time",
+   "path": "build-iso/config/includes.chroot/usr/share/polkit-1/actions/org.navin.repair.policy",
+   "check": "org.navin.fan"
+  },
+  {
+   "category": "Fan",
+   "title": "Fan status shows slider position and CPU limit",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-fan",
+   "check": "slider="
+  },
+  {
+   "category": "Fan",
+   "title": "Fan window links to the slider",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_desktop.py",
+   "check": "Open fan speed slider"
+  },
+  {
+   "category": "Glass look",
+   "title": "Floating light-glass panels with soft shadow",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "navin_glass"
+  },
+  {
+   "category": "Glass look",
+   "title": "Frosted rounded menus and pop-ups",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "menu, .menu"
+  },
+  {
+   "category": "Glass look",
+   "title": "Dark glass tooltips",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "tooltip"
+  },
+  {
+   "category": "Glass look",
+   "title": "Glass start menu with rounded search",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "#whiskermenu-window"
+  },
+  {
+   "category": "Glass look",
+   "title": "Start menu slightly see-through",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/panel/whiskermenu-1.rc",
+   "check": "menu-opacity=96"
+  },
+  {
+   "category": "Glass look",
+   "title": "Rounded sidebar rows (Files, System Center)",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "stacksidebar row"
+  },
+  {
+   "category": "Glass look",
+   "title": "Blue accent buttons, sliders, switches and progress bars",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "scale highlight"
+  },
+  {
+   "category": "Glass look",
+   "title": "Glass notifications, top-right, 6 s",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml",
+   "check": "initial-opacity"
+  },
+  {
+   "category": "Glass look",
+   "title": "Light see-through terminal with NAVIN colours",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/terminal/terminalrc",
+   "check": "TERMINAL_BACKGROUND_TRANSPARENT"
+  },
+  {
+   "category": "Glass look",
+   "title": "Windows turn slightly see-through while moving",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "move_opacity"
+  },
+  {
+   "category": "Glass look",
+   "title": "Centered window titles",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "title_alignment"
+  },
+  {
+   "category": "Glass look",
+   "title": "New windows open in the centre",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "placement_mode"
+  },
+  {
+   "category": "Glass look",
+   "title": "Sharper, smoother text",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "hintslight"
+  },
+  {
+   "category": "Glass look",
+   "title": "Bigger, clearer mouse pointer",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "CursorThemeSize"
+  },
+  {
+   "category": "Glass look",
+   "title": "Login screen uses the light icon set",
+   "path": "build-iso/config/includes.chroot/etc/lightdm/lightdm-gtk-greeter.conf",
+   "check": "Papirus-Light"
+  },
+  {
+   "category": "Glass look",
+   "title": "Blue glass selection box on the desktop",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/gtk-3.0/gtk.css",
+   "check": "rubberband"
+  },
+  {
+   "category": "Updates",
+   "title": "NAVIN 2.0 update channel (tools/settings patches: v2.0-update.N)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_logic.py",
+   "check": "v2.0-update"
+  },
+  {
+   "category": "Updates",
+   "title": "Debian 12 patches can never be applied to 2.0",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_logic.py",
+   "check": "never applied to NAVIN 2.0"
+  },
+  {
+   "category": "Updates",
+   "title": "System Updater tells you when a new NAVIN version (new ISO) exists",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_logic.py",
+   "check": "def newer_os_release"
+  },
+  {
+   "category": "Updates",
+   "title": "Daily update notification after login (nothing installs by itself)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-update-notify",
+   "check": "notify-send"
+  },
+  {
+   "category": "Updates",
+   "title": "Patches are checked against the publisher's GitHub file fingerprint",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-apply-update",
+   "check": "update_tag(build)"
+  },
+  {
+   "category": "Updates",
+   "title": "Patch publishing workflow (manual, verified, never \"latest\")",
+   "path": ".github/workflows/navin-2.0-update.yml",
+   "check": "make_latest"
+  },
+  {
+   "category": "Smaller ISO",
+   "title": "Firmware for ARM boards/phones removed (cannot load on a PC)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "rockchip"
+  },
+  {
+   "category": "Smaller ISO",
+   "title": "Qualcomm 5G modem firmware for x86 laptops kept",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "sdx*"
+  },
+  {
+   "category": "Smaller ISO",
+   "title": "Unused elementary-OS icon sets removed",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "ePapirus"
+  },
+  {
+   "category": "Smaller ISO",
+   "title": "Build report shows how much firmware was removed",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "firmware_removed_kb"
+  },
+  {
+   "category": "Tools",
+   "title": "What's New page in System Center (this list)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "def p_whatsnew"
+  },
+  {
+   "category": "Tools",
+   "title": "Welcome window: What's new button",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_desktop.py",
+   "check": "What's new in NAVIN 2.0"
+  },
+  {
+   "category": "Tools",
+   "title": "Hardware detection report shows the NAVIN 2.0 laptop fixes",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-hwdetect",
+   "check": "NAVIN 2.0:"
+  }
+ ]
+}

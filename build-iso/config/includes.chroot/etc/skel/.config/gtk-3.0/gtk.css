@@ -1,16 +1,63 @@
-/* NAVIN OS 1.0 accent: reference blue #1677F2 on white */
+/* NAVIN 2.0 light glass theme layer (on top of Arc). Accent #1677F2 on white.
+   Glass needs a compositor (navin-compositor xfwm or lite); with effects off the same colours
+   simply draw solid, so nothing becomes unreadable. Kept to plain colours/radii/borders:
+   no blur filters or animations, so it costs nothing on old graphics chips. */
 @define-color selected_bg_color #1677F2;
 @define-color theme_selected_bg_color #1677F2;
 @define-color accent_bg_color #1677F2;
+@define-color navin_glass rgba(255,255,255,0.78);
+@define-color navin_glass_strong rgba(255,255,255,0.92);
+@define-color navin_edge rgba(22,119,242,0.18);
+@define-color navin_ink #111827;
 
-.xfce4-panel { background-color: rgba(255,255,255,0.82); border: 1px solid rgba(22,119,242,0.2); border-radius: 18px; margin: 8px; }
-.xfce4-panel button { border-radius: 10px; transition: 150ms ease; }
-.xfce4-panel button:hover { padding: 4px; }
-.xfce4-panel button:checked, .xfce4-panel button:hover { background-color: rgba(22, 119, 242, 0.12); }
+/* ---- panels: floating glass bars ---- */
+.xfce4-panel { background-color: @navin_glass; border: 1px solid @navin_edge; border-radius: 18px; margin: 8px; box-shadow: 0 6px 18px rgba(17,24,39,0.10); }
+.xfce4-panel button { border-radius: 12px; transition: 120ms ease-out; }
+.xfce4-panel button:hover { background-color: rgba(22,119,242,0.12); }
+.xfce4-panel button:checked { background-color: rgba(22,119,242,0.18); }
+.xfce4-panel .tasklist button:checked { border-bottom: 2px solid #1677F2; }
+
+/* ---- menus, popovers, tooltips: frosted cards ---- */
+menu, .menu, .context-menu, popover, popover.background { background-color: @navin_glass_strong; border: 1px solid @navin_edge; border-radius: 10px; }
+menu menuitem, .menu menuitem { border-radius: 8px; padding: 6px 10px; margin: 1px 4px; }
+menu menuitem:hover, .menu menuitem:hover { background-color: rgba(22,119,242,0.14); color: @navin_ink; }
+tooltip, tooltip.background { background-color: rgba(17,24,39,0.86); color: #FFFFFF; border-radius: 10px; border: none; }
+tooltip label { color: #FFFFFF; }
+
+/* ---- Whisker menu (start menu) ---- */
+#whiskermenu-window { background-color: @navin_glass_strong; border-radius: 18px; border: 1px solid @navin_edge; }
+#whiskermenu-window entry { border-radius: 12px; padding: 6px 10px; }
+#whiskermenu-window treeview:selected, #whiskermenu-window iconview:selected { background-color: rgba(22,119,242,0.16); color: @navin_ink; border-radius: 10px; }
+
+/* ---- windows ---- */
 window.background { background-color: #FFFFFF; }
-.sidebar, placessidebar, .thunar .sidebar { background-color: #F8FAFF; }
-placessidebar row:selected { background-color: rgba(22, 119, 242, 0.14); color: #111111; border-radius: 8px; }
-entry { border-radius: 10px; }
+headerbar, .titlebar { background-color: #F8FAFF; border-bottom: 1px solid rgba(17,24,39,0.06); }
+.sidebar, placessidebar, .thunar .sidebar, stacksidebar { background-color: #F6F9FF; }
+placessidebar row:selected, stacksidebar row:selected { background-color: rgba(22,119,242,0.14); color: @navin_ink; border-radius: 10px; }
+stacksidebar row { border-radius: 10px; margin: 2px 6px; padding: 4px 6px; }
+notebook > header tab:checked { box-shadow: inset 0 -2px #1677F2; }
+
+/* ---- controls ---- */
 button { border-radius: 10px; }
-XfdesktopIconView.view { background: transparent; color: #111111; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8); }
-XfdesktopIconView.view:active { background-color: rgba(22, 119, 242, 0.25); border-radius: 10px; }
+button.suggested-action { background-image: none; background-color: #1677F2; color: #FFFFFF; border-color: #1268D6; }
+button.destructive-action { background-image: none; background-color: #E5484D; color: #FFFFFF; }
+entry, spinbutton, combobox button { border-radius: 10px; }
+entry:focus { box-shadow: 0 0 0 2px rgba(22,119,242,0.25); }
+scale trough { border-radius: 6px; min-height: 6px; }
+scale highlight { background-color: #1677F2; border-radius: 6px; }
+scale slider { border-radius: 50%; min-width: 18px; min-height: 18px; }
+switch:checked { background-color: #1677F2; }
+progressbar progress { background-color: #1677F2; border-radius: 6px; }
+progressbar trough { border-radius: 6px; }
+scrollbar slider { border-radius: 8px; min-width: 6px; min-height: 6px; }
+selection, *:selected { background-color: #1677F2; color: #FFFFFF; }
+
+/* ---- desktop icons ---- */
+XfdesktopIconView.view { background: transparent; color: @navin_ink; text-shadow: 0 1px 2px rgba(255,255,255,0.85); }
+XfdesktopIconView.view:active { background-color: rgba(22,119,242,0.22); border-radius: 12px; }
+XfdesktopIconView.rubberband { background-color: rgba(22,119,242,0.15); border: 1px solid rgba(22,119,242,0.5); }
+
+/* ---- notifications (xfce4-notifyd) ---- */
+#XfceNotifyWindow { background-color: @navin_glass_strong; border: 1px solid @navin_edge; border-radius: 16px; }
+#XfceNotifyWindow label#summary { font-weight: bold; color: @navin_ink; }
+#XfceNotifyWindow progressbar progress { background-color: #1677F2; }

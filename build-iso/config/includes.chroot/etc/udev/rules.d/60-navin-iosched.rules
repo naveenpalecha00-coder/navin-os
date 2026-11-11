@@ -1,0 +1,7 @@
+# NAVIN 2.0 disk schedulers. Hard disks (most old laptops, e.g. Samsung RV411): BFQ keeps the desktop
+# and mouse responsive while something else reads/writes the disk. SATA SSD: mq-deadline. NVMe: none.
+ACTION=="add|change", KERNEL=="sd[a-z]*", ENV{DEVTYPE}=="disk", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="sd[a-z]*", ENV{DEVTYPE}=="disk", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
+ACTION=="add|change", KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTR{queue/scheduler}="none"
+# Hard disks: larger read-ahead makes app start-up faster.
+ACTION=="add|change", KERNEL=="sd[a-z]*", ENV{DEVTYPE}=="disk", ATTR{queue/rotational}=="1", ATTR{queue/read_ahead_kb}="1024"

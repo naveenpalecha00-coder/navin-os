@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+"""NAVIN 2.0 update notifier (per user, autostart). 3 minutes after login, at most once a day, asks
+GitHub for a newer NAVIN 2.0 OTA patch (v2.0-update.N) or a newer NAVIN version (vX.Y, new ISO).
+It only shows a notification; nothing is downloaded or installed without the user pressing the button
+in NAVIN System Updater. Off: touch ~/.config/navin/no-update-check"""
+import json, pathlib, subprocess, sys, time, urllib.request
+sys.path.insert(0, "/usr/local/lib/navin")
+from navin_logic import REPO, newer_patch, newer_os_release
+
+home = pathlib.Path.home()
+if (home / ".config/navin/no-update-check").exists() or (pathlib.Path("/run/live").exists() and "--force" not in sys.argv):
+    sys.exit(0)  # live USB sessions have no installed system to patch
+stamp = home / ".cache/navin/update-check"; stamp.parent.mkdir(parents=True, exist_ok=True)
+if "--now" not in sys.argv:
+    time.sleep(180)
+    if stamp.exists() and time.time() - stamp.stat().st_mtime < 86400:
+        sys.exit(0)
+try:
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/releases?per_page=30",
+                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "NAVIN-OS-Update-Notify"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        rows = json.load(r)
+    current = int(pathlib.Path("/etc/navin/build").read_text().strip())
+except Exception as e:  # offline or GitHub unreachable: try again next login
+    print("update check skipped:", e); sys.exit(0)
+stamp.touch()
+patch, osr = newer_patch(rows, current), newer_os_release(rows)
+if not patch and not osr:
+    print("NAVIN is up to date"); sys.exit(0)
+title = "NAVIN update available" if patch else "New NAVIN version available"
+body = (f"{patch['tag_name']}: tools and settings update" if patch else "") + ("\n" if patch and osr else "") + (f"{osr['tag_name']}: new ISO" if osr else "")
+try:
+    out = subprocess.run(["notify-send", "-i", "system-software-update", "-A", "open=Open updater", "-w", title, body],
+                         capture_output=True, text=True, timeout=600).stdout.strip()
+except (OSError, subprocess.SubprocessError):
+    sys.exit(0)
+if out == "open":
+    subprocess.Popen(["navin-updater"])

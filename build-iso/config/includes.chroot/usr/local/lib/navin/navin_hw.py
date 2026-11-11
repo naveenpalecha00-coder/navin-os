@@ -1,4 +1,4 @@
-"""NAVIN OS 1.2 hardware detection.
+"""NAVIN 2.0 hardware detection (Debian 13).
 
 Pure parsing/decision functions (unit-tested) plus collect() which reads the
 running system (DMI, /proc, /sys, ACPI, PCI, USB, input, hwmon). Nothing here
@@ -164,6 +164,104 @@ def thermal_level(temp_c):
     return "ok"
 
 
+# ---------------- NAVIN 2.0: old-laptop quirks (Samsung RV411 class) ----------------
+
+# Intel GMA 4500 (gen4) and Ironlake "HD Graphics" (gen5, 1st-gen Core i3/i5/Pentium P6xxx) device ids.
+OLD_INTEL_GPU = {"2a42", "2e02", "2e12", "2e22", "2e32", "2e42", "2e92", "0042", "0046"}
+I8042_SAMSUNG = ("i8042.nomux=1", "i8042.reset=1")
+# Tried in order by navin-touchpad-rescue when a laptop shows no touchpad: native protocol first,
+# then plain IntelliMouse modes that every PS/2 touchpad understands (cursor + tap, no multitouch).
+PSMOUSE_FALLBACKS = ("", "proto=exps", "proto=imps", "proto=bare")
+
+
+def is_samsung(dmi):
+    return (dmi.get("sys_vendor") or "").strip().upper().startswith("SAMSUNG")
+
+
+def is_old_intel(gpu):
+    return gpu.get("vendor") == "8086" and (gpu.get("device") or "").lower() in OLD_INTEL_GPU
+
+
+def is_old_cpu(flags):
+    """CPUs before Sandy Bridge (no AVX), e.g. 1st-gen Core i3 M 3xx / Pentium P6xxx."""
+    return "avx" not in set(flags)
+
+
+def laptop_quirks(dmi, gpus, cpu_flags, mem_kb, rotational=False):
+    """Decide NAVIN 2.0 compatibility settings for one computer (pure, unit-tested).
+
+    kernel_params are written to the installed boot menu only for Samsung laptops (i8042 controller
+    quirk that makes PS/2 touchpads disappear); everything else is applied at runtime."""
+    old_gpu = any(is_old_intel(g) for g in gpus)
+    old_cpu = is_old_cpu(cpu_flags)
+    q = {"samsung": is_samsung(dmi), "old_gpu": old_gpu, "old_cpu": old_cpu,
+         "old_laptop": old_gpu or old_cpu, "kernel_params": [], "notes": [],
+         "xorg_driver": "intel-sna" if old_gpu else "modesetting",
+         "compositor": "lite" if (old_gpu or mem_kb <= 2726297) else "xfwm",
+         "zram_algo": "lz4" if old_cpu else "zstd",
+         "chrome_gpu": "safe" if old_gpu else "full",
+         "io_scheduler": "bfq" if rotational else "mq-deadline",
+         "sata_alpm": "max_performance" if (old_cpu or old_gpu) else "default",
+         "battery_turbo": not old_cpu}
+    if q["samsung"]:
+        q["kernel_params"] += list(I8042_SAMSUNG)
+        q["notes"].append("Samsung laptop: touchpad controller fix (i8042.nomux/reset) is used. If the cursor still does not move, press Fn+F5 once — Samsung turns the touchpad off in hardware with that key.")
+    if old_gpu:
+        q["notes"].append("1st-gen Intel graphics: NAVIN uses the Intel SNA driver, the light compositor and Chrome's safe GPU mode (no forced GPU raster) to stop screen freezes.")
+    if old_cpu:
+        q["notes"].append("Older CPU: LZ4 memory compression (faster than zstd on this CPU) and no turbo boost on battery to keep temperatures down.")
+    return q
+
+
+def grub_quirks_cfg(params):
+    """Text for /etc/default/grub.d/90-navin-quirks.cfg (empty string = remove the file)."""
+    params = [p for p in params if re.fullmatch(r"[a-z0-9_.]+=[a-z0-9_.,-]+", p)]
+    if not params:
+        return ""
+    return ("# NAVIN 2.0 hardware quirks (written by navin-hwdetect; remove with: navin-touchpad quirks off)\n"
+            f'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT {" ".join(params)}"\n')
+
+
+def touchpad_missing(devices, laptop, has_aux_port):
+    """True when a laptop with a PS/2 AUX port shows no touchpad input device (rescue needed)."""
+    return bool(laptop and has_aux_port and not any(is_touchpad(d) for d in devices))
+
+
+# ---------------- NAVIN 2.0: real fan speed slider ----------------
+
+PWM_FLOOR = 77  # 30 % of 255: a manual setting never runs the fan slower than this
+
+
+def fan_pwm_target(percent, current_auto_pwm=0):
+    """Slider 1..100 -> PWM 0..255. Never below 30 % and never below what the BIOS was already
+    running (so the slider can only make cooling stronger than firmware automatic control)."""
+    percent = max(1, min(100, int(percent)))
+    value = round(PWM_FLOOR + (255 - PWM_FLOOR) * (percent - 1) / 99)
+    return max(value, min(255, int(current_auto_pwm or 0)))
+
+
+def thinkpad_level(percent):
+    """Slider 1..100 -> ThinkPad fan level 1..7 (0 = stopped is never used)."""
+    return max(1, min(7, -(-max(1, min(100, int(percent))) * 7 // 100)))
+
+
+def fan_plan(control, percent, current_auto_pwm=0):
+    """What `navin-fan set PERCENT` does on each fan interface. 0 = hand control back to the BIOS."""
+    percent = int(percent)
+    if not 0 <= percent <= 100:
+        raise ValueError("percent must be 0..100")
+    if percent == 0:
+        return {"action": "auto"}
+    if control == "thinkpad":
+        return {"action": "thinkpad", "level": thinkpad_level(percent)}
+    if control == "hwmon-pwm":
+        return {"action": "pwm", "pwm": fan_pwm_target(percent, current_auto_pwm)}
+    if control == "platform-profile":
+        return {"action": "profile", "profile": "quiet" if percent < 34 else ("balanced" if percent < 67 else "performance")}
+    # No fan interface (many older laptops, e.g. Samsung RV411): the slider limits CPU heat instead.
+    return {"action": "heat-limit", "cpu_max_percent": max(50, 100 - (percent // 2))}
+
+
 # ---------------- live system collection ----------------
 
 def _read(path, default=""):
@@ -216,6 +314,7 @@ def collect():
     laptop = dmi.get("chassis_type") in ("8", "9", "10", "11", "14", "30", "31", "32")
     cpuinfo = _read("/proc/cpuinfo")
     model = next((l.split(":", 1)[1].strip() for l in cpuinfo.splitlines() if l.startswith("model name")), "unknown")
+    flags = next((l.split(":", 1)[1].split() for l in cpuinfo.splitlines() if l.startswith("flags")), [])
     mem_kb = int(re.search(r"MemTotal:\s+(\d+)", _read("/proc/meminfo", "MemTotal: 0")).group(1))
     loaded = {l.split()[0] for l in _read("/proc/modules").splitlines() if l}
     acpi_ids = [_read(p) for p in pathlib.Path("/sys/bus/acpi/devices").glob("*/hid")]
@@ -243,6 +342,8 @@ def collect():
         drv = n / "device/driver"
         net.append({"iface": n.name, "wireless": (n / "wireless").exists(), "driver": os.path.basename(os.readlink(drv)) if drv.is_symlink() else None})
     profile, zram = ram_profile(mem_kb)
+    root_rota = _run(["lsblk", "-dno", "ROTA", _run(["findmnt", "-no", "SOURCE", "/"]).strip() or "/dev/sda"]).strip() == "1"
+    aux = any("AUX" in _read(p / "description") for p in pathlib.Path("/sys/bus/serio/devices").glob("serio*"))
     report = {
         "dmi": dmi, "laptop": laptop, "cpu": {"model": model, "arch": os.uname().machine, "cores": os.cpu_count()},
         "memory": {"total_kb": mem_kb, "profile": profile, "zram_percent": zram},
@@ -254,16 +355,64 @@ def collect():
         "storage": [l for l in _run(["lsblk", "-dno", "NAME,TRAN,ROTA,SIZE,MODEL"]).splitlines() if l and not l.startswith(("loop", "zram", "sr"))],
         "batteries": batteries, "sensors": hwmon(),
         "touchpad": touchpad_plan(devices, acpi_ids, loaded, laptop),
+        "touchpad_missing": touchpad_missing(devices, laptop, aux),
+        "quirks": laptop_quirks(dmi, gpus, flags, mem_kb, root_rota),
         "drivers": gpu_plan(gpus, bool(sb), installed, _run(["nvidia-detect"], 20) if any(g["vendor"] == "10de" for g in gpus) else ""),
     }
+    if "navin.oldlaptop=1" in _read("/proc/cmdline").split():  # "Old Laptop Mode" boot entry
+        report["quirks"].update(old_laptop=True, compositor="lite", chrome_gpu="safe")
     return report
 
 
 def apply(report, log):
-    """Root only: load safe in-kernel modules from the touchpad plan."""
+    """Root only: load safe in-kernel modules from the touchpad plan, then NAVIN 2.0 quirks."""
     for m in report["touchpad"]["modules"]:
         rc = subprocess.run(["modprobe", m], capture_output=True, text=True)
         log(f"modprobe {m}: {'ok' if rc.returncode == 0 else rc.stderr.strip()}")
+    apply_quirks(report.get("quirks") or {}, log)
+
+
+def apply_quirks(q, log, root="/"):
+    """Write the NAVIN 2.0 compatibility files chosen by laptop_quirks(). Root only. Idempotent."""
+    r = pathlib.Path(root)
+    run = pathlib.Path(root, "run/navin"); run.mkdir(parents=True, exist_ok=True)
+    (run / "quirks.json").write_text(json.dumps(q))
+    (run / "compositor-default").write_text(q.get("compositor", "xfwm") + "\n")
+    (run / "zram-algo").write_text(q.get("zram_algo", "zstd") + "\n")
+    (run / "chrome-gpu").write_text(q.get("chrome_gpu", "full") + "\n")
+    xorg = r / "etc/X11/xorg.conf.d/10-navin-oldintel.conf"
+    if q.get("xorg_driver") == "intel-sna" and (r / "usr/lib/xorg/modules/drivers/intel_drv.so").exists():
+        xorg.parent.mkdir(parents=True, exist_ok=True)
+        xorg.write_text('# NAVIN 2.0: 1st-gen Intel graphics (gen4/gen5) - Intel SNA driver, TearFree, no screen freezes\n'
+                        'Section "Device"\n  Identifier "NAVIN old Intel"\n  Driver "intel"\n  Option "AccelMethod" "sna"\n'
+                        '  Option "TearFree" "true"\n  Option "TripleBuffer" "false"\nEndSection\n')
+        log("old Intel graphics: Intel SNA driver configured")
+    elif xorg.exists():
+        xorg.unlink(); log("removed old-Intel X driver config (not needed on this computer)")
+    tlp = r / "etc/tlp.d/60-navin-oldlaptop.conf"
+    if q.get("sata_alpm") == "max_performance":
+        tlp.parent.mkdir(parents=True, exist_ok=True)
+        tlp.write_text("# NAVIN 2.0: older laptop - no SATA link power saving (stops disk freezes), quiet audio, no USB input autosuspend\n"
+                       "SATA_LINKPWR_ON_AC=\"max_performance\"\nSATA_LINKPWR_ON_BAT=\"max_performance\"\n"
+                       "AHCI_RUNTIME_PM_ON_AC=on\nAHCI_RUNTIME_PM_ON_BAT=on\nSOUND_POWER_SAVE_ON_AC=0\nSOUND_POWER_SAVE_ON_BAT=0\n"
+                       "USB_EXCLUDE_BTUSB=1\nUSB_EXCLUDE_PHONE=1\n"
+                       + ("" if q.get("battery_turbo", True) else "CPU_BOOST_ON_BAT=0\n"))
+    elif tlp.exists():
+        tlp.unlink()
+    live = (r / "run/live").exists()
+    cfg = r / "etc/default/grub.d/90-navin-quirks.cfg"
+    off = (r / "etc/navin/quirks-off").exists()
+    text = "" if off else grub_quirks_cfg(q.get("kernel_params", []))
+    if not live and (r / "etc/default/grub.d").is_dir():
+        old = cfg.read_text() if cfg.exists() else ""
+        if text != old:
+            if text:
+                cfg.write_text(text)
+            elif cfg.exists():
+                cfg.unlink()
+            if root == "/":
+                rc = subprocess.run(["update-grub"], capture_output=True, text=True)
+                log("boot menu quirks " + ("updated" if rc.returncode == 0 else "update failed: " + rc.stderr.strip()[-200:]))
 
 
 if __name__ == "__main__":

@@ -7,5 +7,8 @@ if [ "$want" = auto ]; then
   if [ "$mem" -le 2726297 ]; then want=lite; elif [ "$mem" -le 6815744 ]; then want=balanced; else want=standard; fi
 fi
 case "$want" in lite) pct=100;; balanced) pct=75;; *) want=standard; pct=50;; esac
-printf 'ALGO=zstd\nPERCENT=%s\nPRIORITY=100\n' "$pct" > /etc/default/zramswap
+# NAVIN 2.0: LZ4 on CPUs without AVX (1st-gen Core/Pentium): ~3x faster than zstd there, so swapping
+# to ZRAM no longer freezes the desktop. Newer CPUs keep zstd (better compression).
+grep -qw avx /proc/cpuinfo && algo=zstd || algo=lz4
+printf 'ALGO=%s\nPERCENT=%s\nPRIORITY=100\n' "$algo" "$pct" > /etc/default/zramswap
 mkdir -p /run/navin; echo "$want" > /run/navin/memprofile

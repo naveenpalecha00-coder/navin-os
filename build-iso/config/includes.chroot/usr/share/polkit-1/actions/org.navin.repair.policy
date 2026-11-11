@@ -13,4 +13,37 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/navin/navin-repair</annotate>
   </action>
+  <action id="org.navin.touchpad-rescue">
+    <description>Reset the NAVIN touchpad driver</description>
+    <message>NAVIN needs your password to reset the touchpad driver</message>
+    <icon_name>input-touchpad</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/navin/navin-touchpad-rescue</annotate>
+  </action>
+  <action id="org.navin.quirks">
+    <description>Change NAVIN laptop compatibility fixes</description>
+    <message>NAVIN needs your password to change the laptop compatibility fixes</message>
+    <icon_name>input-touchpad</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/navin/navin-quirks</annotate>
+  </action>
+  <action id="org.navin.fan">
+    <description>Change NAVIN fan and cooling settings</description>
+    <message>NAVIN needs permission to change the fan speed</message>
+    <icon_name>temperature</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/navin/navin-fan</annotate>
+  </action>
 </policyconfig>

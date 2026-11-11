@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NAVIN 2.0: fast login/logout - no saved sessions to restore, no splash screen, no logout dialog wait -->
+<channel name="xfce4-session" version="1.0">
+  <property name="general" type="empty">
+    <property name="SaveOnExit" type="bool" value="false"/>
+    <property name="AutoSave" type="bool" value="false"/>
+    <property name="PromptOnLogout" type="bool" value="false"/>
+  </property>
+  <property name="splash" type="empty">
+    <property name="Engine" type="string" value=""/>
+  </property>
+  <property name="compat" type="empty">
+    <property name="LaunchGNOME" type="bool" value="false"/>
+    <property name="LaunchKDE" type="bool" value="false"/>
+  </property>
+</channel>

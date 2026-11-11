@@ -1,0 +1,47 @@
+name: Publish NAVIN 2.0 update (OTA patch)
+
+# Manual only. Packs NAVIN tools/settings (never kernel or packages) from the navin-2.0 branch into
+# navin-update.tar.gz and publishes release v2.0-update.N. NAVIN 2.0 System Updater installs it only
+# after the user presses the button, checking GitHub's own file fingerprint. Never marked "latest",
+# so the website and releases/latest keep pointing at the ISO.
+on:
+  workflow_dispatch:
+    inputs:
+      number:
+        description: "Patch number (21, 22, ... - must be higher than the last one)"
+        required: true
+      notes:
+        description: "One line shown to users in System Updater"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/navin-2.0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: python3 -m unittest discover -s build-iso/tests -v
+      - name: Build patch
+        run: bash build-iso/tools/make-update.sh "${{ github.event.inputs.number }}"
+      - name: List patch contents
+        run: tar -tzf navin-update.tar.gz | tee patch-files.txt | wc -l
+      - name: Publish v2.0-update.${{ github.event.inputs.number }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0-update.${{ github.event.inputs.number }}
+          target_commitish: ${{ github.sha }}
+          name: NAVIN 2.0 update ${{ github.event.inputs.number }}
+          prerelease: false
+          make_latest: false
+          body: |
+            ${{ github.event.inputs.notes }}
+
+            NAVIN 2.0 tools and settings update (no kernel or package changes). Install from NAVIN System Updater.
+          files: |
+            navin-update.tar.gz
+            navin-update.tar.gz.sha256
+            patch-files.txt

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """NAVIN Hardware Detection. navin-hwdetect [--json] [--apply] [--quiet]
---apply (root, run at boot by navin-hwdetect.service): saves /var/lib/navin/hardware.json and
-loads only safe in-kernel drivers for detected-but-unbound touchpads. Never installs packages."""
-import sys, json, pathlib, time
+--apply (root, run at boot by navin-hwdetect.service): saves /var/lib/navin/hardware.json, loads only
+safe in-kernel drivers for detected-but-unbound touchpads and writes the NAVIN 2.0 old-laptop fixes
+(Samsung touchpad boot fix, old Intel graphics driver, disk power). Never installs packages."""
+import sys, json, pathlib, time, subprocess
 sys.path.insert(0, "/usr/local/lib/navin")
 import navin_hw
 
@@ -19,7 +20,12 @@ if "--apply" in args:
         report = navin_hw.collect()
     out = pathlib.Path("/var/lib/navin"); out.mkdir(parents=True, exist_ok=True)
     (out / "hardware.json").write_text(json.dumps(report, indent=1))
-    log("detected: " + ", ".join(t["vendor"] + " " + t["bus"] for t in report["touchpad"]["touchpads"]) or "no touchpad")
+    log("detected: " + (", ".join(t["vendor"] + " " + t["bus"] for t in report["touchpad"]["touchpads"]) or "no touchpad"))
+    q = report["quirks"]
+    log("quirks: samsung=%s old_gpu=%s old_cpu=%s compositor=%s zram=%s boot=%s" % (q["samsung"], q["old_gpu"], q["old_cpu"], q["compositor"], q["zram_algo"], " ".join(q["kernel_params"]) or "-"))
+    if report["touchpad_missing"]:
+        # Laptop with a PS/2 AUX port but no touchpad: reset the controller in the background.
+        subprocess.run(["systemctl", "--no-block", "start", "navin-touchpad-rescue.service"], capture_output=True)
 if "--json" in args:
     print(json.dumps(report, indent=1))
 elif "--quiet" not in args:
@@ -41,7 +47,11 @@ elif "--quiet" not in args:
         print("Storage  :", s)
     for b in report["batteries"]:
         print(f"Battery  : {b['name']} {b['capacity']}% {b['status']} · health {b['health_percent']}%")
-    for note in report["touchpad"]["notes"]:
+    q = report["quirks"]
+    print(f"NAVIN 2.0: {'Samsung · ' if q['samsung'] else ''}{'old Intel GPU · ' if q['old_gpu'] else ''}{'older CPU · ' if q['old_cpu'] else ''}effects {q['compositor']} · ZRAM {q['zram_algo']} · Chrome GPU {q['chrome_gpu']}")
+    if report["touchpad_missing"]:
+        print("Touchpad : missing on this laptop - run: navin-touchpad rescue")
+    for note in report["touchpad"]["notes"] + q["notes"]:
         print("Note     :", note)
     for r in report["drivers"]:
         print("Driver   :", (r["package"] or "-"), "—", r["reason"])

@@ -1,9 +1,12 @@
 #!/bin/bash
-# NAVIN OS 1.2 fan & thermal profiles (root). Safety rules:
-#  * never stop a fan and never set a fan slower than firmware automatic control
-#  * only "cooling" raises fan speed, through thinkpad_acpi or writable hwmon PWM
+# NAVIN 2.0 fan & thermal profiles + fan speed slider (root). Safety rules:
+#  * never stop a fan and never set a fan slower than firmware automatic control: the slider's lowest
+#    PWM is 30 % and never below the speed the BIOS was running when NAVIN took control
+#  * only "cooling" and "set" raise fan speed, through thinkpad_acpi or writable hwmon PWM
+#  * navin-thermal still forces full cooling at 90 C, whatever the slider says
+#  * no fan interface (many older laptops, e.g. Samsung RV411): "set" limits CPU speed instead (less heat)
 #  * "restore" (also run on any error and when navin-thermal stops) hands control back to BIOS/EC
-#   navin-fan status | silent | balanced | cooling | auto | restore      (legacy: turbo = cooling)
+#   navin-fan status | silent | balanced | cooling | auto | restore | set 0..100 | capability   (legacy: turbo = cooling)
 set -u
 ORIG=/run/navin/fan-orig; mkdir -p /run/navin
 TP=/proc/acpi/ibm/fan
@@ -11,9 +14,20 @@ plat(){ local f=/sys/firmware/acpi/platform_profile c; [ -w $f ] || return 1; fo
 gov(){ for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do grep -qw "$1" "${f%/*}/scaling_available_governors" 2>/dev/null && echo "$1" > "$f"; done; }
 pwms(){ for p in /sys/class/hwmon/hwmon*/pwm[0-9]; do [ -w "$p" ] && [ -w "${p}_enable" ] && echo "$p"; done; }
 control(){ if [ -w $TP ] && grep -q '^commands:.*level' $TP; then echo thinkpad; elif [ -n "$(pwms)" ]; then echo hwmon-pwm; elif [ -w /sys/firmware/acpi/platform_profile ]; then echo platform-profile; else echo none; fi; }
+heat(){ # CPU speed limit in percent of maximum (100 = no limit)
+  local pol max min t
+  for pol in /sys/devices/system/cpu/cpufreq/policy*; do
+    [ -w "$pol/scaling_max_freq" ] || continue
+    max=$(cat "$pol/cpuinfo_max_freq"); min=$(cat "$pol/cpuinfo_min_freq"); t=$((max * $1 / 100)); [ $t -lt $min ] && t=$min
+    echo $t > "$pol/scaling_max_freq" 2>/dev/null
+  done
+  [ "$1" -ge 100 ] && rm -f /run/navin/heat-limit || echo "$1" > /run/navin/heat-limit
+}
+plan(){ python3 -c 'import sys,json; sys.path.insert(0,"/usr/local/lib/navin"); import navin_hw; print(json.dumps(navin_hw.fan_plan(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))))' "$@"; }
 restore(){
   [ -w $TP ] && echo 'level auto' > $TP 2>/dev/null
-  if [ -f $ORIG ]; then while read -r p en; do [ -w "${p}_enable" ] && echo "$en" > "${p}_enable" 2>/dev/null; done < $ORIG; rm -f $ORIG; fi
+  if [ -f $ORIG ]; then while read -r p en _; do [ -w "${p}_enable" ] && echo "$en" > "${p}_enable" 2>/dev/null; done < $ORIG; rm -f $ORIG; fi
+  rm -f /run/navin/fan-slider
   for p in $(pwms); do [ "$(cat "${p}_enable")" = 1 ] && echo 2 > "${p}_enable" 2>/dev/null; done
   return 0
 }
@@ -22,6 +36,7 @@ case "${1:-status}" in
   status)
     echo "control=$(control)"
     echo "platform=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo n/a)"
+    echo "slider=$(cat /run/navin/fan-slider 2>/dev/null || echo auto) cpu_limit=$(cat /run/navin/heat-limit 2>/dev/null || echo none)"
     [ -r $TP ] && grep -E '^(status|speed|level):' $TP | tr -s '\t ' ' '
     for h in /sys/class/hwmon/hwmon*; do [ -d "$h" ] || continue; n=$(cat $h/name); for f in $h/fan*_input; do [ -f "$f" ] && echo "fan $n $(basename ${f%_input})=$(cat $f) rpm"; done; done
     exit 0;;
@@ -32,9 +47,34 @@ case "${1:-status}" in
     gov powersave
     case "$(control)" in
       thinkpad) echo 'level 7' > $TP && echo "cooling: ThinkPad fan level 7";;
-      hwmon-pwm) : > $ORIG; for p in $(pwms); do echo "$p $(cat ${p}_enable)" >> $ORIG; echo 1 > "${p}_enable" && echo 255 > "$p"; done; echo "cooling: PWM fans at maximum";;
+      hwmon-pwm) [ -f $ORIG ] || for p in $(pwms); do echo "$p $(cat ${p}_enable) $(cat $p)" >> $ORIG; done; for p in $(pwms); do echo 1 > "${p}_enable" && echo 255 > "$p"; done; echo "cooling: PWM fans at maximum";;
       *) echo "cooling: no safe fan-speed interface; using cool/low-heat CPU settings only (monitoring mode)";;
     esac;;
-  restore) restore; echo "restored BIOS/EC automatic fan control";;
-  *) echo "usage: navin-fan status|silent|balanced|cooling|auto|restore" >&2; exit 2;;
+  restore) restore; heat 100; echo "restored BIOS/EC automatic fan control";;
+  capability) # readable without root (for the slider screen)
+    if [ -r $TP ] && grep -q '^commands:.*level' $TP; then echo thinkpad
+    elif ls /sys/class/hwmon/hwmon*/pwm[0-9]_enable >/dev/null 2>&1; then echo hwmon-pwm
+    elif [ -e /sys/firmware/acpi/platform_profile ]; then echo platform-profile; else echo none; fi; exit 0;;
+  set)
+    [[ "${2:-}" =~ ^[0-9]+$ ]] && [ "$2" -le 100 ] || { echo "usage: navin-fan set 0..100   (0 = BIOS automatic)" >&2; exit 2; }
+    c=$(control)
+    if [ "$c" = hwmon-pwm ]; then
+      # Remember each fan's mode and the speed the BIOS was running before NAVIN took control.
+      [ -f $ORIG ] || for p in $(pwms); do echo "$p $(cat ${p}_enable) $(cat $p)" >> $ORIG; done
+      [ "$2" = 0 ] && { restore; heat 100; echo "fan: BIOS automatic control"; exit 0; }
+      while read -r p en auto; do
+        v=$(plan hwmon-pwm "$2" "${auto:-0}" | jq -r .pwm)
+        echo 1 > "${p}_enable" && echo "$v" > "$p" && echo "fan $(basename "$(dirname "$p")")/$(basename "$p"): $v/255"
+      done < $ORIG
+    else
+      j=$(plan "$c" "$2" 0)
+      case "$(jq -r .action <<<"$j")" in
+        auto) restore; heat 100; echo "fan: BIOS automatic control"; exit 0;;
+        thinkpad) l=$(jq -r .level <<<"$j"); echo "level $l" > $TP && echo "fan: ThinkPad level $l of 7";;
+        profile) pr=$(jq -r .profile <<<"$j"); case $pr in quiet) plat quiet low-power cool;; balanced) plat balanced;; *) plat performance balanced;; esac; echo "fan: platform profile $(cat /sys/firmware/acpi/platform_profile)";;
+        heat-limit) h=$(jq -r .cpu_max_percent <<<"$j"); heat "$h"; echo "this laptop's BIOS does not let Linux set the fan speed; CPU limited to $h % so it makes less heat";;
+      esac
+    fi
+    echo "$2" > /run/navin/fan-slider;;
+  *) echo "usage: navin-fan status|silent|balanced|cooling|auto|restore|set 0..100|capability" >&2; exit 2;;
 esac

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""NAVIN System Center (NAVIN OS 1.2): Hardware Manager, Driver Manager, System Monitor, Performance
+"""NAVIN System Center (NAVIN 2.0): What's New, Laptop & Touchpad, Hardware Manager, Driver Manager, System Monitor, Performance
 Center, Fan Control, Boot Manager, Recovery, System Repair, Update Manager, Hardware Diagnostics.
 Every page reads real system data; privileged actions go through pkexec + whitelisted helpers."""
 import gi, json, os, pathlib, re, shutil, subprocess, sys, threading, time
@@ -13,7 +13,7 @@ from navin_sys import leak_candidates, parse_systemd_analyze
 REPAIR = ["pkexec", "/usr/local/lib/navin/navin-repair"]
 FAN = ["pkexec", "/usr/local/lib/navin/navin-fan"]
 LIVE = pathlib.Path("/run/live").exists()
-PAGES = [("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
+PAGES = [("whatsnew", "What's New in 2.0"), ("laptop", "Laptop & Touchpad"), ("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
          ("performance", "Performance Center"), ("fan", "Fan Control"), ("boot", "Boot Manager"),
          ("recovery", "Recovery"), ("repair", "System Repair"), ("updates", "Update Manager"),
          ("diagnostics", "Hardware Diagnostics")]
@@ -207,15 +207,85 @@ class Center(Gtk.Window):
             log.set("Run the benchmark at least twice (before and after a change)." if len(files) < 2 else sh(["navin-benchmark", "compare", str(files[-2]), str(files[-1])]))
         return go
 
+    # ---- NAVIN 2.0: What's New (real list shipped with the image, every entry names its file)
+    def p_whatsnew(self):
+        b = page("What's New in NAVIN 2.0", "Every change below is in this system; the file that does it is shown in grey.")
+        try:
+            items = json.loads(pathlib.Path("/usr/share/navin/whatsnew-2.0.json").read_text())["items"]
+        except (OSError, ValueError, KeyError):
+            items = []
+        groups = {}
+        for it in items:
+            groups.setdefault(it["category"], []).append(it)
+        total = Gtk.Label(xalign=0); total.set_markup(f"<b>{len(items)} changes</b> in {len(groups)} areas"); b.pack_start(total, False, False, 0)
+        for cat, rows in groups.items():
+            exp = Gtk.Expander(label=f"{cat} ({len(rows)})"); exp.set_expanded(cat == next(iter(groups)))
+            inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); inner.set_border_width(8)
+            for it in rows:
+                l = Gtk.Label(xalign=0); l.set_line_wrap(True)
+                l.set_markup("• " + GLib.markup_escape_text(it["title"]) + "  <span foreground='#6B7280' size='small'>" + GLib.markup_escape_text(it["path"].split("includes.chroot/")[-1]) + "</span>")
+                inner.pack_start(l, False, False, 0)
+            exp.add(inner); b.pack_start(exp, False, False, 0)
+        return b
+
+    # ---- NAVIN 2.0: Laptop & Touchpad (old-laptop care, Samsung RV411 class)
+    def p_laptop(self):
+        b = page("Laptop & Touchpad", "Fixes for older laptops: touchpad rescue, Samsung boot fix, light effects. Nothing here changes your files.")
+        try:
+            q = json.loads(pathlib.Path("/run/navin/quirks.json").read_text())
+        except (OSError, ValueError):
+            q = {}
+        facts = [("Samsung laptop", q.get("samsung")), ("1st-gen Intel graphics", q.get("old_gpu")), ("Older CPU (no AVX)", q.get("old_cpu"))]
+        info = Gtk.Label(xalign=0); info.set_line_wrap(True)
+        info.set_markup("<b>This computer:</b> " + " · ".join(f"{n}: {'yes' if v else 'no'}" for n, v in facts) +
+                        f"\nWindow effects: {q.get('compositor', 'xfwm')} · memory compression: {q.get('zram_algo', 'zstd')} · Chrome GPU: {q.get('chrome_gpu', 'full')}" +
+                        "".join("\n• " + GLib.markup_escape_text(n) for n in q.get("notes", [])))
+        b.pack_start(info, False, False, 0)
+        log = Log(260)
+        def doctor(*_):
+            log.set(sh(["navin-touchpad", "doctor"])); return False
+        b.pack_start(row(btn("Check touchpad", doctor), btn("Rescue touchpad now", lambda: log.stream(["navin-touchpad", "rescue"], lambda rc: doctor())),
+                         btn("Undo rescue fallback", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-touchpad-rescue", "reset"]))), False, False, 0)
+        b.pack_start(row(btn("Boot fix on", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-quirks", "on"])),
+                         btn("Boot fix off", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-quirks", "off"])),
+                         btn("Light effects", lambda: log.stream(["navin-compositor", "lite"])), btn("Full effects", lambda: log.stream(["navin-compositor", "xfwm"])),
+                         btn("Effects off", lambda: log.stream(["navin-compositor", "off"]))), False, False, 0)
+        hint = Gtk.Label(xalign=0); hint.set_line_wrap(True)
+        hint.set_text("Samsung laptops: Fn+F5 turns the touchpad off in hardware — press it once if the cursor does not move. "
+                      "If the touchpad never appears, restart and choose \"Old Laptop Mode\" in the boot menu.")
+        b.pack_start(hint, False, False, 0); b.pack_start(log, True, True, 0); doctor(); return b
+
     # ---- Fan Control
     def p_fan(self):
-        b = page("Fan Control", "Uses only interfaces your firmware exposes (ThinkPad ACPI, hwmon PWM, ACPI platform profile). Fans are never stopped or slowed below BIOS control; firmware control is restored on exit or error.")
+        b = page("Fan Control", "Fan speed slider plus profiles. Uses only interfaces your firmware exposes (ThinkPad ACPI, hwmon PWM, ACPI platform profile). Fans are never stopped or slowed below BIOS control, the thermal guard takes over at 90 °C, and firmware control is restored on exit or error.")
+        cap = sh(["/usr/local/lib/navin/navin-fan", "capability"]).strip() or "none"
+        what = {"thinkpad": "ThinkPad fan levels 1–7", "hwmon-pwm": "real fan speed (PWM), lowest 30 %", "platform-profile": "firmware cooling profile (quiet / balanced / performance)",
+                "none": "this laptop's BIOS does not let Linux set the fan speed (common on older laptops such as Samsung RV411). The slider limits CPU speed instead, so the laptop makes less heat."}[cap if cap in ("thinkpad", "hwmon-pwm", "platform-profile") else "none"]
+        info = Gtk.Label(xalign=0); info.set_line_wrap(True); info.set_markup("<b>Slider controls:</b> " + GLib.markup_escape_text(what)); b.pack_start(info, False, False, 0)
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 5); scale.set_hexpand(True); scale.set_size_request(420, -1)
+        scale.add_mark(0, Gtk.PositionType.BOTTOM, "Auto (BIOS)"); scale.add_mark(50, Gtk.PositionType.BOTTOM, "50 %"); scale.add_mark(100, Gtk.PositionType.BOTTOM, "Max")
+        try:
+            scale.set_value(int(pathlib.Path("/run/navin/fan-slider").read_text().strip()))
+        except (OSError, ValueError):
+            scale.set_value(0)
+        value = Gtk.Label(label="Auto" if scale.get_value() == 0 else f"{int(scale.get_value())} %"); value.set_width_chars(6)
         st = Gtk.Label(xalign=0, selectable=True); log = Log(160)
         def upd(*_):
             s = sh(["/usr/local/lib/navin/navin-fan", "status"])
-            mode = "Monitoring only — this hardware exposes no safe fan control." if "control=none" in s else ""
+            mode = "Monitoring only — this hardware exposes no safe fan control." if cap == "none" else ""
             st.set_text(s + "\n" + sh(["sensors"]) + ("\n" + mode if mode else "")); return True
-        b.pack_start(row(*[btn(n.title(), lambda n=n: log.stream(FAN + [n], upd)) for n in ("silent", "balanced", "cooling", "auto")], btn("Restore firmware control", lambda: log.stream(FAN + ["restore"], upd))), False, False, 0)
+        pending = {"id": 0}
+        def commit():
+            pending["id"] = 0; log.stream(FAN + ["set", str(int(scale.get_value()))], upd); return False
+        def moved(sc):
+            v = int(sc.get_value()); value.set_text("Auto" if v == 0 else f"{v} %")
+            if pending["id"]:
+                GLib.source_remove(pending["id"])
+            pending["id"] = GLib.timeout_add(700, commit)  # wait until the finger stops moving
+        scale.connect("value-changed", moved)
+        r = Gtk.Box(spacing=10); r.pack_start(Gtk.Label(label="Fan speed"), False, False, 0); r.pack_start(scale, True, True, 0); r.pack_start(value, False, False, 0)
+        b.pack_start(r, False, False, 0)
+        b.pack_start(row(*[btn(n.title(), lambda n=n: log.stream(FAN + [n], upd)) for n in ("silent", "balanced", "cooling", "auto")], btn("Restore firmware control", lambda: (scale.set_value(0), log.stream(FAN + ["restore"], upd)))), False, False, 0)
         b.pack_start(st, False, False, 0); b.pack_start(log, False, False, 0); upd(); GLib.timeout_add_seconds(5, lambda: upd() if self.stack.get_visible_child_name() == "fan" else True); return b
 
     # ---- Boot Manager

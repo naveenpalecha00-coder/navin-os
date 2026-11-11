@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import gi, os, re, sys, json, subprocess, threading, pathlib, urllib.request, ast, operator, time, secrets
-from navin_logic import package_name, release_build, BUILD, REPO
+from navin_logic import package_name, release_build, newer_patch, newer_os_release, BUILD, VERSION, REPO
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
@@ -204,6 +204,7 @@ class Controls(Window):
 class Fan(Window):
  def __init__(self):
   super().__init__('NAVIN Fan & Cooling'); self.sensor=Gtk.Label(xalign=0); self.sensor.set_line_wrap(True); self.box.pack_start(self.sensor,True,True,0)
+  self.button('Open fan speed slider (System Center)',lambda:launch(['navin-center','fan']))
   for mode in ('silent','balanced','cooling','auto','restore'):self.button(mode.title(),lambda m=mode:self.work(lambda:run(['pkexec','/usr/local/lib/navin/navin-fan',m])))
   self.finish(); GLib.timeout_add_seconds(3,self.refresh); self.refresh()
  def refresh(self):
@@ -272,14 +273,18 @@ class Updater(Window):
   def fetch():
    req=urllib.request.Request('https://api.github.com/repos/'+REPO+'/releases',headers={'Accept':'application/vnd.github+json','User-Agent':'NAVIN-OS-Updater'})
    with urllib.request.urlopen(req,timeout=30) as response: rows=json.load(response)
-   current=int(pathlib.Path('/etc/navin/build').read_text().strip()); newer=[r for r in rows if not r.get('draft') and not r.get('prerelease') and (release_build(r['tag_name']) or 0)>current]
-   return max(newer,key=lambda r:release_build(r['tag_name'])) if newer else None
+   current=int(pathlib.Path('/etc/navin/build').read_text().strip()); self.os_release=newer_os_release(rows)
+   return newer_patch(rows,current)
   def task():
    try:self.remote=fetch(); GLib.idle_add(self.ready)
    except Exception as e:GLib.idle_add(self.status.set_text,str(e))
   threading.Thread(target=task,daemon=True).start()
  def ready(self):
-  names={a['name'] for a in self.remote['assets']} if self.remote else set(); self.install.set_sensitive({'navin-update.tar.gz','navin-update.tar.gz.sha256'}<=names); self.status.set_text(self.remote['tag_name']+' available' if self.remote else 'No newer NAVIN release')
+  self.install.set_sensitive(bool(self.remote)); msg=[]
+  if self.remote:msg.append('Update '+self.remote['tag_name']+' is ready: '+((self.remote.get('body') or '').strip().splitlines() or ['NAVIN tools and settings'])[0][:120])
+  if getattr(self,'os_release',None):
+   msg.append('New NAVIN version '+self.os_release['tag_name']+' is available (new ISO - install it from a USB drive). Opening the download page...'); launch(['xdg-open',self.os_release['html_url']])
+  self.status.set_text('\n'.join(msg) or 'NAVIN '+VERSION+' is up to date (checked GitHub just now)')
  def apply(self):
   if not self.remote:return
   dialog=Gtk.MessageDialog(transient_for=self,modal=True,buttons=Gtk.ButtonsType.OK_CANCEL,text='Apply configuration and tools from '+self.remote['tag_name']+'? Back up important files first.'); reply=dialog.run(); dialog.destroy()
@@ -307,8 +312,8 @@ class Updater(Window):
  def applied(self,text):self.status.set_text(text); self.restart.set_sensitive(True); launch(['notify-send','NAVIN updated','Restart when ready'])
 class Welcome(Window):
  def __init__(self):
-  super().__init__('Welcome to NAVIN OS 1.2'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
-  for label,cmd in [('Connect Wi-Fi','nm-connection-editor'),('NAVIN AI','navin-ai-desktop'),('App Store','navin-app-store'),('Install NAVIN OS','install-debian')]:self.button(label,lambda c=cmd:launch([c]))
+  super().__init__('Welcome to NAVIN 2.0'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
+  for label,cmd in [('Connect Wi-Fi','nm-connection-editor'),('NAVIN AI','navin-ai-desktop'),('App Store','navin-app-store'),('Install NAVIN OS','install-debian'),("What's new in NAVIN 2.0",'navin-center')]:self.button(label,lambda c=cmd:launch([c,'whatsnew'] if c=='navin-center' else [c]))
   self.button('Done',self.destroy); self.finish(); launch(['paplay','/usr/share/sounds/freedesktop/stereo/desktop-login.oga'])
 mode=sys.argv[1] if len(sys.argv)>1 else 'controls'
 if mode=='welcome' and '--autostart' in sys.argv:

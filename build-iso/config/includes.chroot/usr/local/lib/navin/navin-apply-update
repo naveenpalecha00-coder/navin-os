@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 import os,sys,pathlib,hashlib,tarfile,tempfile,shutil,json,urllib.request
-from navin_logic import safe_patch_path
+from navin_logic import safe_patch_path, update_tag
 if os.geteuid()!=0:sys.exit('Administrator privileges required')
 if len(sys.argv)!=4:sys.exit('Expected archive, checksum and build')
 source=pathlib.Path(sys.argv[1]); digest=sys.argv[2]; build=int(sys.argv[3]); current=int(pathlib.Path('/etc/navin/build').read_text())
 if build<=current:sys.exit('Refusing downgrade or duplicate patch')
 if source.stat().st_size>100*1024*1024:sys.exit('Patch too large')
 # Trust the fixed publisher repository, not a digest supplied by an unprivileged caller.
-request=urllib.request.Request('https://api.github.com/repos/naveenpalecha00-coder/navin-os/releases/tags/v1.0-build.'+str(build),headers={'Accept':'application/vnd.github+json','User-Agent':'NAVIN-OS-OTA'})
+request=urllib.request.Request('https://api.github.com/repos/naveenpalecha00-coder/navin-os/releases/tags/'+update_tag(build),headers={'Accept':'application/vnd.github+json','User-Agent':'NAVIN-OS-OTA'})
 with urllib.request.urlopen(request,timeout=30) as response:release=json.load(response)
 if release.get('draft') or release.get('prerelease'):sys.exit('Release is not stable')
 asset=next((a for a in release.get('assets',[]) if a.get('name')=='navin-update.tar.gz'),None)

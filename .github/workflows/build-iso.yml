@@ -1,10 +1,10 @@
-name: Build NAVIN OS 1.2 ISO (Debian 13 Trixie)
+name: Build NAVIN 2.0 ISO (Debian 13 Trixie)
 
-# NAVIN OS 1.2 is developed on its own branch. main keeps the working Debian 12 Build 10
-# pipeline and release (v1.0-build.10) untouched for rollback.
+# NAVIN 2.0 is developed on its own branch (navin-2.0, started from navin-1.2-trixie).
+# main keeps the Debian 12 Build 10 pipeline/release and navin-1.2-trixie keeps v1.2 for rollback.
 on:
   push:
-    branches: [navin-1.2-trixie]
+    branches: [navin-2.0]
     paths: ["build-iso/**", ".github/workflows/build-iso.yml"]
   workflow_dispatch:
 
@@ -12,13 +12,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-iso-1.2
+  group: build-iso-2.0
   cancel-in-progress: true
 
 env:
-  ISO: navin-os-1.2-x86_64.iso
-  TAG: v1.2-trixie-test
-  FINAL_TAG: v1.2
+  ISO: navin-2.0-x86_64.iso
+  TAG: v2.0-test
+  FINAL_TAG: v2.0
 
 jobs:
   build:
@@ -45,9 +45,10 @@ jobs:
             L=build-iso/config/includes.chroot/usr/local/lib/navin
             mkdir -p /usr/local/lib/navin && cp -a $L/. /usr/local/lib/navin/
             cp -a build-iso/config/includes.chroot/usr/local/bin/. /usr/local/bin/
+            mkdir -p /usr/share/navin && cp -a build-iso/config/includes.chroot/usr/share/navin/. /usr/share/navin/
             mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml && cp build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/*.xml /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/
             fail=0
-            for app in "navin_install_guide.py -" "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
+            for app in "navin_install_guide.py -" "navin_center.py whatsnew" "navin_center.py laptop" "navin_center.py fan" "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
               set -- $app
               rc=0; a=$2; [ "$a" = - ] && a=; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/lib/navin/$1 $a > /tmp/out 2>&1 || rc=$?
               if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL $app (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   $app"; fi
@@ -98,7 +99,7 @@ jobs:
           B=build-iso; R=$B/reports; mkdir -p $R
           cp $B/docs/hardware-compatibility.md $B/docs/known-issues.md $R/
           {
-            echo "# NAVIN OS 1.2 — Debian 13 Trixie build report"
+            echo "# NAVIN 2.0 — Debian 13 Trixie build report"
             echo
             echo "- Commit: $GITHUB_SHA · Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- ISO: $ISO · $(( ${{ steps.verify.outputs.size }} / 1048576 )) MB · SHA256 ${{ steps.verify.outputs.sha }}"
@@ -126,7 +127,9 @@ jobs:
             echo
             echo "## Quality gates still requiring real hardware (not done by this pipeline)"
             echo "- [ ] Calamares install clicked through by a person on a real PC (with and without Windows) and the installed system boots"
-            echo "- [ ] Touchpad (Synaptics / ELAN / ALPS / I2C-HID) on real laptops"
+            echo "- [ ] Touchpad (Synaptics / ELAN / ALPS / I2C-HID) on real laptops, including Samsung RV411 (normal boot and Old Laptop Mode)"
+            echo "- [ ] Fan slider on a laptop with real fan control (ThinkPad / hwmon PWM); CPU heat limit on laptops without it"
+            echo "- [ ] Boot time on the target laptop (goal ~10 s on SSD; hard disks are slower)"
             echo "- [ ] Wi-Fi, Bluetooth and audio on test hardware"
             echo "- [ ] Intel / AMD / NVIDIA graphics on real GPUs; fan control on supported laptops"
             echo "- [ ] Long-duration stability (navin-benchmark run --stability 60)"
@@ -140,7 +143,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: navin-1.2-build-evidence
+          name: navin-2.0-build-evidence
           path: |
             build-iso/build.log
             build-iso/reports/
@@ -151,10 +154,10 @@ jobs:
         if: always() && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: navin-os-1.2-iso
+          name: navin-2.0-iso
           path: |
-            build-iso/navin-os-1.2-x86_64.iso
-            build-iso/navin-os-1.2-x86_64.iso.sha256
+            build-iso/navin-2.0-x86_64.iso
+            build-iso/navin-2.0-x86_64.iso.sha256
           retention-days: 7
           compression-level: 0
 
@@ -169,17 +172,20 @@ jobs:
           done
           echo "final=$final" >> "$GITHUB_OUTPUT"
 
-      - name: Publish NAVIN OS 1.2 release (only when every live, install and reboot VM test passes)
+      - name: Publish NAVIN 2.0 release (only when every live, install and reboot VM test passes)
         if: steps.gate.outputs.final == 'yes'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.FINAL_TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN OS 1.2 (Debian 13)
+          name: NAVIN 2.0 (Debian 13)
           prerelease: false
           make_latest: false
           body: |
-            NAVIN OS 1.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
+            NAVIN 2.0 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
+            Focus: older laptops (Samsung RV411 class) — touchpad rescue + Samsung boot fix + "Old Laptop Mode",
+            no-freeze settings for 1st-gen Intel graphics and hard disks, fan speed slider, light glass look,
+            faster boot, NAVIN 2.0 update channel. Full list: System Center → What's New in 2.0.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -189,11 +195,11 @@ jobs:
             - Installed disk starts on its own (Secure Boot with empty boot entries, and BIOS) to the desktop, live-only admin rules removed
 
             Not yet confirmed on physical computers (touchpads, Wi-Fi, sound, graphics cards, fans, long runs).
-            Please report problems on GitHub Issues. Build 10 (Debian 12) stays available for rollback.
+            Please report problems on GitHub Issues. NAVIN 1.2 and Build 10 (Debian 12) stay available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-os-1.2-x86_64.iso
-            build-iso/navin-os-1.2-x86_64.iso.sha256
+            build-iso/navin-2.0-x86_64.iso
+            build-iso/navin-2.0-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md
@@ -205,11 +211,11 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN OS 1.2 Debian 13 — TEST BUILD (not hardware-verified)
+          name: NAVIN 2.0 Debian 13 — TEST BUILD (not hardware-verified)
           prerelease: true
           make_latest: false
           body: |
-            NAVIN OS 1.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
+            NAVIN 2.0 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -217,8 +223,8 @@ jobs:
             NOT the final release. Keep using Build 10 (Debian 12) for daily use; it stays available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-os-1.2-x86_64.iso
-            build-iso/navin-os-1.2-x86_64.iso.sha256
+            build-iso/navin-2.0-x86_64.iso
+            build-iso/navin-2.0-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md

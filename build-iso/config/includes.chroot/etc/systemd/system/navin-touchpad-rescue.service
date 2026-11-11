@@ -1,0 +1,9 @@
+[Unit]
+Description=NAVIN 2.0 touchpad rescue (old PS/2 touchpads that do not appear)
+After=navin-hwdetect.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/navin/navin-touchpad-rescue run
+TimeoutSec=40
+SuccessExitStatus=3

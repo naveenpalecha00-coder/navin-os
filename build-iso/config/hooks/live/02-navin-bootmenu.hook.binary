@@ -1,9 +1,10 @@
 #!/bin/sh
-# NAVIN OS 1.2 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
+# NAVIN 2.0 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
 #   Live Mode — Try NAVIN OS          (default, boots straight to the live desktop)
 #   Full Installation — Install ...   (same live system + navin.install=1 -> Calamares opens)
+#   Old Laptop Mode                   (Samsung/old PS/2 touchpad controller fix + light effects)
 #   Safe Graphics                     (nomodeset, for black screens)
-# Arrow keys move, Enter starts, timeout 5 s. Light NAVIN theme with pale-blue selection.
+# Arrow keys move, Enter starts, timeout 3 s. Light NAVIN theme with pale-blue selection.
 set -e
 python3 - <<'PY'
 import pathlib, re, struct, zlib
@@ -13,7 +14,9 @@ def png(path, w, h, rgb):
     def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
-LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN OS 1.2", "Full Installation - Install NAVIN OS 1.2", "Safe Graphics - NAVIN OS (black screen fix)"
+LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN 2.0", "Full Installation - Install NAVIN 2.0", "Safe Graphics - NAVIN 2.0 (black screen fix)"
+OLD = "Old Laptop Mode - NAVIN 2.0 (Samsung touchpad fix)"
+OLD_ARGS = " i8042.nomux=1 i8042.reset=1 navin.oldlaptop=1"
 block = re.compile(r"menuentry\s+([\"'])(.*?)\1([^{]*)\{(.*?)\n\}", re.S)
 
 def fix_grub(text):
@@ -30,14 +33,16 @@ def fix_grub(text):
             out.append(f'menuentry "{LIVE}"{rest}{{{body}\n}}')
             inst = re.sub(r"^(\s*linux\s+.*)$", r"\1 navin.install=1", body, count=1, flags=re.M)
             out.append(f'\nmenuentry "{INSTALL}" --hotkey=i {{{inst}\n}}')
+            old = re.sub(r"^(\s*linux\s+.*)$", lambda x: x.group(1) + OLD_ARGS, body, count=1, flags=re.M)
+            out.append(f'\nmenuentry "{OLD}" --hotkey=o {{{old}\n}}')
         else:
             out.append(m.group(0))
     out.append(text[pos:])
     text = "".join(out)
-    text = re.sub(r"^set timeout=.*$", "set timeout=5", text, flags=re.M)
+    text = re.sub(r"^set timeout=.*$", "set timeout=3", text, flags=re.M)
     if "set timeout=" not in text:
-        text = "set default=0\nset timeout=5\n" + text
-    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN OS 1.2").replace("Utilities...", "Tools (memory test, hardware)")
+        text = "set default=0\nset timeout=3\n" + text
+    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.0").replace("Utilities...", "Tools (memory test, hardware)")
 
 changed = 0
 for f in ("boot/grub/grub.cfg", "boot/grub/config.cfg", "boot/grub/install_start.cfg"):
@@ -50,7 +55,7 @@ if theme.is_dir():
     for part in ("c", "n", "s", "e", "w", "ne", "nw", "se", "sw"):
         png(theme / f"select_{part}.png", 8, 8, (22, 119, 242))
     (theme / "theme.txt").write_text('''desktop-color: "#F4F7FB"
-title-text: "NAVIN OS 1.2"
+title-text: "NAVIN 2.0"
 title-color: "#111111"
 message-color: "#333333"
 + boot_menu {
@@ -97,27 +102,32 @@ if live.exists():
     out, done = [], False
     for b in blocks:
         if "fail-safe" in b.lower():
-            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN OS (black screen fix)", b)
+            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN 2.0 (black screen fix)", b)
             b = re.sub(r"^(\s*append .*)$", lambda x: x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset", b, flags=re.M)
             out.append(b)
         elif not done and b.startswith("label") and "append" in b:
             done = True
-            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN OS 1.2", b))
+            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN 2.0", b))
             inst = re.sub(r"^label (\S+)", r"label \1-install", b, flags=re.M)
-            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN OS 1.2", inst)
+            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN 2.0", inst)
             inst = re.sub(r"^\s*menu default\s*\n", "", inst, flags=re.M)
             inst = re.sub(r"^(\s*append .*)$", r"\1 navin.install=1", inst, count=1, flags=re.M)
             out.append(inst)
+            old = re.sub(r"^label (\S+)", r"label \1-oldlaptop", b, flags=re.M)
+            old = re.sub(r"menu label .*", "menu label ^Old Laptop Mode - NAVIN 2.0 (Samsung touchpad fix)", old)
+            old = re.sub(r"^\s*menu default\s*\n", "", old, flags=re.M)
+            old = re.sub(r"^(\s*append .*)$", lambda x: x.group(1) + OLD_ARGS, old, count=1, flags=re.M)
+            out.append(old)
         else:
             out.append(b)
     live.write_text("\n".join(out)); changed += 1
 for f in pathlib.Path("isolinux").glob("*.cfg"):
     t = f.read_text()
-    t = re.sub(r"^timeout .*$", "timeout 50", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN OS 1.2")
+    t = re.sub(r"^timeout .*$", "timeout 30", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.0")
     f.write_text(t)
 std = pathlib.Path("isolinux/stdmenu.cfg")
 if std.exists():
     png(pathlib.Path("isolinux/splash.png"), 640, 480, (244, 247, 251))
     std.write_text(std.read_text() + "\nmenu color title * #ff111111 #00000000 none\nmenu color sel * #ffffffff #ff1677f2 none\nmenu color unsel * #ff111111 #00000000 none\nmenu color hotsel * #ffffffff #ff1677f2 none\nmenu color hotkey * #ff1677f2 #00000000 none\nmenu color tabmsg * #ff555555 #00000000 none\nmenu color timeout_msg * #ff555555 #00000000 none\nmenu color timeout * #ff1677f2 #00000000 none\nmenu color border * #00000000 #00000000 none\n")
-print(f"[navin-os] boot menu: Live Mode / Full Installation / Safe Graphics written ({changed} files)")
+print(f"[navin-os] boot menu: Live Mode / Full Installation / Old Laptop Mode / Safe Graphics written ({changed} files)")
 PY

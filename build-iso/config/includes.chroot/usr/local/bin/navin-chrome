@@ -1,9 +1,19 @@
 #!/bin/bash
+# NAVIN 2.0 browser launcher: RAM cache, hardware video decode where it is stable.
+# /run/navin/chrome-gpu = safe on 1st-gen Intel graphics / Old Laptop Mode (no forced GPU raster or
+# zero-copy: those freeze gen4/gen5 Intel). 2 GB computers also get a smaller renderer limit.
 set -e
 CACHE=/var/cache/navin/chrome/$(id -u)
 install -d -m 0700 "$CACHE"
+flags=(--disk-cache-dir="$CACHE" --disk-cache-size=67108864)
+if [ "$(cat /run/navin/chrome-gpu 2>/dev/null)" = safe ]; then
+  flags+=(--disable-gpu-rasterization --disable-zero-copy --disable-features=UseSkiaRenderer,CanvasOopRasterization)
+else
+  flags+=(--enable-features=VaapiVideoDecoder,VaapiVideoEncoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy)
+fi
+[ "$(cat /run/navin/memprofile 2>/dev/null)" = lite ] && flags+=(--renderer-process-limit=3 --process-per-site)
 for browser in google-chrome-stable chromium; do
   command -v "$browser" >/dev/null || continue
-  exec "$browser" --disk-cache-dir="$CACHE" --disk-cache-size=67108864 --enable-features=VaapiVideoDecoder,VaapiVideoEncoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy "$@"
+  exec "$browser" "${flags[@]}" "$@"
 done
 notify-send NAVIN 'No browser is installed'; exit 1

@@ -1,6 +1,7 @@
 #!/bin/bash
-# NAVIN OS 1.2 touchpad control (libinput through xinput, per user, persistent).
+# NAVIN 2.0 touchpad control (libinput through xinput, per user, persistent).
 #   navin-touchpad status | on | off | toggle | speed -1..1 | scroll 5..50 | tap on|off | drag on|off | natural on|off | pinch on|off | apply
+#   navin-touchpad doctor | rescue | quirks on|off   (old laptops: missing or stuttering touchpad)
 CONF="$HOME/.config/navin/touchpad.conf"; mkdir -p "${CONF%/*}"
 ids(){ xinput list 2>/dev/null | grep -iE 'touchpad|trackpad|glidepoint' | grep -oE 'id=[0-9]+' | cut -d= -f2; }
 get(){ grep -E "^$1=" "$CONF" 2>/dev/null | tail -1 | cut -d= -f2; }
@@ -18,7 +19,28 @@ apply(){
     prop "$id" "libinput Scrolling Pixel Distance" "$(get scroll || echo 15)"
   done
 }
-[ -n "$(ids)" ] || [ "${1:-}" = status ] || [ "${1:-}" = pinch ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found (run navin-hwdetect for details)" 2>/dev/null; exit 1; }
+doctor(){
+  echo "== NAVIN touchpad doctor =="
+  echo "Computer : $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+  if [ -n "$(ids)" ]; then for id in $(ids); do echo "Touchpad : $(xinput list --name-only "$id") (id $id, enabled $(xinput list-props "$id" | awk -F: '/Device Enabled/{gsub(/[ \t]/,"",$2);print $2}'))"; done
+  else echo "Touchpad : NOT FOUND"; fi
+  grep -iE 'Phys=isa0060/serio[1-9]' -B1 /proc/bus/input/devices | grep -oE 'Name=.*' | sed 's/^/PS\/2 port: /'
+  n=$(journalctl -k -b 0 2>/dev/null | grep -ciE 'lost sync|issuing reconnect|psmouse.*(error|failed)')
+  echo "Driver errors this boot: ${n:-0} (lost sync / reconnects)"
+  [ -f /etc/default/grub.d/90-navin-quirks.cfg ] && echo "Boot fix : on ($(grep -oE 'i8042[^ "]*' /etc/default/grub.d/90-navin-quirks.cfg | tr '\n' ' '))" || echo "Boot fix : off"
+  [ -f /etc/modprobe.d/navin-touchpad-rescue.conf ] && echo "Fallback : $(grep options /etc/modprobe.d/navin-touchpad-rescue.conf)"
+  case "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)" in SAMSUNG*|Samsung*) echo "Tip      : Samsung - Fn+F5 switches the touchpad off/on in hardware.";; esac
+  [ -z "$(ids)" ] && echo "Next step: navin-touchpad rescue"
+  [ "${n:-0}" -gt 3 ] && echo "Next step: navin-touchpad quirks on, then restart"
+  return 0
+}
+case "${1:-}" in
+  doctor) doctor; exit 0;;
+  rescue) pkexec /usr/local/lib/navin/navin-touchpad-rescue run; rc=$?; sleep 1; apply
+    [ $rc = 0 ] && notify-send -i input-touchpad "Touchpad" "Touchpad is working" 2>/dev/null || notify-send -i input-touchpad "Touchpad not found" "Samsung: press Fn+F5, then try again" 2>/dev/null; exit $rc;;
+  quirks) [[ "${2:-}" =~ ^(on|off)$ ]] || { echo "quirks on|off" >&2; exit 2; }; pkexec /usr/local/lib/navin/navin-quirks "$2"; exit $?;;
+esac
+[ -n "$(ids)" ] || [ "${1:-}" = status ] || [ "${1:-}" = pinch ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found - run: navin-touchpad rescue" 2>/dev/null; exit 1; }
 case "${1:-status}" in
   status) for id in $(ids); do echo "id=$id $(xinput list --name-only "$id")"; done; cat "$CONF" 2>/dev/null;;
   on|off) save enabled "$1"; apply; notify-send -i input-touchpad "Touchpad $1" 2>/dev/null;;
@@ -30,5 +52,5 @@ case "${1:-status}" in
     # Gesture service is system-wide (root); the setting lives in /etc/navin/gestures.conf.
     echo "pinch=$2" | pkexec /usr/bin/tee /etc/navin/gestures.conf >/dev/null && pkexec /usr/bin/systemctl restart navin-gestures.service && notify-send -i input-touchpad "Pinch to zoom $2" 2>/dev/null;;
   apply) apply;;
-  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|pinch on/off|apply" >&2; exit 2;;
+  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|pinch on/off|apply|doctor|rescue|quirks on/off" >&2; exit 2;;
 esac

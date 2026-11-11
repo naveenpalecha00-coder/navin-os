@@ -19,10 +19,13 @@ logic = load('navin_logic')
 
 class Rules(unittest.TestCase):
     def test_build(self):
-        self.assertEqual(logic.BUILD, 12)
-        self.assertEqual(logic.release_build('v1.0-build.10'), 10)
-        # A Debian 13 base change is never offered as an OTA patch to Debian 12 systems.
+        self.assertEqual(logic.BUILD, 20)
+        self.assertEqual(logic.VERSION, '2.0')
+        self.assertEqual(logic.release_build('v2.0-update.21'), 21)
+        # Debian 12 patches are a different base and are never applied to NAVIN 2.0.
+        self.assertIsNone(logic.release_build('v1.0-build.10'))
         self.assertIsNone(logic.release_build('v1.2-trixie-test'))
+        self.assertIsNone(logic.release_build('v2.0'))
 
     def test_hold(self):
         self.assertEqual(logic.HOLD_SECONDS, 5)

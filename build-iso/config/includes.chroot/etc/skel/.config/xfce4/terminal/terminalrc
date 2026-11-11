@@ -1,0 +1,18 @@
+[Configuration]
+FontName=Noto Mono 11
+MiscCursorBlinks=TRUE
+MiscCursorShape=TERMINAL_CURSOR_SHAPE_IBEAM
+MiscDefaultGeometry=96x26
+MiscMenubarDefault=FALSE
+MiscToolbarDefault=FALSE
+ScrollingLines=5000
+BackgroundMode=TERMINAL_BACKGROUND_TRANSPARENT
+BackgroundDarkness=0.94
+ColorForeground=#1F2937
+ColorBackground=#FFFFFF
+ColorCursor=#1677F2
+ColorSelection=#CFE3FF
+ColorSelectionUseDefault=FALSE
+ColorBold=#111827
+ColorBoldUseDefault=FALSE
+ColorPalette=#1F2937;#D93F3F;#2E9E5B;#B7791F;#1677F2;#8B5CF6;#0E9AA7;#E5E7EB;#6B7280;#EF4444;#22C55E;#EAB308;#3B82F6;#A78BFA;#06B6D4;#FFFFFF

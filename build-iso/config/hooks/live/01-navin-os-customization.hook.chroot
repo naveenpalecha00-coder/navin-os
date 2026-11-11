@@ -27,10 +27,10 @@ sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable
 apt-get clean
 
 echo "[navin-os] 2/9 OS branding"
-sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN OS 1.2 (Debian 13 Trixie base)"/' /usr/lib/os-release
-grep -q '^NAVIN_OS_VERSION' /usr/lib/os-release || echo 'NAVIN_OS_VERSION="1.2"' >> /usr/lib/os-release
-printf 'NAVIN OS 1.2 \\n \\l\n\n' > /etc/issue
-echo "NAVIN OS 1.2" > /etc/issue.net
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN 2.0 (Debian 13 Trixie base)"/' /usr/lib/os-release
+sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.0"' >> /usr/lib/os-release
+printf 'NAVIN 2.0 \\n \\l\n\n' > /etc/issue
+echo "NAVIN 2.0" > /etc/issue.net
 echo "navin-os" > /etc/hostname
 
 echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
@@ -80,10 +80,10 @@ if [ -d /etc/calamares/branding/debian ]; then
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
   sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
   sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
-  sed -i 's/version:.*/version:             "1.2"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "1.2"/' "$D"
-  sed -i 's/versionedName:.*/versionedName:       "NAVIN OS 1.2"/' "$D"
-  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN OS 1.2"/' "$D"
+  sed -i 's/version:.*/version:             "2.0"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "2.0"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN 2.0"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN 2.0"/' "$D"
   sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
   sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
   sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
@@ -145,6 +145,16 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
     <property name="workspace_count" type="int" value="4"/>
     <property name="snap_to_border" type="bool" value="true"/>
     <property name="tile_on_move" type="bool" value="true"/>
+    <property name="move_opacity" type="int" value="92"/>
+    <property name="resize_opacity" type="int" value="96"/>
+    <property name="popup_opacity" type="int" value="98"/>
+    <property name="inactive_opacity" type="int" value="100"/>
+    <property name="frame_opacity" type="int" value="100"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="button_layout" type="string" value="O|HMC"/>
+    <property name="placement_ratio" type="int" value="100"/>
+    <property name="placement_mode" type="string" value="center"/>
+    <property name="wrap_windows" type="bool" value="false"/>
   </property>
 </channel>
 EOF
@@ -154,9 +164,22 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
   <property name="Net" type="empty">
     <property name="ThemeName" type="string" value="Arc"/>
     <property name="IconThemeName" type="string" value="Papirus-Light"/>
+    <property name="EnableEventSounds" type="bool" value="false"/>
+    <property name="EnableInputFeedbackSounds" type="bool" value="false"/>
   </property>
   <property name="Gtk" type="empty">
     <property name="FontName" type="string" value="Noto Sans 10"/>
+    <property name="MonospaceFontName" type="string" value="Noto Mono 10"/>
+    <property name="CursorThemeSize" type="int" value="24"/>
+    <property name="ButtonImages" type="bool" value="true"/>
+    <property name="MenuImages" type="bool" value="true"/>
+    <property name="DialogsUseHeader" type="bool" value="false"/>
+  </property>
+  <property name="Xft" type="empty">
+    <property name="Antialias" type="int" value="1"/>
+    <property name="Hinting" type="int" value="1"/>
+    <property name="HintStyle" type="string" value="hintslight"/>
+    <property name="RGBA" type="string" value="rgb"/>
   </property>
 </channel>
 EOF
@@ -268,7 +291,7 @@ sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEna
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '12\n' > /etc/navin/build
+printf '20\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
@@ -278,7 +301,7 @@ for s in navin-hwdetect navin-memprofile navin-power navin-gestures navin-therma
 systemctl enable thermald.service 2>/dev/null || true
 systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
 mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
-printf '1.2\n' > /etc/navin/version
+printf '2.0\n' > /etc/navin/version
 # Installed system boot menu (written into the target by Calamares' bootloader module)
 if [ -f /etc/default/grub ]; then
   sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN OS"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
@@ -288,7 +311,7 @@ if [ -d /etc/calamares ]; then
   B=/etc/calamares/branding/navin
   if [ -f "$B/branding.desc" ]; then
     cp /usr/share/navin/calamares/show.qml "$B/show.qml"
-    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-1.2-trixie/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
+    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-2.0/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
     sed -i 's|SidebarBackground:.*|SidebarBackground:    "#eaf1f9"|; s|SidebarText:.*|SidebarText:          "#14202b"|; s|SidebarTextCurrent:.*|SidebarTextCurrent:   "#0b4f8a"|; s|SidebarBackgroundCurrent:.*|SidebarBackgroundCurrent: "#cfe2f6"|' "$B/branding.desc"
   fi
   install -m 0644 /usr/share/navin/calamares/welcome.conf /etc/calamares/modules/welcome.conf
@@ -311,6 +334,39 @@ update-desktop-database /usr/share/applications || true
 # Reports shipped inside the image and published with the release
 dpkg-query -W -f='${Package}\t${Version}\t${Installed-Size}\n' | sort > /usr/share/navin/reports/package-manifest.tsv
 . /etc/os-release; echo "base=$VERSION_CODENAME debian_version=$(cat /etc/debian_version) kernel=$(ls /boot/vmlinuz-* | xargs -n1 basename | tr '\n' ' ')" > /usr/share/navin/reports/base.txt
+
+echo "[navin-os] 2.0: old-laptop fixes, fast boot, smaller image"
+# --- fast boot: no 30 s waits ---
+# RESUME=none: no "waiting for suspend/resume device" stall (NAVIN uses ZRAM, not hibernation).
+# lz4 initramfs: decompresses several times faster than zstd/xz on old CPUs.
+mkdir -p /etc/initramfs-tools/conf.d
+printf '# NAVIN 2.0 fast boot\nRESUME=none\nCOMPRESS=lz4\n' > /etc/initramfs-tools/conf.d/navin-fast.conf
+systemctl mask NetworkManager-wait-online.service systemd-networkd-wait-online.service systemd-udev-settle.service 2>/dev/null || true
+systemctl disable man-db.timer 2>/dev/null || true
+mkdir -p /etc/systemd/system/apt-daily.timer.d /etc/systemd/system/apt-daily-upgrade.timer.d
+for t in apt-daily apt-daily-upgrade; do
+  # Not right after boot: a missed run used to start apt on the hard disk during login (freeze on old laptops).
+  printf '[Timer]\nPersistent=false\nRandomizedDelaySec=2h\n' > /etc/systemd/system/$t.timer.d/navin.conf
+done
+mkdir -p /etc/systemd/system.conf.d /etc/systemd/journald.conf.d
+printf '[Manager]\nDefaultTimeoutStartSec=30s\nDefaultTimeoutStopSec=10s\nDefaultDeviceTimeoutSec=20s\n' > /etc/systemd/system.conf.d/navin-2.conf
+printf '[Journal]\nSystemMaxUse=64M\nRuntimeMaxUse=32M\nMaxLevelStore=info\n' > /etc/systemd/journald.conf.d/navin-2.conf
+if [ -d /usr/share/plymouth ]; then
+  mkdir -p /etc/plymouth
+  printf '[Daemon]\nTheme=%s\nShowDelay=0\nDeviceTimeout=5\n' "$(plymouth-set-default-theme 2>/dev/null || echo spinner)" > /etc/plymouth/plymouthd.conf
+fi
+# --- old laptops / touchpad rescue / fan slider ---
+chmod 0755 /usr/local/lib/navin/navin-touchpad-rescue /usr/local/lib/navin/navin-quirks /usr/local/bin/navin-update-notify 2>/dev/null || true
+# navin-touchpad-rescue.service is started by navin-hwdetect only when a laptop shows no touchpad.
+# --- smaller image: firmware that can never load on an x86 PC (ARM phone/board chips, datacenter cards) ---
+before=$(du -sk /usr/lib/firmware | cut -f1)
+for d in rockchip meson amlogic arm powervr cnm imx ti-keystone qlogic bnx2 cxgb3 cavium inside-secure; do rm -rf "/usr/lib/firmware/$d"; done
+find /usr/lib/firmware/qcom -mindepth 1 -maxdepth 1 ! -name 'sdx*' -exec rm -rf {} + 2>/dev/null || true   # keep x86 laptop 5G modems (sdx*)
+find /usr/lib/firmware/mediatek -maxdepth 1 -name 'mt8[1-9]*' -exec rm -rf {} + 2>/dev/null || true       # ARM SoC (Wi-Fi/BT mt7xxx kept)
+rm -f /usr/lib/firmware/myri10ge* /usr/lib/firmware/hfi1_* /usr/lib/firmware/qat_* /usr/lib/firmware/ql2* /usr/lib/firmware/s5p-mfc* 2>/dev/null || true
+rm -rf /usr/share/icons/ePapirus /usr/share/icons/ePapirus-Dark   # elementary-OS variants; NAVIN uses Papirus-Light/Dark
+echo "firmware_removed_kb=$((before - $(du -sk /usr/lib/firmware | cut -f1)))" >> /usr/share/navin/reports/base.txt
+update-initramfs -u -k all || true
 
 echo "[navin-os] Size guard: one kernel, no datacenter-NIC firmware"
 # Build 9 ISO was over GitHub's 2 GiB limit; two kernels+initrds and server firmware were the largest removable items.

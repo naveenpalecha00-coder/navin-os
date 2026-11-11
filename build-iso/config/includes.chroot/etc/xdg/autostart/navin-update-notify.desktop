@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Update Notifier
+Comment=Tells you when a NAVIN update is available (checks at most once a day)
+Exec=navin-update-notify
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

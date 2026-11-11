@@ -29,3 +29,9 @@
   monitoring-only there. NAVIN never stops a fan or slows it below BIOS control.
 - **Touchpad latency** cannot be measured automatically; use `sudo libinput measure` manually.
 - **Download speed** depends on GitHub's CDN and your connection. Browser downloads from GitHub support resume.
+
+
+## NAVIN 2.0
+- Samsung RV411: if the cursor does not move, press Fn+F5 once (hardware touchpad switch), then run `navin-touchpad rescue` or choose "Old Laptop Mode" at boot.
+- The fan slider cannot change fan speed on laptops whose BIOS hides the fan from Linux; it limits CPU speed (less heat) instead and says so.
+- Boot-time goal ~10 s is realistic on an SSD; on the RV411's original hard disk expect longer. Measure with `systemd-analyze`.

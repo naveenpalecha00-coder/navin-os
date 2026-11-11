@@ -1,12 +1,12 @@
 #!/bin/sh
-# NAVIN OS 1.2: recover a touchpad that did not come back after suspend/resume.
+# NAVIN 2.0: recover a touchpad that did not come back after suspend/resume.
 [ "$1" = post ] || exit 0
 sleep 2
 grep -qiE 'touchpad|trackpad|glidepoint' /proc/bus/input/devices && exit 0
 bus=$(jq -r '.touchpad.touchpads[0].bus // empty' /var/lib/navin/hardware.json 2>/dev/null)
 case "$bus" in
   I2C|USB) modprobe -r hid_multitouch i2c_hid_acpi 2>/dev/null; modprobe i2c_hid_acpi; modprobe hid_multitouch ;;
-  PS/2|RMI) modprobe -r psmouse 2>/dev/null; modprobe psmouse ;;
-  *) exit 0 ;;
+  PS/2|RMI) /usr/local/lib/navin/navin-touchpad-rescue run >/dev/null 2>&1 ;;
+  *) [ -n "$(grep -ls AUX /sys/bus/serio/devices/serio*/description)" ] && /usr/local/lib/navin/navin-touchpad-rescue run >/dev/null 2>&1; exit 0 ;;
 esac
 echo "$(date '+%F %T') resume: reloaded $bus touchpad driver" >> /var/log/navin-hwdetect.log

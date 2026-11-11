@@ -1,0 +1,10 @@
+#!/bin/bash
+# NAVIN 2.0: turn the automatic laptop boot fixes (e.g. Samsung i8042.nomux/reset) on or off. Root only.
+[ "$(id -u)" = 0 ] || { echo "run with pkexec" >&2; exit 1; }
+case "$1" in
+  off) mkdir -p /etc/navin; touch /etc/navin/quirks-off;;
+  on) rm -f /etc/navin/quirks-off;;
+  *) echo "usage: navin-quirks on|off" >&2; exit 2;;
+esac
+/usr/local/bin/navin-hwdetect --apply --quiet
+echo "Laptop fixes $1. Restart to use them."
