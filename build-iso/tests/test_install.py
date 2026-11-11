@@ -127,17 +127,24 @@ class InstallerConfig(unittest.TestCase):
         unit = (IC / 'etc/systemd/system/navin-autotest.service').read_text()
         self.assertIn('ConditionVirtualization=vm', unit)
 
-    def test_panel_plugins_have_their_packages(self):
-        # VM test screenshot showed "power-manager-plugin could not be loaded" when the package was missing.
+    def test_panel_plugins_exist(self):
+        # Panel item name = .desktop file name in /usr/share/xfce4/panel/plugins (read from the Debian 13 .debs).
+        # VM screenshots showed "could not be loaded" for a missing package and for the wrong name "clipman".
+        import re as _re
         panel = (IC / 'etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml').read_text()
         pk = (ROOT / 'config/package-lists/navin-os.list.chroot').read_text().split()
         pk += (IC / 'usr/share/navin/optional-packages.list').read_text().split()
-        need = {'power-manager-plugin': 'xfce4-power-manager-plugins', 'whiskermenu': 'xfce4-whiskermenu-plugin',
-                'pulseaudio': 'xfce4-pulseaudio-plugin', 'clipman': 'xfce4-clipman-plugin', 'xkb': 'xfce4-xkb-plugin',
-                'genmon': 'xfce4-genmon-plugin'}
-        for plugin, pkg in need.items():
-            if f'value="{plugin}"' in panel:
-                self.assertIn(pkg, pk, plugin)
+        builtin = {'launcher', 'systray', 'clock', 'separator', 'tasklist', 'pager', 'actions', 'showdesktop',
+                   'windowmenu', 'directorymenu', 'applicationsmenu'}
+        from_pkg = {'power-manager-plugin': 'xfce4-power-manager-plugins', 'whiskermenu': 'xfce4-whiskermenu-plugin',
+                    'pulseaudio': 'xfce4-pulseaudio-plugin', 'xfce4-clipman-plugin': 'xfce4-clipman-plugin',
+                    'xkb': 'xfce4-xkb-plugin', 'genmon': 'xfce4-genmon-plugin'}
+        used = _re.findall(r'name="plugin-\d+" type="string" value="([^"]+)"', panel)
+        self.assertGreater(len(used), 5)
+        for plugin in used:
+            self.assertTrue(plugin in builtin or plugin in from_pkg, f'unknown panel item {plugin}')
+            if plugin in from_pkg:
+                self.assertIn(from_pkg[plugin], pk, plugin)
 
     def test_window_previews_on_by_default(self):
         h = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
