@@ -1,0 +1,34 @@
+#!/bin/bash
+# NAVIN OS 1.2 replacement for Debian's calamares-bootloader-config helper (Calamares exec step
+# "bootloader-config", runs on the live system with the target mounted).
+# Debian's helper always downloads grub-efi / grub-pc. NAVIN ships the GRUB binaries, signed shim and
+# signed GRUB in the image, so an install finishes offline; the GRUB packages that manage future
+# updates are installed now when online, otherwise on the first online start (navin-grub-finish).
+CHROOT=${1:-$(mount | grep proc | grep calamares | awk '{print $3}' | sed -e "s#/proc##g")}
+[ -n "$CHROOT" ] && [ -d "$CHROOT/etc" ] || { echo "bootloader-config: target not found"; exit 1; }
+LOG=$CHROOT/var/log/navin-install.log
+log(){ echo "$*" | tee -a "$LOG"; }
+
+if [ "$(mount | grep "$CHROOT " | cut -c -16)" = "/dev/mapper/luks" ]; then
+  echo "UMASK=0077" > "$CHROOT/etc/initramfs-tools/conf.d/initramfs-permissions"
+  chroot "$CHROOT" apt-get -y install cryptsetup-initramfs cryptsetup keyutils
+fi
+
+if [ -d /sys/firmware/efi/efivars ]; then mode=uefi; pkg=grub-efi; bin=grub-efi-amd64-bin; else mode=bios; pkg=grub-pc; bin=grub-pc-bin; fi
+log "NAVIN bootloader-config: firmware=$mode"
+if timeout 300 env DEBIAN_FRONTEND=noninteractive chroot "$CHROOT" apt-get -y -o Acquire::Retries=1 install "$pkg" >> "$LOG" 2>&1; then
+  log " * $pkg installed (manages future GRUB updates)"
+elif chroot "$CHROOT" dpkg -s "$bin" >/dev/null 2>&1; then
+  log " * offline: using $bin from the NAVIN image; $pkg is added on the first online start"
+  systemctl --root="$CHROOT" enable navin-grub-finish.service >> "$LOG" 2>&1 || true
+else
+  log " * ERROR: no GRUB for $mode in the image and no internet"; exit 1
+fi
+# Dual boot: Windows and other systems appear in the boot menu (also set in /etc/default/grub.d/navin.cfg).
+[ -f "$CHROOT/etc/default/grub" ] || printf 'GRUB_DEFAULT=0\n' > "$CHROOT/etc/default/grub"
+sed -i '/^#\?GRUB_DISABLE_OS_PROBER=/d' "$CHROOT/etc/default/grub"
+echo 'GRUB_DISABLE_OS_PROBER=false' >> "$CHROOT/etc/default/grub"
+# Live-only passwordless admin never reaches the installed system.
+rm -f "$CHROOT/etc/sudoers.d/navin-nopasswd" "$CHROOT/etc/polkit-1/rules.d/49-navin-nopasswd.rules"
+chroot "$CHROOT" /usr/sbin/update-grub >> "$LOG" 2>&1 || true
+exit 0

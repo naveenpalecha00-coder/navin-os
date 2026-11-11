@@ -1,0 +1,11 @@
+#!/bin/sh
+# NAVIN OS grub-install wrapper used by Calamares (bootloader.conf grubInstall) and the CI install test.
+# UEFI: also installs the signed shim + GRUB to the removable path \EFI\BOOT\BOOTX64.EFI so the disk
+# still starts when firmware forgets its boot entries (common on laptops and after BIOS updates).
+case " $* " in
+  *x86_64-efi*)
+    /usr/sbin/grub-install "$@" --force-extra-removable && exit 0
+    echo "navin-grub-install: NVRAM entry could not be written, retrying with the removable path only" >&2
+    exec /usr/sbin/grub-install "$@" --force-extra-removable --no-nvram ;;
+  *) exec /usr/sbin/grub-install "$@" ;;
+esac

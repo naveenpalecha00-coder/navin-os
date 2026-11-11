@@ -1,0 +1,129 @@
+#!/bin/bash
+# NAVIN OS 1.2 automated install self-test. Runs ONLY in the GitHub Actions virtual machine:
+#   - inside a VM (systemd-detect-virt), on the live USB (/run/live),
+#   - a disk labelled NAVINTEST is attached (holds the file "mode"),
+#   - the target disk is a blank virtio disk with serial NAVINTARGET, at most 64 GB.
+# On every real computer one of these is false and the script exits without touching anything.
+# Steps mirror the Calamares sequence in /etc/calamares/settings.conf (partition, mount, unpackfs,
+# machineid, fstab, users, displaymanager, bootloader-config, bootloader, packages, initramfs, umount)
+# and call the same NAVIN helpers Calamares uses. The Calamares window itself is opened and checked
+# first, then closed (clicking through its pages cannot be automated).
+set -u
+systemd-detect-virt -q --vm || exit 0
+[ -d /run/live ] || exit 0
+for i in $(seq 1 30); do [ -e /dev/disk/by-label/NAVINTEST ] && break; sleep 2; done
+[ -e /dev/disk/by-label/NAVINTEST ] || exit 0
+DISK=$(readlink -f /dev/disk/by-id/virtio-NAVINTARGET 2>/dev/null)
+LOG=/var/log/navin-autotest.log; : > "$LOG"
+say(){ echo "$*" >> "$LOG"; timeout 5 sh -c "echo '$*' > /dev/ttyS0" 2>/dev/null; }
+STEP=start
+fail(){ say "NAVIN_INSTALL_FAIL step=$STEP $*"; tail -n 40 "$LOG" | tr -d "'" | while read -r l; do say "NAVIN_LOG $l"; done; sync; sleep 3; systemctl poweroff; exit 1; }
+run(){ "$@" >> "$LOG" 2>&1 || fail "command failed: $*"; }
+[ -b "$DISK" ] || fail "no target disk"
+[ "$(blockdev --getsize64 "$DISK")" -le $((64*1024*1024*1024)) ] || fail "target disk larger than 64 GB"
+[ "$(lsblk -n -o NAME "$DISK" | wc -l)" = 1 ] && [ -z "$(blkid -p "$DISK" 2>/dev/null)" ] || fail "target disk is not blank"
+mkdir -p /run/navintest; mount -o ro /dev/disk/by-label/NAVINTEST /run/navintest
+MODE=$(cat /run/navintest/mode 2>/dev/null || echo install); umount /run/navintest
+FW=bios; [ -d /sys/firmware/efi ] && FW=uefi
+SB=no; [ "$FW" = uefi ] && [ "$(od -An -t u1 -j4 -N1 /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | tr -d ' ')" = 1 ] && SB=yes
+say "NAVIN_INSTALL_START mode=$MODE firmware=$FW secureboot=$SB disk=$DISK"
+T0=$(date +%s)
+
+# ---- desktop checks (live session) -----------------------------------------------------------
+STEP=desktop
+for i in $(seq 1 90); do pgrep -u navin -x xfce4-panel >/dev/null && break; sleep 2; done
+pgrep -u navin -x xfce4-panel >/dev/null || fail "live desktop did not start"
+sleep 20
+XA=/home/navin/.Xauthority
+asuser(){ runuser -u navin -- env DISPLAY=:0 XAUTHORITY=$XA "$@"; }
+CM=$(asuser python3 -c 'from Xlib import display
+d=display.Display(); print("yes" if d.get_selection_owner(d.intern_atom("_NET_WM_CM_S0")) else "no")' 2>>"$LOG")
+CALA=skip; SWITCHER=skip
+if [ "$MODE" = install-ui ]; then
+  # Alt+Tab with window previews: open two windows, hold Alt+Tab, host takes a screenshot.
+  asuser sh -c 'xfce4-terminal --title="NAVIN test terminal" >/dev/null 2>&1 & thunar /usr/share >/dev/null 2>&1 &'
+  sleep 12
+  asuser xdotool keydown alt key Tab >> "$LOG" 2>&1; sleep 2
+  SWITCHER=$(asuser xdotool search --onlyvisible --class xfwm4 2>/dev/null | head -1)
+  [ -n "$SWITCHER" ] && SWITCHER=open || SWITCHER=not-found
+  say "NAVIN_SHOT alttab"; sleep 12
+  asuser xdotool keyup alt >> "$LOG" 2>&1
+  # Installer window: the real Calamares opens (as root, like pkexec) with NAVIN branding.
+  STEP=calamares
+  asuser xhost +si:localuser:root >> "$LOG" 2>&1
+  env DISPLAY=:0 XAUTHORITY=$XA QT_QPA_PLATFORM=xcb calamares -d > /var/log/navin-calamares-test.log 2>&1 &
+  CP=$!
+  CALA=fail
+  for i in $(seq 1 45); do
+    sleep 2; kill -0 $CP 2>/dev/null || break
+    asuser xdotool search --onlyvisible --class '[Cc]alamares' >/dev/null 2>&1 && { CALA=pass; break; }
+  done
+  # Still running but no window found by xdotool: record "alive"; a crash/exit is a failure.
+  [ "$CALA" = fail ] && kill -0 $CP 2>/dev/null && CALA=alive
+  if [ "$CALA" != fail ]; then sleep 8; say "NAVIN_SHOT calamares"; sleep 12; fi
+  kill $CP 2>/dev/null; sleep 2; kill -9 $CP 2>/dev/null; pkill -x calamares 2>/dev/null
+  grep -iE "qt platform plugin|could not load|failed to load module|fatal" /var/log/navin-calamares-test.log | head -n 8 | tr -d "'" | while read -r l; do say "NAVIN_LOG calamares: $l"; done
+  if [ "$CALA" = fail ]; then cat /var/log/navin-calamares-test.log >> "$LOG"; fail "Calamares exited instead of opening its window"; fi
+fi
+say "NAVIN_UI compositor=$CM switcher=$SWITCHER calamares=$CALA"
+
+# ---- install (Calamares exec sequence) ---------------------------------------------------------
+STEP=partition
+if [ "$FW" = uefi ]; then
+  printf 'label: gpt\nsize=512MiB, type=uefi, name="EFI"\ntype=linux, name="NAVIN OS"\n' | sfdisk -q "$DISK" >> "$LOG" 2>&1 || fail "sfdisk"
+else
+  printf 'label: dos\ntype=83, bootable\n' | sfdisk -q "$DISK" >> "$LOG" 2>&1 || fail "sfdisk"
+fi
+run udevadm settle
+PARTS=($(lsblk -nrpo NAME,TYPE "$DISK" | awk '$2=="part"{print $1}'))
+if [ "$FW" = uefi ]; then ESP=${PARTS[0]}; ROOT=${PARTS[1]}; run mkfs.vfat -F 32 -n EFI "$ESP"; else ROOT=${PARTS[0]}; fi
+run mkfs.ext4 -q -F -L NAVIN-OS "$ROOT"
+STEP=mount
+TGT=/tmp/calamares-root-navintest; SRC=/tmp/navin-squashfs
+mkdir -p "$TGT" "$SRC"
+run mount "$ROOT" "$TGT"
+if [ "$FW" = uefi ]; then mkdir -p "$TGT/boot/efi"; run mount "$ESP" "$TGT/boot/efi"; fi
+STEP=unpackfs
+run mount -t squashfs -o loop,ro /run/live/medium/live/filesystem.squashfs "$SRC"
+run rsync -aHAXx --numeric-ids "$SRC/" "$TGT/"
+umount "$SRC"
+T_COPY=$(( $(date +%s) - T0 ))
+for d in dev dev/pts proc sys run; do run mount --rbind "/$d" "$TGT/$d"; mount --make-rslave "$TGT/$d"; done
+STEP=machineid
+rm -f "$TGT/etc/machine-id" "$TGT/var/lib/dbus/machine-id"
+run chroot "$TGT" systemd-machine-id-setup
+STEP=fstab
+RU=$(blkid -s UUID -o value "$ROOT")
+{ echo "# /etc/fstab: NAVIN OS (written by the install test like Calamares' fstab module)"
+  echo "UUID=$RU / ext4 defaults,noatime,errors=remount-ro 0 1"
+  [ "$FW" = uefi ] && echo "UUID=$(blkid -s UUID -o value "$ESP") /boot/efi vfat umask=0077 0 2"; } > "$TGT/etc/fstab"
+STEP=users
+G=$(for g in sudo audio video plugdev netdev bluetooth lpadmin autologin nopasswdlogin; do chroot "$TGT" getent group $g >/dev/null && printf '%s,' $g; done)
+run chroot "$TGT" useradd -m -s /bin/bash -c "NAVIN Test" -G "${G%,}" navintest
+echo 'navintest:navin-ci-test' | chroot "$TGT" chpasswd >> "$LOG" 2>&1 || fail "chpasswd"
+STEP=displaymanager
+mkdir -p "$TGT/etc/lightdm/lightdm.conf.d"
+printf '[Seat:*]\nautologin-user=navintest\nautologin-user-timeout=0\n' > "$TGT/etc/lightdm/lightdm.conf.d/60-navin-autologin.conf"
+STEP=bootloader-config
+mkdir -p "$TGT/run/live/medium"; mount --bind /run/live/medium "$TGT/run/live/medium"
+run /usr/share/calamares/helpers/calamares-bootloader-config "$TGT"
+umount "$TGT/run/live/medium"; rmdir "$TGT/run/live/medium" "$TGT/run/live" 2>/dev/null
+STEP=bootloader
+if [ "$FW" = uefi ]; then
+  run chroot "$TGT" /usr/local/lib/navin/navin-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --force
+  [ -f "$TGT/boot/efi/EFI/BOOT/BOOTX64.EFI" ] || fail "no removable-path loader \\EFI\\BOOT\\BOOTX64.EFI"
+  SHIM=$(grep -a -q -i "shim" "$TGT/boot/efi/EFI/BOOT/BOOTX64.EFI" && echo shim || echo grub)
+else
+  run chroot "$TGT" /usr/sbin/grub-install --target=i386-pc --recheck --force "$DISK"; SHIM=n/a
+fi
+run chroot "$TGT" grub-mkconfig -o /boot/grub/grub.cfg
+grep -q "menuentry 'NAVIN OS" "$TGT/boot/grub/grub.cfg" || fail "boot menu has no NAVIN OS entry"
+STEP=packages
+LIVEPKG=$(chroot "$TGT" dpkg-query -W -f='${Package} ${Status}\n' live-boot live-boot-initramfs-tools live-config live-config-systemd live-tools calamares-settings-debian 2>/dev/null | awk '/installed$/{print $1}' | tr '\n' ' ')
+[ -n "$LIVEPKG" ] && run chroot "$TGT" env DEBIAN_FRONTEND=noninteractive apt-get -y --purge remove $LIVEPKG
+STEP=initramfs
+run chroot "$TGT" update-initramfs -u -k all
+STEP=umount
+sync; umount -R "$TGT" || { sleep 3; umount -R -l "$TGT"; }
+say "NAVIN_INSTALL_OK firmware=$FW secureboot=$SB efi_loader=$SHIM copy_s=$T_COPY total_s=$(( $(date +%s) - T0 )) removed=[$LIVEPKG] compositor=$CM switcher=$SWITCHER calamares=$CALA"
+sync; sleep 3; systemctl poweroff

@@ -18,11 +18,12 @@ concurrency:
 env:
   ISO: navin-os-1.2-x86_64.iso
   TAG: v1.2-trixie-test
+  FINAL_TAG: v1.2
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
 
@@ -46,9 +47,9 @@ jobs:
             cp -a build-iso/config/includes.chroot/usr/local/bin/. /usr/local/bin/
             mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml && cp build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/*.xml /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/
             fail=0
-            for app in "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
+            for app in "navin_install_guide.py -" "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
               set -- $app
-              rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/lib/navin/$1 $2 > /tmp/out 2>&1 || rc=$?
+              rc=0; a=$2; [ "$a" = - ] && a=; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/lib/navin/$1 $a > /tmp/out 2>&1 || rc=$?
               if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL $app (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   $app"; fi
             done
             rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-shortcuts > /tmp/out 2>&1 || rc=$?
@@ -74,17 +75,19 @@ jobs:
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
           echo "sha=$(cut -d' ' -f1 "$ISO.sha256")" >> "$GITHUB_OUTPUT"
           if [ "$SIZE" -gt 2147000000 ]; then echo "ISO larger than GitHub's 2 GiB asset limit"; exit 1; fi
-          sudo apt-get update -qq && sudo apt-get install -y -qq xorriso qemu-system-x86 ovmf socat imagemagick >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq xorriso qemu-system-x86 ovmf socat imagemagick mtools dosfstools >/dev/null
           xorriso -osirrox on -indev "$ISO" -extract /EFI/boot/bootx64.efi /tmp/bootx64.efi 2>/dev/null || true
           if strings /tmp/bootx64.efi 2>/dev/null | grep -qi 'shim'; then echo "secureboot=shim (Microsoft-signed)" >> "$GITHUB_OUTPUT"; else echo "secureboot=not signed" >> "$GITHUB_OUTPUT"; fi
           xorriso -indev "$ISO" -find /live -name 'vmlinuz*' 2>/dev/null | tee /tmp/kernels.txt
           echo "kernel=$(basename $(head -1 /tmp/kernels.txt | tr -d "'") )" >> "$GITHUB_OUTPUT"
 
-      - name: Boot test in virtual machines (BIOS 2 GB, UEFI 4 GB, UEFI Secure Boot)
+      - name: VM tests — live boot (BIOS 2 GB, UEFI 4 GB, Secure Boot), installer + install to disk + reboot (Secure Boot UEFI, BIOS)
         id: boot
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          sudo rm -rf build-iso/chroot build-iso/binary build-iso/cache   # free disk for the install-test disks
+          df -h /
           bash build-iso/tools/vm-boot-test.sh "build-iso/$ISO" vm-test
           cat vm-test/results.env
           cat vm-test/results.env >> "$GITHUB_OUTPUT"
@@ -111,8 +114,18 @@ jobs:
             echo "| UEFI, 4 GB | ${{ steps.boot.outputs.result_uefi_4g }} | ${{ steps.boot.outputs.time_uefi_4g }} | ${{ steps.boot.outputs.detail_uefi_4g }} |"
             echo "| UEFI Secure Boot | ${{ steps.boot.outputs.result_uefi_sb }} | ${{ steps.boot.outputs.time_uefi_sb }} | ${{ steps.boot.outputs.detail_uefi_sb }} |"
             echo
+            echo "## Automatic install tests (offline, blank virtual disk)"
+            echo "Calamares window opened in the Secure Boot live session (screenshot in the build evidence), then the"
+            echo "Calamares install steps ran through NAVIN's own helpers; the installed disk was started alone."
+            echo "| Test | Result | Seconds | Details |"
+            echo "|---|---|---|---|"
+            echo "| Install, UEFI Secure Boot | ${{ steps.boot.outputs.result_install_sb }} | ${{ steps.boot.outputs.time_install_sb }} | ${{ steps.boot.outputs.detail_install_sb }} |"
+            echo "| Start installed disk, Secure Boot, empty boot entries | ${{ steps.boot.outputs.result_boot_installed_sb }} | ${{ steps.boot.outputs.time_boot_installed_sb }} | ${{ steps.boot.outputs.detail_boot_installed_sb }} |"
+            echo "| Install, legacy BIOS | ${{ steps.boot.outputs.result_install_bios }} | ${{ steps.boot.outputs.time_install_bios }} | ${{ steps.boot.outputs.detail_install_bios }} |"
+            echo "| Start installed disk, legacy BIOS | ${{ steps.boot.outputs.result_boot_installed_bios }} | ${{ steps.boot.outputs.time_boot_installed_bios }} | ${{ steps.boot.outputs.detail_boot_installed_bios }} |"
+            echo
             echo "## Quality gates still requiring real hardware (not done by this pipeline)"
-            echo "- [ ] Calamares test installation completes and the installed system boots"
+            echo "- [ ] Calamares install clicked through by a person on a real PC (with and without Windows) and the installed system boots"
             echo "- [ ] Touchpad (Synaptics / ELAN / ALPS / I2C-HID) on real laptops"
             echo "- [ ] Wi-Fi, Bluetooth and audio on test hardware"
             echo "- [ ] Intel / AMD / NVIDIA graphics on real GPUs; fan control on supported laptops"
@@ -145,8 +158,49 @@ jobs:
           retention-days: 7
           compression-level: 0
 
-      - name: Publish TEST pre-release (only when BIOS and UEFI VM boots pass)
-        if: steps.boot.outputs.result_bios_2g == 'pass' && steps.boot.outputs.result_uefi_4g == 'pass'
+      - name: Decide release type
+        id: gate
+        run: |
+          o='${{ toJSON(steps.boot.outputs) }}'
+          final=yes
+          for k in result_bios_2g result_uefi_4g result_uefi_sb result_install_sb result_boot_installed_sb result_install_bios result_boot_installed_bios; do
+            v=$(echo "$o" | python3 -c "import json,sys; print(json.load(sys.stdin).get('$k',''))")
+            echo "$k=$v"; [ "$v" = pass ] || final=no
+          done
+          echo "final=$final" >> "$GITHUB_OUTPUT"
+
+      - name: Publish NAVIN OS 1.2 release (only when every live, install and reboot VM test passes)
+        if: steps.gate.outputs.final == 'yes'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.FINAL_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: NAVIN OS 1.2 (Debian 13)
+          prerelease: false
+          make_latest: false
+          body: |
+            NAVIN OS 1.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
+
+            SHA256: ${{ steps.verify.outputs.sha }}
+
+            Automatic tests passed in virtual machines:
+            - Live boot: legacy BIOS 2 GB, UEFI 4 GB, UEFI Secure Boot
+            - Installer window opens; offline install to an empty disk with Secure Boot UEFI and with legacy BIOS
+            - Installed disk starts on its own (Secure Boot with empty boot entries, and BIOS) to the desktop, live-only admin rules removed
+
+            Not yet confirmed on physical computers (touchpads, Wi-Fi, sound, graphics cards, fans, long runs).
+            Please report problems on GitHub Issues. Build 10 (Debian 12) stays available for rollback.
+            See build-report.md, known-issues.md and hardware-compatibility.md.
+          files: |
+            build-iso/navin-os-1.2-x86_64.iso
+            build-iso/navin-os-1.2-x86_64.iso.sha256
+            build-iso/reports/build-report.md
+            build-iso/reports/package-manifest.tsv
+            build-iso/reports/hardware-compatibility.md
+            build-iso/reports/known-issues.md
+
+      - name: Publish TEST pre-release (live boots passed but an install test did not)
+        if: steps.gate.outputs.final != 'yes' && steps.boot.outputs.result_bios_2g == 'pass' && steps.boot.outputs.result_uefi_4g == 'pass'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
@@ -159,8 +213,8 @@ jobs:
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
-            Status: [Build Passed] · [VM boot: BIOS ${{ steps.boot.outputs.result_bios_2g }}, UEFI ${{ steps.boot.outputs.result_uefi_4g }}, Secure Boot ${{ steps.boot.outputs.result_uefi_sb }}]
-            NOT yet validated on physical hardware and NOT the final release. Keep using Build 10 (Debian 12) for daily use; it stays available for rollback.
+            Status: [Build Passed] · [VM boot: BIOS ${{ steps.boot.outputs.result_bios_2g }}, UEFI ${{ steps.boot.outputs.result_uefi_4g }}, Secure Boot ${{ steps.boot.outputs.result_uefi_sb }}] · [Install: Secure Boot ${{ steps.boot.outputs.result_install_sb }}/${{ steps.boot.outputs.result_boot_installed_sb }}, BIOS ${{ steps.boot.outputs.result_install_bios }}/${{ steps.boot.outputs.result_boot_installed_bios }}]
+            NOT the final release. Keep using Build 10 (Debian 12) for daily use; it stays available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
             build-iso/navin-os-1.2-x86_64.iso

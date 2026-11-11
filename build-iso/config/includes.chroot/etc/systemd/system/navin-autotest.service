@@ -1,0 +1,12 @@
+[Unit]
+Description=NAVIN OS automated install self-test (GitHub Actions VM with a NAVINTEST disk only)
+After=display-manager.service
+ConditionVirtualization=vm
+ConditionPathExists=/run/live
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/navin/navin-autotest
+
+[Install]
+WantedBy=graphical.target

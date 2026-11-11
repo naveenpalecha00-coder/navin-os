@@ -90,3 +90,41 @@ def classify_swipe(dx, dy, width, height, threshold=0.15):
     if abs(rx) >= abs(ry):
         return "right" if rx > 0 else "left"
     return "down" if ry > 0 else "up"
+
+
+class PinchTracker:
+    """Two-finger pinch -> zoom steps (pure; fed by navin-gestures from the touchpad's MT slots).
+
+    Positions are normalised by the touchpad size. Each time the finger distance grows or shrinks by
+    `step` (default 20%) against the last reference, one zoom step is returned (+1 zoom in, -1 zoom out).
+    A two-finger scroll moves both fingers the same way: the distance barely changes while the centre
+    travels, so it never produces a step."""
+
+    def __init__(self, width, height, step=0.20, min_spread=0.04):
+        self.w, self.h = float(width or 1), float(height or 1)
+        self.step, self.min_spread = step, min_spread
+        self.reset()
+
+    def reset(self):
+        self.ref = self.start = self.c0 = None
+
+    def update(self, p1, p2):
+        (x1, y1), (x2, y2) = p1, p2
+        dx, dy = (x1 - x2) / self.w, (y1 - y2) / self.h
+        dist = (dx * dx + dy * dy) ** 0.5
+        cx, cy = (x1 + x2) / 2 / self.w, (y1 + y2) / 2 / self.h
+        if self.ref is None:
+            self.ref = self.start = max(dist, 1e-6)
+            self.c0 = (cx, cy)
+            return 0
+        spread = abs(dist - self.start)
+        travel = ((cx - self.c0[0]) ** 2 + (cy - self.c0[1]) ** 2) ** 0.5
+        if spread < self.min_spread or travel > spread:
+            return 0
+        if dist >= self.ref * (1 + self.step):
+            self.ref = dist
+            return 1
+        if dist <= self.ref / (1 + self.step):
+            self.ref = dist
+            return -1
+        return 0

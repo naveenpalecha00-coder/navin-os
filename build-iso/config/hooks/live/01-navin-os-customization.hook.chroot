@@ -99,7 +99,7 @@ Type=Application
 Version=1.0
 Name=Install NAVIN OS
 Comment=Install NAVIN OS to this computer or a USB drive
-Exec=install-debian
+Exec=navin-install
 Icon=/usr/share/pixmaps/navin-os-logo.png
 Terminal=false
 Categories=System;
@@ -123,7 +123,7 @@ Exec=picom --config /etc/xdg/picom.conf
 OnlyShowIn=XFCE;
 X-GNOME-Autostart-enabled=true
 EOF
-# Disable xfwm4 built-in compositor so picom is the only compositor
+# Compositor is chosen per login by navin-compositor (xfwm4 = Alt+Tab window previews, default; picom = rounded corners)
 mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
 cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -133,7 +133,13 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
     <property name="box_move" type="bool" value="false"/>
     <property name="box_resize" type="bool" value="false"/>
     <property name="zoom_desktop" type="bool" value="false"/>
-    <property name="cycle_preview" type="bool" value="false"/>
+    <property name="cycle_preview" type="bool" value="true"/>
+    <property name="cycle_tabwin_mode" type="int" value="0"/>
+    <property name="vblank_mode" type="string" value="auto"/>
+    <property name="show_frame_shadow" type="bool" value="true"/>
+    <property name="show_popup_shadow" type="bool" value="false"/>
+    <property name="show_dock_shadow" type="bool" value="false"/>
+    <property name="unredirect_overlays" type="bool" value="true"/>
     <property name="sync_to_vblank" type="bool" value="false"/>
     <property name="theme" type="string" value="Arc"/>
     <property name="workspace_count" type="int" value="4"/>
@@ -268,7 +274,7 @@ update-desktop-database /usr/share/applications || true
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
 rm -f /etc/skel/.config/touchegg/touchegg.conf /etc/xdg/autostart/navin-picom.desktop
 chmod 0755 /usr/local/bin/navin-* /usr/local/sbin/navin-* /usr/local/lib/navin/navin-* /usr/lib/systemd/system-sleep/navin-input || true
-for s in navin-hwdetect navin-memprofile navin-power navin-gestures navin-thermal navin-boot-ok fstrim.timer; do systemctl enable "$s" 2>/dev/null || echo "[navin-os] WARNING: could not enable $s"; done
+for s in navin-hwdetect navin-memprofile navin-power navin-gestures navin-thermal navin-boot-ok navin-autotest fstrim.timer; do systemctl enable "$s" 2>/dev/null || echo "[navin-os] WARNING: could not enable $s"; done
 systemctl enable thermald.service 2>/dev/null || true
 systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
 mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
@@ -277,6 +283,29 @@ printf '1.2\n' > /etc/navin/version
 if [ -f /etc/default/grub ]; then
   sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN OS"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
 fi
+echo "[navin-os] 1.2 final: installer guide + branding, offline boot loader, dual-boot menu, pinch default"
+if [ -d /etc/calamares ]; then
+  B=/etc/calamares/branding/navin
+  if [ -f "$B/branding.desc" ]; then
+    cp /usr/share/navin/calamares/show.qml "$B/show.qml"
+    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-1.2-trixie/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
+    sed -i 's|SidebarBackground:.*|SidebarBackground:    "#eaf1f9"|; s|SidebarText:.*|SidebarText:          "#14202b"|; s|SidebarTextCurrent:.*|SidebarTextCurrent:   "#0b4f8a"|; s|SidebarBackgroundCurrent:.*|SidebarBackgroundCurrent: "#cfe2f6"|' "$B/branding.desc"
+  fi
+  install -m 0644 /usr/share/navin/calamares/welcome.conf /etc/calamares/modules/welcome.conf
+  install -m 0644 /usr/share/navin/calamares/partition.conf /etc/calamares/modules/partition.conf
+  if [ -f /etc/calamares/modules/bootloader.conf ]; then
+    sed -i 's|^grubInstall:.*|grubInstall: "/usr/local/lib/navin/navin-grub-install"|; s|^installEFIFallback:.*|installEFIFallback: false|; /^efiBootloaderId:/d' /etc/calamares/modules/bootloader.conf
+    # Debian's signed GRUB looks for its config in \EFI\debian, so the EFI folder keeps that name (menu still says NAVIN OS).
+    echo 'efiBootloaderId: "debian"' >> /etc/calamares/modules/bootloader.conf
+  fi
+  H=/usr/share/calamares/helpers/calamares-bootloader-config
+  if [ -f "$H" ]; then install -m 0755 /usr/local/lib/navin/calamares-bootloader-config "$H"; else echo "[navin-os] WARNING: $H missing"; fi
+  # One installer icon: NAVIN's guide. Debian's own "Install Debian" icon/menu entry is hidden.
+  rm -f /etc/xdg/autostart/calamares-desktop-icon.desktop
+  [ -f /usr/share/applications/calamares-install-debian.desktop ] && sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/share/applications/calamares-install-debian.desktop
+fi
+grep -q '^pinch=' /etc/navin/gestures.conf 2>/dev/null || echo 'pinch=on' > /etc/navin/gestures.conf
+chmod 0755 /usr/local/lib/navin/navin-grub-install /usr/local/lib/navin/navin-grub-finish /usr/local/lib/navin/navin-autotest /usr/local/bin/navin-install /usr/local/bin/navin-compositor || true
 # Desktop entries for System Center pages + shortcut editor on the Whisker menu
 update-desktop-database /usr/share/applications || true
 # Reports shipped inside the image and published with the release

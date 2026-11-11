@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Window Effects
+Comment=Switch between Alt+Tab window previews, rounded corners and no effects
+Exec=navin-compositor toggle
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;

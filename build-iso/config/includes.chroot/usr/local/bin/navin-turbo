@@ -23,7 +23,7 @@ turbo_on() {
     for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/energy_performance_preference; do [ -w \$f ] && echo performance > \$f; done
     sync; echo 1 > /proc/sys/vm/drop_caches; echo 1 > /proc/sys/vm/compact_memory
   " || true
-  pkill -x picom 2>/dev/null   # compositor bypass: full GPU for the game/app
+  navin-compositor suspend >/dev/null 2>&1   # compositor bypass: full GPU for the game/app
   for p in $(pgrep -u "$USER" -f "$BG" 2>/dev/null); do renice -n 15 -p "$p" >/dev/null 2>&1; done
   echo on > "$STATE"
   notify-send -i dialog-information "NAVIN Turbo" "Turbo ON — maximum speed (more heat & battery use)" 2>/dev/null
@@ -33,7 +33,7 @@ turbo_off() {
   local gov; gov=$(governor schedutil); [ -n "$gov" ] || gov=$(governor powersave)
   [ -n "$gov" ] && as_root sh -c "for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do echo $gov > \$f; done
     for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/energy_performance_preference; do [ -w \$f ] && echo balance_performance > \$f; done" || true
-  pgrep -x picom >/dev/null || (setsid picom --config /etc/xdg/picom.conf >/dev/null 2>&1 &)
+  navin-compositor apply >/dev/null 2>&1     # restore the chosen window effects
   for p in $(pgrep -u "$USER" -f "$BG" 2>/dev/null); do renice -n 10 -p "$p" >/dev/null 2>&1; done
   rm -f "$STATE"
   notify-send -i dialog-information "NAVIN Turbo" "Balanced mode restored" 2>/dev/null

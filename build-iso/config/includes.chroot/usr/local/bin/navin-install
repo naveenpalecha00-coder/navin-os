@@ -1,0 +1,3 @@
+#!/bin/sh
+# NAVIN OS installer launcher: pre-install guide, then the real Calamares installer.
+exec /usr/bin/python3 /usr/local/lib/navin/navin_install_guide.py "$@"

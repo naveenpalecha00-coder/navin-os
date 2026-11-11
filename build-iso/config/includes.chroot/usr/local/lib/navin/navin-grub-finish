@@ -1,0 +1,8 @@
+#!/bin/sh
+# First online start after an offline install: add the GRUB package that keeps the boot loader
+# updated (grub-efi on UEFI, grub-pc on BIOS), then disable this service.
+if [ -d /sys/firmware/efi ]; then pkg=grub-efi; else pkg=grub-pc; fi
+dpkg -s "$pkg" >/dev/null 2>&1 && { systemctl disable navin-grub-finish.service; exit 0; }
+for i in 1 2 3 4 5 6; do getent hosts deb.debian.org >/dev/null && break; sleep 20; done
+getent hosts deb.debian.org >/dev/null || exit 0
+apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -y install "$pkg" && systemctl disable navin-grub-finish.service

@@ -1,19 +1,32 @@
 #!/usr/bin/python3
-"""NAVIN OS 1.2 three-finger touchpad gestures (root service, python3-evdev + uinput).
-Debian 13 has no touchegg, so NAVIN reads the touchpad's BTN_TOOL_TRIPLETAP state and emits
-keyboard shortcuts through a virtual keyboard:
-  swipe left -> next workspace (Ctrl+Alt+Right)   swipe right -> previous workspace (Ctrl+Alt+Left)
-  swipe up   -> window overview (Super+W)        swipe down  -> show desktop (Super+D)"""
+"""NAVIN OS 1.2 touchpad gestures (root service, python3-evdev + uinput).
+Debian 13 has no touchegg, so NAVIN reads the touchpad and emits keyboard shortcuts through a
+virtual keyboard. The touchpad is only read (never grabbed), so normal pointer/scroll keeps working.
+  3 fingers: swipe left -> next workspace (Ctrl+Alt+Right)   swipe right -> previous (Ctrl+Alt+Left)
+             swipe up   -> window overview (Super+W)        swipe down  -> show desktop (Super+D)
+  2 fingers: pinch out  -> zoom in (Ctrl+=)                 pinch in    -> zoom out (Ctrl+-)
+Pinch needs a multi-touch touchpad (ABS_MT slots). Turn pinch off with `pinch=off` in
+/etc/navin/gestures.conf (navin-touchpad pinch off)."""
 import os, select, sys, time
 sys.path.insert(0, "/usr/local/lib/navin")
 import evdev
 from evdev import ecodes as e
-from navin_sys import classify_swipe
+from navin_sys import classify_swipe, PinchTracker
 
 os.nice(5)
+CONF = "/etc/navin/gestures.conf"
 ACTIONS = {"left": (e.KEY_LEFTCTRL, e.KEY_LEFTALT, e.KEY_RIGHT), "right": (e.KEY_LEFTCTRL, e.KEY_LEFTALT, e.KEY_LEFT),
-           "up": (e.KEY_LEFTMETA, e.KEY_W), "down": (e.KEY_LEFTMETA, e.KEY_D)}
+           "up": (e.KEY_LEFTMETA, e.KEY_W), "down": (e.KEY_LEFTMETA, e.KEY_D),
+           1: (e.KEY_LEFTCTRL, e.KEY_EQUAL), -1: (e.KEY_LEFTCTRL, e.KEY_MINUS)}
 ui = evdev.UInput({e.EV_KEY: sorted({k for v in ACTIONS.values() for k in v})}, name="navin-gestures")
+
+
+def pinch_enabled():
+    try:
+        with open(CONF) as f:
+            return not any(l.strip().replace(" ", "") == "pinch=off" for l in f)
+    except OSError:
+        return True
 
 
 def touchpads():
@@ -22,7 +35,8 @@ def touchpads():
         try:
             d = evdev.InputDevice(path)
             caps = d.capabilities()
-            if e.BTN_TOOL_TRIPLETAP in caps.get(e.EV_KEY, []) and e.ABS_X in dict(caps.get(e.EV_ABS, [])):
+            keys, absc = caps.get(e.EV_KEY, []), dict(caps.get(e.EV_ABS, []))
+            if e.ABS_X in absc and (e.BTN_TOOL_TRIPLETAP in keys or e.ABS_MT_POSITION_X in absc) and e.BTN_TOOL_FINGER in keys:
                 found.append(d)
             else:
                 d.close()
@@ -40,17 +54,31 @@ def combo(keys):
     ui.syn()
 
 
-state = {}
-devices = []
-last_scan = 0
+def new_state(d):
+    ax, ay = d.absinfo(e.ABS_X), d.absinfo(e.ABS_Y)
+    w, h = ax.max - ax.min, ay.max - ay.min
+    try:
+        mx, my = d.absinfo(e.ABS_MT_POSITION_X), d.absinfo(e.ABS_MT_POSITION_Y)
+        mw, mh = mx.max - mx.min, my.max - my.min
+    except (OSError, KeyError, TypeError):
+        mw, mh = w, h
+    return {"fingers": 0, "x": None, "y": None, "sx": None, "sy": None, "w": w, "h": h,
+            "slot": 0, "slots": {}, "pinch": PinchTracker(mw, mh)}
+
+
+state, devices, last_scan, pinch_on = {}, [], 0, True
 while True:
     if not devices or time.monotonic() - last_scan > 30:
         for d in devices:
             d.close()
-        devices = touchpads(); last_scan = time.monotonic()
-        state = {d.fd: {"fingers": 0, "x": None, "y": None, "sx": None, "sy": None,
-                        "w": d.absinfo(e.ABS_X).max - d.absinfo(e.ABS_X).min,
-                        "h": d.absinfo(e.ABS_Y).max - d.absinfo(e.ABS_Y).min} for d in devices}
+        devices = touchpads(); last_scan = time.monotonic(); pinch_on = pinch_enabled()
+        state = {}
+        for d in devices:
+            try:
+                state[d.fd] = new_state(d)
+            except OSError:
+                pass
+        devices = [d for d in devices if d.fd in state]
         if not devices:
             time.sleep(5); continue
     try:
@@ -61,11 +89,29 @@ while True:
         s = state[d.fd]
         try:
             for ev in d.read():
-                if ev.type == e.EV_ABS and ev.code in (e.ABS_X, e.ABS_Y):
-                    s["x" if ev.code == e.ABS_X else "y"] = ev.value
-                    if s["fingers"] >= 3 and s["sx"] is None and s["x"] is not None and s["y"] is not None:
-                        s["sx"], s["sy"] = s["x"], s["y"]
+                if ev.type == e.EV_ABS:
+                    if ev.code in (e.ABS_X, e.ABS_Y):
+                        s["x" if ev.code == e.ABS_X else "y"] = ev.value
+                        if s["fingers"] >= 3 and s["sx"] is None and s["x"] is not None and s["y"] is not None:
+                            s["sx"], s["sy"] = s["x"], s["y"]
+                    elif ev.code == e.ABS_MT_SLOT:
+                        s["slot"] = ev.value
+                    elif ev.code == e.ABS_MT_TRACKING_ID:
+                        if ev.value < 0:
+                            s["slots"].pop(s["slot"], None)
+                        else:
+                            s["slots"][s["slot"]] = [None, None]
+                    elif ev.code in (e.ABS_MT_POSITION_X, e.ABS_MT_POSITION_Y):
+                        p = s["slots"].setdefault(s["slot"], [None, None])
+                        p[0 if ev.code == e.ABS_MT_POSITION_X else 1] = ev.value
+                elif ev.type == e.EV_KEY and ev.code == e.BTN_TOOL_DOUBLETAP:
+                    if ev.value == 1:
+                        s["fingers"] = 2
+                    elif s["fingers"] == 2:
+                        s["fingers"] = 0
+                    s["pinch"].reset()
                 elif ev.type == e.EV_KEY and ev.code in (e.BTN_TOOL_TRIPLETAP, e.BTN_TOOL_QUADTAP):
+                    s["pinch"].reset()
                     if ev.value == 1:
                         s["fingers"] = 3; s["sx"] = s["sy"] = None
                     elif s["fingers"] >= 3:
@@ -74,6 +120,12 @@ while True:
                             if way:
                                 combo(ACTIONS[way])
                         s["fingers"] = 0; s["sx"] = s["sy"] = None
+                elif ev.type == e.EV_SYN and ev.code == e.SYN_REPORT and pinch_on and s["fingers"] == 2:
+                    pts = [p for p in s["slots"].values() if None not in p]
+                    if len(pts) == 2:
+                        zoom = s["pinch"].update(pts[0], pts[1])
+                        if zoom:
+                            combo(ACTIONS[zoom])
         except OSError:
             devices = []
             break

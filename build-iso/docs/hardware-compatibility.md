@@ -12,11 +12,12 @@ results are added to this file only after someone reports a test.
 | AMD graphics | amdgpu/radeon, firmware-amd-graphics, Mesa VA-API, RADV Vulkan | automatic | not yet |
 | NVIDIA graphics | Nouveau (+ firmware-nvidia-graphics if it fits the image) | proprietary driver offered only when `nvidia-detect` supports the GPU; Secure Boot needs MOK enrollment | not yet |
 | Touchpads | libinput; i2c_hid_acpi, hid_multitouch, psmouse (Synaptics/ELAN/ALPS PS/2, SMBus/RMI4), elan_i2c | `navin-hwdetect` reads ACPI (PNP0C50, ELAN, SYNA, ALPS…) and input devices; loads missing in-kernel drivers; resume recovery | not yet |
-| Gestures | 3-finger swipes via `navin-gestures` (evdev + uinput) | needs a touchpad reporting 3 fingers (BTN_TOOL_TRIPLETAP) | not yet |
+| Gestures | 3-finger swipes + 2-finger pinch zoom via `navin-gestures` (evdev + uinput) | swipes need BTN_TOOL_TRIPLETAP; pinch needs multi-touch slots (ABS_MT) | not yet |
 | Wi-Fi / Bluetooth | Intel, Realtek, Atheros, Broadcom (brcm80211), MediaTek (misc-nonfree) firmware | kernel autoload | not yet |
 | Audio | PipeWire + WirePlumber, SOF firmware, ALSA UCM | kernel autoload; mic fix tool | not yet |
 | Fans | thinkpad_acpi (fan_control=1), dell_smm_hwmon, hwmon PWM, ACPI platform_profile | `navin-fan`; monitoring-only when no safe interface | not yet |
 | Boot | GRUB EFI via Microsoft-signed shim (Secure Boot), ISOLINUX for legacy BIOS | Live Mode / Full Installation / Safe Graphics | VM only (see build report) |
+| Install | Calamares + NAVIN install guide; offline GRUB (UEFI with \EFI\BOOT fallback, BIOS); Windows listed in boot menu | BitLocker must be off to shrink Windows | VM install + reboot (Secure Boot UEFI, BIOS); real PCs not yet |
 
 ## Report a test
 Run `navin-hwdetect > hw.txt` and `navin-benchmark run`, then open a GitHub issue with both files and

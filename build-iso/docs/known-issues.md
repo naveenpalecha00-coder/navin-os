@@ -1,16 +1,27 @@
 # NAVIN OS 1.2 — known issues and limits (honest list)
 
-- **Test build.** Not validated on physical hardware yet. Build 10 (Debian 12) stays published for daily use and rollback.
-- **Installer.** Calamares (Debian 13 settings, NAVIN branding) is unchanged from Debian's stock modules; a full
-  automated installation test is not part of CI. On some machines the bootloader step may download GRUB packages,
-  so keep the internet connected during installation.
+- **Physical hardware.** Every release passes automatic live-boot, install and reboot tests in virtual machines,
+  but has not yet been confirmed on physical computers. Build 10 (Debian 12) stays published for rollback.
+- **Installer.** Calamares (Debian 13) with NAVIN branding, a NAVIN slideshow and a "Before you install" guide
+  (start mode, Secure Boot, disks, Windows, BitLocker, battery). CI opens the real Calamares window and then runs
+  the Calamares install steps through NAVIN's helpers on an empty disk; clicking through the Calamares pages
+  themselves is not automated. The boot loader installs offline (GRUB, signed shim and signed GRUB ship in the
+  image); the GRUB package that manages later GRUB updates is added at the first online start. In the PC's own
+  firmware boot list the entry is named "debian" (Debian's signed GRUB needs that folder name); the NAVIN boot
+  menu itself says NAVIN OS.
+- **Dual boot.** Windows and other systems are listed in the boot menu (os-prober). The installer cannot shrink a
+  BitLocker partition: turn BitLocker off or shrink in Windows first. The USB must start in the same mode
+  (UEFI or Legacy) as Windows; the install guide warns when it does not.
 - **Secure Boot.** The ISO boots through Debian's Microsoft-signed shim and signed kernel. Unsigned extras do
   not load under Secure Boot: memtest86+ (EFI), and DKMS modules such as the NVIDIA proprietary driver until a MOK
   key is enrolled (Debian prompts for this during installation of the driver).
 - **Liquorix removed.** It is not signed for Secure Boot; NAVIN 1.2 uses the Debian kernel only.
-- **Gestures.** touchegg is not in Debian 13. NAVIN's own gesture service supports 3-finger swipes only
-  (no pinch/zoom gestures).
-- **Window previews.** Alt+Tab shows window names/icons; live thumbnails are not available with the picom setup.
+- **Gestures.** touchegg is not in Debian 13. NAVIN's own gesture service handles 3-finger swipes and 2-finger
+  pinch zoom (sent as Ctrl+= / Ctrl+-, so it zooms in browsers, file manager, image viewers, office apps).
+  Pinch needs a multi-touch touchpad; turn it off with `navin-touchpad pinch off`. Rotate gestures are not supported.
+- **Window previews.** Alt+Tab shows a live picture of each window with the default xfwm4 compositor. The 2 GB
+  profile, Turbo mode and the optional picom mode (rounded corners; "Window Effects" in the menu) show icons only.
+  Minimised windows show their last picture or icon.
 - **App-specific shortcuts.** Xfce has no per-application global shortcut layer; the shortcut editor manages
   global shortcuts only.
 - **Windows programs.** Wine runs many but not all .exe files. Anti-cheat games, drivers and some installers fail.

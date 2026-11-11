@@ -1,6 +1,6 @@
 #!/bin/bash
 # NAVIN OS 1.2 touchpad control (libinput through xinput, per user, persistent).
-#   navin-touchpad status | on | off | toggle | speed -1..1 | scroll 5..50 | tap on|off | drag on|off | natural on|off | apply
+#   navin-touchpad status | on | off | toggle | speed -1..1 | scroll 5..50 | tap on|off | drag on|off | natural on|off | pinch on|off | apply
 CONF="$HOME/.config/navin/touchpad.conf"; mkdir -p "${CONF%/*}"
 ids(){ xinput list 2>/dev/null | grep -iE 'touchpad|trackpad|glidepoint' | grep -oE 'id=[0-9]+' | cut -d= -f2; }
 get(){ grep -E "^$1=" "$CONF" 2>/dev/null | tail -1 | cut -d= -f2; }
@@ -18,7 +18,7 @@ apply(){
     prop "$id" "libinput Scrolling Pixel Distance" "$(get scroll || echo 15)"
   done
 }
-[ -n "$(ids)" ] || [ "${1:-}" = status ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found (run navin-hwdetect for details)" 2>/dev/null; exit 1; }
+[ -n "$(ids)" ] || [ "${1:-}" = status ] || [ "${1:-}" = pinch ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found (run navin-hwdetect for details)" 2>/dev/null; exit 1; }
 case "${1:-status}" in
   status) for id in $(ids); do echo "id=$id $(xinput list --name-only "$id")"; done; cat "$CONF" 2>/dev/null;;
   on|off) save enabled "$1"; apply; notify-send -i input-touchpad "Touchpad $1" 2>/dev/null;;
@@ -26,6 +26,9 @@ case "${1:-status}" in
   speed) awk -v v="${2:-x}" 'BEGIN{exit !(v+0==v && v>=-1 && v<=1)}' || { echo "speed -1..1" >&2; exit 2; }; save speed "$2"; apply;;
   scroll) [[ "${2:-}" =~ ^[0-9]+$ ]] && [ "$2" -ge 5 ] && [ "$2" -le 50 ] || { echo "scroll 5..50 (lower = faster)" >&2; exit 2; }; save scroll "$2"; apply;;
   tap|drag|natural) [[ "${2:-}" =~ ^(on|off)$ ]] || exit 2; save "$1" "$2"; apply;;
+  pinch) [[ "${2:-}" =~ ^(on|off)$ ]] || { echo "pinch on|off" >&2; exit 2; }
+    # Gesture service is system-wide (root); the setting lives in /etc/navin/gestures.conf.
+    echo "pinch=$2" | pkexec /usr/bin/tee /etc/navin/gestures.conf >/dev/null && pkexec /usr/bin/systemctl restart navin-gestures.service && notify-send -i input-touchpad "Pinch to zoom $2" 2>/dev/null;;
   apply) apply;;
-  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|apply" >&2; exit 2;;
+  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|pinch on/off|apply" >&2; exit 2;;
 esac

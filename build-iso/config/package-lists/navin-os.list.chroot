@@ -201,3 +201,15 @@ python3-psutil
 rofi
 wmctrl
 dmidecode
+# NAVIN OS 1.2 final: Calamares runtime pieces that are only "Recommends" in Debian 13
+# (the image is built without recommends): Qt platform plugins, SVG icons, Qt 6 QML for the slideshow.
+qt6-qpa-plugins
+qt6-svg-plugins
+qml6-module-qtquick
+qml6-module-qtquick-window
+fdisk
+squashfs-tools
+# Offline boot loader for installs: GRUB tools + UEFI and BIOS binaries (signed shim/GRUB listed above)
+grub2-common
+grub-efi-amd64-bin
+grub-pc-bin

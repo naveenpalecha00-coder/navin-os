@@ -1,0 +1,13 @@
+[Unit]
+Description=NAVIN OS: finish boot loader package setup after an offline install
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/run/live
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/navin/navin-grub-finish
+TimeoutStartSec=15min
+
+[Install]
+WantedBy=multi-user.target
