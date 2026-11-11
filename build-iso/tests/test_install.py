@@ -127,6 +127,26 @@ class InstallerConfig(unittest.TestCase):
         unit = (IC / 'etc/systemd/system/navin-autotest.service').read_text()
         self.assertIn('ConditionVirtualization=vm', unit)
 
+    def test_panel_plugins_have_their_packages(self):
+        # VM test screenshot showed "power-manager-plugin could not be loaded" when the package was missing.
+        panel = (IC / 'etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml').read_text()
+        pk = (ROOT / 'config/package-lists/navin-os.list.chroot').read_text().split()
+        pk += (IC / 'usr/share/navin/optional-packages.list').read_text().split()
+        need = {'power-manager-plugin': 'xfce4-power-manager-plugins', 'whiskermenu': 'xfce4-whiskermenu-plugin',
+                'pulseaudio': 'xfce4-pulseaudio-plugin', 'clipman': 'xfce4-clipman-plugin', 'xkb': 'xfce4-xkb-plugin',
+                'genmon': 'xfce4-genmon-plugin'}
+        for plugin, pkg in need.items():
+            if f'value="{plugin}"' in panel:
+                self.assertIn(pkg, pk, plugin)
+
+    def test_window_previews_on_by_default(self):
+        h = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
+        self.assertIn('<property name="use_compositing" type="bool" value="true"/>', h)
+
+    def test_installed_system_drops_live_autologin(self):
+        s = (NAVIN / 'calamares-bootloader-config').read_text()
+        self.assertIn("/^autologin-user=navin$/d", s)
+
     def test_hook_wires_installer(self):
         h = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
         self.assertIn('Exec=navin-install', h)

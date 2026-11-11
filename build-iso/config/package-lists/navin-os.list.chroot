@@ -41,6 +41,8 @@ xfce4-settings
 gvfs-fuse
 network-manager-gnome
 xfce4-power-manager
+# Battery/brightness panel item (the panel showed a 'plugin could not be loaded' error without it)
+xfce4-power-manager-plugins
 xfce4-notifyd
 xfce4-pulseaudio-plugin
 xfce4-whiskermenu-plugin

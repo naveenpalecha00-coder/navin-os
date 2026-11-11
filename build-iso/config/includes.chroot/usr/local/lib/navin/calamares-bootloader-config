@@ -28,6 +28,11 @@ fi
 [ -f "$CHROOT/etc/default/grub" ] || printf 'GRUB_DEFAULT=0\n' > "$CHROOT/etc/default/grub"
 sed -i '/^#\?GRUB_DISABLE_OS_PROBER=/d' "$CHROOT/etc/default/grub"
 echo 'GRUB_DISABLE_OS_PROBER=false' >> "$CHROOT/etc/default/grub"
+# The live session's automatic login as 'navin' stays only if the user created an account named navin
+# (Calamares' displaymanager step already wrote autologin-user=<name> when "log in automatically" was chosen).
+if [ -f "$CHROOT/etc/lightdm/lightdm.conf" ] && ! chroot "$CHROOT" getent passwd navin >/dev/null; then
+  sed -i '/^autologin-user=navin$/d; /^autologin-user-timeout=/d' "$CHROOT/etc/lightdm/lightdm.conf"
+fi
 # Live-only passwordless admin never reaches the installed system.
 rm -f "$CHROOT/etc/sudoers.d/navin-nopasswd" "$CHROOT/etc/polkit-1/rules.d/49-navin-nopasswd.rules"
 chroot "$CHROOT" /usr/sbin/update-grub >> "$LOG" 2>&1 || true

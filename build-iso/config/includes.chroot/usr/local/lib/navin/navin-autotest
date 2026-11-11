@@ -36,8 +36,10 @@ pgrep -u navin -x xfce4-panel >/dev/null || fail "live desktop did not start"
 sleep 20
 XA=/home/navin/.Xauthority
 asuser(){ runuser -u navin -- env DISPLAY=:0 XAUTHORITY=$XA "$@"; }
-CM=$(asuser python3 -c 'from Xlib import display
-d=display.Display(); print("yes" if d.get_selection_owner(d.intern_atom("_NET_WM_CM_S0")) else "no")' 2>>"$LOG")
+cm(){ asuser python3 -c 'from Xlib import display
+d=display.Display(); o=d.get_selection_owner(d.intern_atom("_NET_WM_CM_S0")); print("yes" if o and getattr(o, "id", o) else "no")' 2>>"$LOG"; }
+for i in $(seq 1 20); do CM=$(cm); [ "$CM" = yes ] && break; sleep 2; done
+say "NAVIN_LOG effects: $(asuser navin-compositor status 2>&1 | tr -d "'") memprofile=$(cat /run/navin/memprofile 2>/dev/null)"
 CALA=skip; SWITCHER=skip
 if [ "$MODE" = install-ui ]; then
   # Alt+Tab with window previews: open two windows, hold Alt+Tab, host takes a screenshot.
@@ -102,8 +104,10 @@ G=$(for g in sudo audio video plugdev netdev bluetooth lpadmin autologin nopassw
 run chroot "$TGT" useradd -m -s /bin/bash -c "NAVIN Test" -G "${G%,}" navintest
 echo 'navintest:navin-ci-test' | chroot "$TGT" chpasswd >> "$LOG" 2>&1 || fail "chpasswd"
 STEP=displaymanager
-mkdir -p "$TGT/etc/lightdm/lightdm.conf.d"
-printf '[Seat:*]\nautologin-user=navintest\nautologin-user-timeout=0\n' > "$TGT/etc/lightdm/lightdm.conf.d/60-navin-autologin.conf"
+# Like Calamares' displaymanager module with "log in automatically": autologin-user in lightdm.conf
+# (lightdm.conf is read last, so a conf.d file would not override it).
+sed -i 's/^#\?autologin-user=.*/autologin-user=navintest/' "$TGT/etc/lightdm/lightdm.conf"
+grep -q '^autologin-user=navintest$' "$TGT/etc/lightdm/lightdm.conf" || fail "autologin not written"
 STEP=bootloader-config
 mkdir -p "$TGT/run/live/medium"; mount --bind /run/live/medium "$TGT/run/live/medium"
 run /usr/share/calamares/helpers/calamares-bootloader-config "$TGT"
