@@ -28,32 +28,32 @@
   {
    "category": "Touchpad",
    "title": "Touchpad rescue: resets the PS/2 touchpad port without a reboot",
-   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-touchpad-repair.sh",
    "check": "reconnect"
   },
   {
    "category": "Touchpad",
    "title": "Rescue tries the native driver, then 3 basic modes that every touchpad understands",
-   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-touchpad-repair.sh",
    "check": "exps imps bare"
   },
   {
    "category": "Touchpad",
    "title": "A working basic mode is remembered for the next boot",
-   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-touchpad-rescue",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-touchpad-repair.sh",
    "check": "navin-touchpad-rescue.conf"
   },
   {
    "category": "Touchpad",
    "title": "Rescue runs by itself at boot when a laptop shows no touchpad",
-   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-hwdetect",
-   "check": "navin-touchpad-rescue.service"
+   "path": "build-iso/config/includes.chroot/etc/systemd/system/navin-touchpad-repair.service",
+   "check": "navin-touchpad-repair.sh run --boot"
   },
   {
    "category": "Touchpad",
    "title": "Rescue runs by itself after sleep/resume",
    "path": "build-iso/config/includes.chroot/usr/lib/systemd/system-sleep/navin-input",
-   "check": "navin-touchpad-rescue"
+   "check": "navin-touchpad-repair.sh run --resume"
   },
   {
    "category": "Touchpad",
@@ -64,8 +64,8 @@
   {
    "category": "Touchpad",
    "title": "Doctor counts \"lost sync\" touchpad errors (the cause of cursor stutter)",
-   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-touchpad",
-   "check": "lost sync"
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "(\"lost_sync\", "
   },
   {
    "category": "Touchpad",

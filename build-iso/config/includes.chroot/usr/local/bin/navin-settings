@@ -36,6 +36,7 @@ while true; do
     "🎨 Light / Dark Mode" "Switch theme" \
     "🖼️ Wallpaper" "Choose wallpaper" \
     "🎯 Accent Colour" "Highlight colour" \
+    "🖐️ Touchpad Control Center" "Real touchpad: on/off, speed, tap, scrolling, repair, test" \
     "🖱️ Mouse & Touchpad" "Speed, tap to click" \
     "⌨️ Keyboard & Language" "Layouts, shortcuts" \
     "🕒 Date & Time" "Timezone, clock" \
@@ -48,7 +49,8 @@ while true; do
     "🔧 Drivers & Devices" "NAVIN Driver Center" \
     "🌀 Fan & Cooling" "Silent / Auto / Turbo fan" \
     "🎤 Fix Microphone" "Unmute + 4 sec mic test" \
-    "🖱️ Fix Touchpad" "Tap-to-click reset" \
+    "🖱️ Fix Touchpad" "Auto detect & repair the touchpad driver" \
+    "🧰 Touchpad & Fan Troubleshooter" "Problem, cause, fix, repair, report" \
     "🤖 NAVIN AI System Doctor" "Auto-detect & fix errors, chat" \
     "📊 System Monitor" "CPU, RAM, apps" \
     "ℹ️ About NAVIN OS" "Version, hardware") || exit 0
@@ -65,6 +67,8 @@ while true; do
     *Dark*) M=$(zenity --list --title="Theme" --column=Mode "Light" "Dark") && set_theme "$( [ "$M" = Dark ] && echo dark || echo light)" ;;
     *Wallpaper*) F=$(zenity --file-selection --title="Wallpaper chuno" --filename="$W/" --file-filter="Images | *.jpg *.jpeg *.png *.webp") && set_wallpaper "$F" ;;
     *Accent*) accent ;;
+    *"Touchpad Control"*) python3 /usr/local/lib/navin/navin_center.py laptop & ;;
+    *Troubleshooter*) python3 /usr/local/lib/navin/navin_center.py troubleshoot & ;;
     *Mouse*) xfce4-mouse-settings & ;;
     *Keyboard*) xfce4-keyboard-settings & ;;
     *Date*) xfce4-datetime-settings 2>/dev/null & ;;
@@ -77,7 +81,7 @@ while true; do
     *Drivers*) navin-driver-center & ;;
     *Fan*) navin-fan-control & ;;
     *Microphone*) navin-mic-fix --test & ;;
-    *"Fix Touchpad"*) for id in $(xinput list --id-only); do xinput set-prop $id "libinput Tapping Enabled" 1 2>/dev/null; done; notify-send "Touchpad" "Tap-to-click ON" ;;
+    *"Fix Touchpad"*) navin-touchpad repair & ;;
     *Doctor*) navin-ai-doctor & ;;
     *Monitor*) xfce4-taskmanager & ;;
     *About*) navin-about & ;;

@@ -28,7 +28,7 @@ apt-get clean
 
 echo "[navin-os] 2/9 OS branding"
 sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN 2.2 (Debian 13 Trixie base)"/' /usr/lib/os-release
-sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.2"' >> /usr/lib/os-release
+sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.2.1"' >> /usr/lib/os-release
 printf 'NAVIN 2.2 \\n \\l\n\n' > /etc/issue
 echo "NAVIN 2.2" > /etc/issue.net
 echo "navin-os" > /etc/hostname
@@ -82,8 +82,8 @@ if [ -d /etc/calamares/branding/debian ]; then
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
   sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
   sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
-  sed -i 's/version:.*/version:             "2.2"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "2.2"/' "$D"
+  sed -i 's/version:.*/version:             "2.2.1"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "2.2.1"/' "$D"
   sed -i 's/versionedName:.*/versionedName:       "NAVIN 2.2"/' "$D"
   sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN 2.2"/' "$D"
   sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
@@ -293,7 +293,7 @@ sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEna
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '40\n' > /etc/navin/build
+printf '41\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
@@ -360,8 +360,9 @@ if [ -d /usr/share/plymouth ]; then
   printf '[Daemon]\nTheme=%s\nShowDelay=0\nDeviceTimeout=5\n' "$(plymouth-set-default-theme 2>/dev/null || echo spinner)" > /etc/plymouth/plymouthd.conf
 fi
 # --- old laptops / touchpad rescue / fan slider ---
-chmod 0755 /usr/local/lib/navin/navin-touchpad-rescue /usr/local/lib/navin/navin-quirks /usr/local/bin/navin-update-notify 2>/dev/null || true
-# navin-touchpad-rescue.service is started by navin-hwdetect only when a laptop shows no touchpad.
+chmod 0755 /usr/local/lib/navin/navin-touchpad-rescue /usr/local/lib/navin/navin-quirks /usr/local/bin/navin-update-notify /usr/lib/navin-os/navin-touchpad-repair.sh /usr/local/lib/navin/navin_tp.py 2>/dev/null || true
+# NAVIN 2.2.1: touchpad repair engine runs once at every boot (fast no-op when the touchpad is present).
+systemctl enable navin-touchpad-repair.service || true
 # --- smaller image: firmware that can never load on an x86 PC (ARM phone/board chips, datacenter cards) ---
 before=$(du -sk /usr/lib/firmware | cut -f1)
 for d in rockchip meson amlogic arm powervr cnm imx ti-keystone qlogic bnx2 cxgb3 cavium inside-secure; do rm -rf "/usr/lib/firmware/$d"; done

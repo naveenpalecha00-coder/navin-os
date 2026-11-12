@@ -1,0 +1,14 @@
+[Unit]
+Description=NAVIN touchpad detection and automatic repair (Samsung RV411 and other laptops)
+After=navin-hwdetect.service systemd-udev-trigger.service
+ConditionPathExists=/proc/bus/input/devices
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/navin-os/navin-touchpad-repair.sh run --boot
+TimeoutSec=45
+# 3 = not fixed (reason in the log), 4 = restart needed: not service failures
+SuccessExitStatus=3 4
+
+[Install]
+WantedBy=multi-user.target

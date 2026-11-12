@@ -3,7 +3,8 @@
 # Exactly two choices on the main menu:
 #   Live Mode — Try NAVIN 2.2          (default, the full desktop with every feature, nothing installed)
 #   Full Installation — Install ...    (same live system + navin.install=1 -> Calamares opens)
-# Both carry the touchpad controller fix (i8042.nomux=1 i8042.reset=1, from auto/config --bootappend-live),
+# Both carry the touchpad controller fix (i8042.nomux=1 i8042.reset=1, from auto/config --bootappend-live;
+# legacy BIOS adds i8042.nopnp=1 i8042.noloop=1, UEFI adds them on Samsung laptops through SMBIOS),
 # so old-laptop touchpads work without a separate "Old Laptop Mode". Old laptops get light effects automatically.
 # Safe Graphics (nomodeset, black-screen fix) is kept out of the main list: GRUB puts it inside the Tools
 # submenu, ISOLINUX keeps it as a hidden entry (Tab, type "safe").
@@ -19,9 +20,25 @@ def png(path, w, h, rgb):
 
 LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN 2.2", "Full Installation - Install NAVIN 2.2", "Safe Graphics - NAVIN 2.2 (black screen fix)"
 TOUCH = " i8042.nomux=1 i8042.reset=1"
+# NAVIN 2.2.1: legacy BIOS (ISOLINUX) entries also probe the touchpad port directly (Samsung RV411 class BIOS
+# leaves it out of ACPI). UEFI GRUB adds the same only on Samsung laptops, read from SMBIOS ($navin_tp).
+BIOS_TOUCH = " i8042.nopnp=1 i8042.noloop=1"
+GRUB_SMBIOS = """# NAVIN 2.2.1: Samsung laptops get direct PS/2 touchpad probing (i8042.nopnp/noloop)
+if smbios --type 1 --get-string 4 --set navin_vendor; then
+  if [ "$navin_vendor" = "SAMSUNG ELECTRONICS CO., LTD." -o "$navin_vendor" = "SAMSUNG ELECTRONICS CO.,LTD." ]; then set navin_tp="i8042.nopnp=1 i8042.noloop=1"; export navin_tp; fi
+fi
+"""
 
 def touch_fix(line):
     return line if "i8042.nomux" in line else line + TOUCH
+
+def grub_touch(line):
+    line = touch_fix(line)
+    return line if "$navin_tp" in line else line + " $navin_tp"
+
+def bios_touch(line):
+    line = touch_fix(line)
+    return line if "i8042.nopnp" in line else line + BIOS_TOUCH
 block = re.compile(r"menuentry\s+([\"'])(.*?)\1([^{]*)\{(.*?)\n\}", re.S)
 
 SUBMENU = re.compile(r"^(\s*submenu\s+[\"'][^\"']*(?:Utilities|Tools|Advanced)[^\"']*[\"'][^{\n]*\{[^\n]*\n)", re.M | re.I)
@@ -36,18 +53,20 @@ def fix_grub(text):
         linux = lambda f: re.sub(r"^(\s*linux\s+.*)$", lambda x: f(x.group(1)), body, count=1, flags=re.M)
         if "fail-safe" in title.lower() or "safe graphics" in title.lower():
             # Not on the main list (user rule: only Live + Full Installation); moved into the Tools submenu below.
-            sb = linux(lambda l: touch_fix(l if "nomodeset" in l else l + " nomodeset"))
+            sb = linux(lambda l: grub_touch(l if "nomodeset" in l else l + " nomodeset"))
             safe = "".join("\t" + l + "\n" for l in f'menuentry "{SAFE}"{rest}{{{sb}\n}}'.splitlines())
         elif "live" in title.lower() or "navin" in title.lower() or "install" in title.lower():
             if done or "linux" not in body:
                 continue  # any other live/installer entry from live-build is dropped: two choices only
             done = True
-            out.append(f'menuentry "{LIVE}"{rest}{{{linux(touch_fix)}\n}}')
-            out.append(f'\nmenuentry "{INSTALL}" --hotkey=i {{{linux(lambda l: touch_fix(l) + " navin.install=1")}\n}}')
+            out.append(f'menuentry "{LIVE}"{rest}{{{linux(grub_touch)}\n}}')
+            out.append(f'\nmenuentry "{INSTALL}" --hotkey=i {{{linux(lambda l: grub_touch(l) + " navin.install=1")}\n}}')
         else:
             out.append(m.group(0))
     out.append(text[pos:])
     text = "".join(out)
+    if done and "navin_vendor" not in text:
+        text = GRUB_SMBIOS + text
     if safe:
         text, n = SUBMENU.subn(lambda x: x.group(1) + safe, text, count=1)
     text = re.sub(r"^set timeout=.*$", "set timeout=3", text, flags=re.M)
@@ -116,13 +135,13 @@ if live.exists():
             # Hidden from the menu (two visible choices only); still bootable: press Tab and type "safe".
             b = re.sub(r"^label \S+", "label safe", b, count=1, flags=re.M)
             b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN 2.2 (black screen fix)\n\tmenu hide", b)
-            b = re.sub(r"^(\s*append .*)$", lambda x: touch_fix(x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset"), b, flags=re.M)
+            b = re.sub(r"^(\s*append .*)$", lambda x: bios_touch(x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset"), b, flags=re.M)
             out.append(b)
         elif b.startswith("label") and "append" in b:
             if done:
                 continue  # other live entries are dropped: two choices only
             done = True
-            live_b = re.sub(r"^(\s*append .*)$", lambda x: touch_fix(x.group(1)), b, count=1, flags=re.M)
+            live_b = re.sub(r"^(\s*append .*)$", lambda x: bios_touch(x.group(1)), b, count=1, flags=re.M)
             out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN 2.2", live_b))
             inst = re.sub(r"^label (\S+)", r"label \1-install", live_b, flags=re.M)
             inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN 2.2", inst)

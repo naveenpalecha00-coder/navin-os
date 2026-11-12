@@ -1,58 +1,46 @@
 #!/bin/bash
-# NAVIN 2.1 touchpad control (libinput through xinput, per user, persistent).
+# NAVIN 2.2.1 touchpad control (libinput through xinput, per user, persistent).
 #   apply --login : used at every login — the touchpad is always switched ON again, so a stray Fn/toggle
 #                   press (or a Samsung hardware toggle) can never leave it off after a restart.
 #   navin-touchpad status | on | off | toggle | speed -1..1 | scroll 5..50 | tap on|off | drag on|off | natural on|off | pinch on|off | apply
-#   navin-touchpad doctor | rescue | quirks on|off   (old laptops: missing or stuttering touchpad)
+#   navin-touchpad accel adaptive|flat | scrollmethod twofinger|edge|none | click areas|fingers | dwt|middle|lefthanded on|off | preset fast|smooth|optimal
+#   navin-touchpad doctor | repair | rescan | quirks on|off   (missing or stuttering touchpad; repair = automatic repair engine)
 CONF="$HOME/.config/navin/touchpad.conf"; mkdir -p "${CONF%/*}"
-ids(){ xinput list 2>/dev/null | grep -iE 'touchpad|trackpad|glidepoint' | grep -oE 'id=[0-9]+' | cut -d= -f2; }
+REPAIR=/usr/lib/navin-os/navin-touchpad-repair.sh
+TPY=/usr/local/lib/navin/navin_tp.py
+# Built-in touchpad ids (named touchpad first; the PS/2 basic-mode pointer when the vendor driver failed).
+ids(){ python3 -c 'import sys; sys.path.insert(0,"/usr/local/lib/navin"); import navin_tp; print("\n".join(navin_tp.xinput_ids()))' 2>/dev/null; }
 get(){ grep -E "^$1=" "$CONF" 2>/dev/null | tail -1 | cut -d= -f2; }
 save(){ grep -vE "^$1=" "$CONF" 2>/dev/null > "$CONF.tmp"; echo "$1=$2" >> "$CONF.tmp"; mv "$CONF.tmp" "$CONF"; }
-prop(){ local id=$1 name=$2; shift 2; xinput list-props "$id" | grep -q "$name (" && xinput set-prop "$id" "$name" "$@"; }
-b(){ [ "$1" = on ] && echo 1 || echo 0; }
-apply(){
-  for id in $(ids); do
-    prop "$id" "Device Enabled" "$(b "$(get enabled || echo on)")"
-    prop "$id" "libinput Tapping Enabled" "$(b "$(get tap || echo on)")"
-    prop "$id" "libinput Tapping Drag Enabled" "$(b "$(get drag || echo on)")"
-    prop "$id" "libinput Natural Scrolling Enabled" "$(b "$(get natural || echo off)")"
-    prop "$id" "libinput Disable While Typing Enabled" 0
-    prop "$id" "libinput Accel Speed" "$(get speed || echo 0.3)"
-    prop "$id" "libinput Scrolling Pixel Distance" "$(get scroll || echo 15)"
-  done
-}
-doctor(){
-  echo "== NAVIN touchpad doctor =="
-  echo "Computer : $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null)"
-  if [ -n "$(ids)" ]; then for id in $(ids); do echo "Touchpad : $(xinput list --name-only "$id") (id $id, enabled $(xinput list-props "$id" | awk -F: '/Device Enabled/{gsub(/[ \t]/,"",$2);print $2}'))"; done
-  else echo "Touchpad : NOT FOUND"; fi
-  grep -iE 'Phys=isa0060/serio[1-9]' -B1 /proc/bus/input/devices | grep -oE 'Name=.*' | sed 's/^/PS\/2 port: /'
-  n=$(journalctl -k -b 0 2>/dev/null | grep -ciE 'lost sync|issuing reconnect|psmouse.*(error|failed)')
-  echo "Driver errors this boot: ${n:-0} (lost sync / reconnects)"
-  [ -f /etc/default/grub.d/90-navin-quirks.cfg ] && echo "Boot fix : on ($(grep -oE 'i8042[^ "]*' /etc/default/grub.d/90-navin-quirks.cfg | tr '\n' ' '))" || echo "Boot fix : off"
-  [ -f /etc/modprobe.d/navin-touchpad-rescue.conf ] && echo "Fallback : $(grep options /etc/modprobe.d/navin-touchpad-rescue.conf)"
-  case "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)" in SAMSUNG*|Samsung*) echo "Tip      : Samsung - Fn+F5 switches the touchpad off/on in hardware.";; esac
-  [ -z "$(ids)" ] && echo "Next step: navin-touchpad rescue"
-  [ "${n:-0}" -gt 3 ] && echo "Next step: navin-touchpad quirks on, then restart"
-  return 0
-}
+# Every saved setting goes to the real device through xinput/libinput (navin_hw.touchpad_props).
+apply(){ python3 "$TPY" apply "$@" >/dev/null 2>&1; }
+doctor(){ echo "== NAVIN touchpad doctor =="; python3 "$TPY" info; return 0; }
 case "${1:-}" in
   doctor) doctor; exit 0;;
-  rescue) pkexec /usr/local/lib/navin/navin-touchpad-rescue run; rc=$?; sleep 1; apply
-    [ $rc = 0 ] && notify-send -i input-touchpad "Touchpad" "Touchpad is working" 2>/dev/null || notify-send -i input-touchpad "Touchpad not found" "Samsung: press Fn+F5, then try again" 2>/dev/null; exit $rc;;
+  rescue|repair) pkexec "$REPAIR" run --manual; rc=$?; sleep 1; apply
+    case $rc in 0) notify-send -i input-touchpad "Touchpad" "$(python3 "$TPY" diagnose)" 2>/dev/null;;
+      4) notify-send -i input-touchpad "Touchpad: restart needed" "Boot fix added. Restart once." 2>/dev/null;;
+      *) notify-send -i input-touchpad "Touchpad not found" "$(python3 "$TPY" diagnose) Samsung: press Fn+F5, then try again." 2>/dev/null;; esac; exit $rc;;
+  rescan) pkexec "$REPAIR" rescan; rc=$?; apply; exit $rc;;
   quirks) [[ "${2:-}" =~ ^(on|off)$ ]] || { echo "quirks on|off" >&2; exit 2; }; pkexec /usr/local/lib/navin/navin-quirks "$2"; exit $?;;
 esac
-[ -n "$(ids)" ] || [ "${1:-}" = status ] || [ "${1:-}" = pinch ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found - run: navin-touchpad rescue" 2>/dev/null; exit 1; }
+[ -n "$(ids)" ] || [ "${1:-}" = status ] || [ "${1:-}" = pinch ] || [ "${1:-}" = apply ] || { notify-send -i input-touchpad "Touchpad" "No touchpad found - open Settings › Touchpad › Auto Detect & Repair" 2>/dev/null; exit 1; }
 case "${1:-status}" in
   status) for id in $(ids); do echo "id=$id $(xinput list --name-only "$id")"; done; cat "$CONF" 2>/dev/null;;
   on|off) save enabled "$1"; apply; notify-send -i input-touchpad "Touchpad $1" 2>/dev/null;;
   toggle) [ "$(get enabled || echo on)" = on ] && n=off || n=on; save enabled "$n"; apply; notify-send -i input-touchpad "Touchpad $n" 2>/dev/null;;
   speed) awk -v v="${2:-x}" 'BEGIN{exit !(v+0==v && v>=-1 && v<=1)}' || { echo "speed -1..1" >&2; exit 2; }; save speed "$2"; apply;;
   scroll) [[ "${2:-}" =~ ^[0-9]+$ ]] && [ "$2" -ge 5 ] && [ "$2" -le 50 ] || { echo "scroll 5..50 (lower = faster)" >&2; exit 2; }; save scroll "$2"; apply;;
-  tap|drag|natural) [[ "${2:-}" =~ ^(on|off)$ ]] || exit 2; save "$1" "$2"; apply;;
+  tap|drag|natural|dwt|middle|lefthanded) [[ "${2:-}" =~ ^(on|off)$ ]] || exit 2; save "$1" "$2"; apply;;
+  accel) [[ "${2:-}" =~ ^(adaptive|flat)$ ]] || { echo "accel adaptive|flat" >&2; exit 2; }; save accel "$2"; apply;;
+  scrollmethod) [[ "${2:-}" =~ ^(twofinger|edge|none)$ ]] || { echo "scrollmethod twofinger|edge|none" >&2; exit 2; }; save scrollmethod "$2"; apply;;
+  click) [[ "${2:-}" =~ ^(areas|fingers)$ ]] || { echo "click areas|fingers  (right-click: bottom-right corner | two-finger click)" >&2; exit 2; }; save click "$2"; apply;;
+  preset) [[ "${2:-}" =~ ^(fast|smooth|optimal)$ ]] || { echo "preset fast|smooth|optimal" >&2; exit 2; }
+    eval "$(python3 -c 'import sys; sys.path.insert(0,"/usr/local/lib/navin"); import navin_hw
+for k,v in navin_hw.PERFORMANCE_PRESETS[sys.argv[1]].items(): print(f"save {k} {v};")' "$2")"; apply;;
   pinch) [[ "${2:-}" =~ ^(on|off)$ ]] || { echo "pinch on|off" >&2; exit 2; }
     # Gesture service is system-wide (root); the setting lives in /etc/navin/gestures.conf.
     echo "pinch=$2" | pkexec /usr/bin/tee /etc/navin/gestures.conf >/dev/null && pkexec /usr/bin/systemctl restart navin-gestures.service && notify-send -i input-touchpad "Pinch to zoom $2" 2>/dev/null;;
-  apply) [ "${2:-}" = --login ] && [ "$(get enabled)" = off ] && save enabled on; apply;;
-  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|pinch on/off|apply|doctor|rescue|quirks on/off" >&2; exit 2;;
+  apply) apply ${2:-};;
+  *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap|drag|natural|dwt|middle|lefthanded on/off|accel adaptive/flat|scrollmethod twofinger/edge/none|click areas/fingers|preset fast/smooth/optimal|pinch on/off|apply|doctor|repair|rescan|quirks on/off" >&2; exit 2;;
 esac

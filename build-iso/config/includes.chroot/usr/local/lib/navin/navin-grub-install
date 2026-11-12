@@ -2,6 +2,11 @@
 # NAVIN OS grub-install wrapper used by Calamares (bootloader.conf grubInstall) and the CI install test.
 # UEFI: also installs the signed shim + GRUB to the removable path \EFI\BOOT\BOOTX64.EFI so the disk
 # still starts when firmware forgets its boot entries (common on laptops and after BIOS updates).
+# NAVIN 2.2.1: when Live Mode needed direct PS/2 touchpad probing (i8042.nopnp, legacy-BIOS menu or a Samsung
+# laptop), the installed system gets the same options from its first start (written before grub-mkconfig).
+if grep -qw 'i8042.nopnp=1' /proc/cmdline 2>/dev/null && [ -d /etc/default/grub.d ] && [ ! -f /etc/default/grub.d/90-navin-quirks.cfg ]; then
+  printf '# NAVIN touchpad fix carried over from Live Mode (remove with: navin-touchpad quirks off)\nGRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT i8042.nopnp=1 i8042.noloop=1"\n' > /etc/default/grub.d/90-navin-quirks.cfg
+fi
 case " $* " in
   *x86_64-efi*)
     /usr/sbin/grub-install "$@" --force-extra-removable && exit 0

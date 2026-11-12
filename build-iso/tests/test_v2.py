@@ -29,7 +29,7 @@ class OldLaptop(unittest.TestCase):
     def test_samsung_rv411_gets_touchpad_controller_fix(self):
         q = hw.laptop_quirks(SAMSUNG, [IRONLAKE], OLD_FLAGS, 2 * 1024 * 1024, rotational=True)
         self.assertTrue(q['samsung'])
-        self.assertEqual(q['kernel_params'], ['i8042.nomux=1', 'i8042.reset=1'])
+        self.assertEqual(q['kernel_params'], ['i8042.nomux=1', 'i8042.reset=1', 'i8042.nopnp=1', 'i8042.noloop=1'])
         self.assertTrue(any('Fn+F5' in n for n in q['notes']))
 
     def test_rv411_class_hardware_gets_no_freeze_settings(self):
@@ -163,8 +163,8 @@ class WhatsNew(unittest.TestCase):
     def test_version_strings(self):
         hook = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
         self.assertIn('PRETTY_NAME="NAVIN 2.2 (Debian 13 Trixie base)"', hook)
-        self.assertIn("printf '40\\n' > /etc/navin/build", hook)
-        self.assertIn('navin-2.2-x86_64.iso', (ROOT / 'build.sh').read_text())
+        self.assertIn("printf '41\\n' > /etc/navin/build", hook)
+        self.assertIn('navin-2.2.1-x86_64.iso', (ROOT / 'build.sh').read_text())
 
 
 if __name__ == '__main__':

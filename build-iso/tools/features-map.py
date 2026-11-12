@@ -140,7 +140,7 @@ M = {
 "advanced settings": "pkg:xfce4-settings",
 # 5 LAPTOP & HARDWARE
 "Samsung RV411 compatibility": "file:usr/local/lib/navin/navin_hw.py::Samsung",
-"touchpad auto-detection": "file:usr/local/lib/navin/navin-touchpad-rescue::touchpad",
+"touchpad auto-detection": "file:usr/lib/navin-os/navin-touchpad-repair.sh::navin_tp.py",
 "Synaptics support": "pkg:xserver-xorg-input-libinput",
 "libinput support": "pkg:libinput-tools",
 "I2C HID support": "file:usr/local/lib/navin/navin-repair::i2c_hid_acpi",

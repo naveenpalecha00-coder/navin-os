@@ -26,6 +26,24 @@ scan() {
   MEM=$(free | awk '/Mem:/{printf "%d", $7*100/$2}'); [ "${MEM:-100}" -le 10 ] && ISSUES+=("ram|RAM kam bachi hai (${MEM}% free) / Low memory")
   timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q no && ISSUES+=("time|Time sync band hai / Clock not synced")
   lspci -k 2>/dev/null | grep -A3 -Ei 'network|wireless' | grep -q 'Kernel driver in use' || ISSUES+=("driver|Wi-Fi driver load nahi hua / Wi-Fi driver missing (Driver Center kholo)")
+  # NAVIN 2.2.1 touchpad diagnostics (navin_hw.touchpad_diagnose): missing driver, failed module, disabled
+  # hardware, missing device, libinput/ACPI errors, controller communication failures.
+  TPD=$(python3 /usr/local/lib/navin/navin_tp.py diagnose --json 2>/dev/null)
+  TPS=$(jq -r '.state // empty' <<<"$TPD" 2>/dev/null)
+  case "$TPS" in
+    ok|not-laptop|"") ;;
+    disabled) ISSUES+=("touchpad-on|Touchpad band hai / Touchpad is switched off");;
+    *) ISSUES+=("touchpad|Touchpad: $(jq -r '.summary' <<<"$TPD") — $(jq -r '[.problems[].cause][0] // ""' <<<"$TPD")");;
+  esac
+  for k in $(jq -r '.log_issues[]?' <<<"$TPD" 2>/dev/null); do
+    case "$k" in
+      lost_sync|elantech_fail|synaptics_fail|alps_fail|smbus_fail|i2c_hid_fail) ISSUES+=("touchpad|Touchpad driver error in kernel log ($k)");;
+      acpi_error) ISSUES+=("acpi|BIOS ACPI errors in kernel log (info only: BIOS update may help)");;
+      firmware_missing) ISSUES+=("firmware|Kisi driver ki firmware file missing / Missing firmware file");;
+    esac
+  done
+  FAND=$(python3 /usr/local/lib/navin/navin_tp.py fan --json 2>/dev/null)
+  [ -n "$(jq -r '.actions[]?' <<<"$FAND" 2>/dev/null)" ] && ISSUES+=("fan|Fan/thermal: $(jq -r '[.problems[].problem] | join("; ")' <<<"$FAND")")
 }
 
 fix() {
@@ -34,6 +52,11 @@ fix() {
     sound)   systemctl --user restart pipewire pipewire-pulse wireplumber ;;
     ram)     zenity --info --title="$T" --text="Bhaari apps band karo. Task Manager khol raha hoon."; xfce4-taskmanager & ;;
     driver)  navin-driver-center & ;;
+    touchpad) pkexec /usr/lib/navin-os/navin-touchpad-repair.sh run --manual; rc=$?; navin-touchpad apply; [ $rc = 0 ] ;;
+    touchpad-on) navin-touchpad on ;;
+    fan)     pkexec /usr/local/lib/navin/navin-fan repair ;;
+    acpi)    zenity --info --title="$T" --text="ACPI errors come from the BIOS. NAVIN cannot change BIOS tables; a BIOS update from the laptop maker can fix them." ;;
+    firmware) navin-driver-center & ;;
     *)       $REPAIR "$1" ;;
   esac
 }
@@ -67,7 +90,9 @@ offline_answer() {
     *disk*|*space*|*storage*) echo "clean|Disk space: apt cache aur purane logs saaf karunga." ;;
     *print*) echo "printer|Printer: CUPS service restart karunga." ;;
     *time*|*clock*|*samay*) echo "time|Clock: internet time sync on karunga." ;;
-    *driver*|*graphics*|*touchpad*) echo "driver|Drivers: NAVIN Driver Center kholunga." ;;
+    *touchpad*|*touch*pad*|*cursor*) echo "touchpad|Touchpad: hardware scan karke driver repair karunga (password lagega)." ;;
+    *fan*|*garam*|*heat*|*hot*) echo "fan|Fan/garmi: fan aur temperature check karke fix karunga." ;;
+    *driver*|*graphics*) echo "driver|Drivers: NAVIN Driver Center kholunga." ;;
     *) echo "scan|Main poora system scan karta hoon." ;;
   esac
 }
@@ -75,7 +100,7 @@ offline_answer() {
 online_answer() {
   . "$CONF"
   CTX="$(uname -r); $(nmcli -t g 2>/dev/null); failed: $(systemctl --failed --plain --no-legend | awk '{print $1}' | tr '\n' ' ')"
-  SYS="You are NAVIN AI System Doctor inside NAVIN OS (Debian 12, XFCE). Reply in the user's language (Hindi or English), short. End with one line 'ACTION: <id>' where id is one of: wifi network bluetooth sound unmute packages upgrade clean printer services time driver scan none."
+  SYS="You are NAVIN AI System Doctor inside NAVIN OS (Debian 12, XFCE). Reply in the user's language (Hindi or English), short. End with one line 'ACTION: <id>' where id is one of: wifi network bluetooth sound unmute packages upgrade clean printer services time driver touchpad fan scan none."
   BODY=$(jq -n --arg m "${AI_MODEL:-gpt-4o-mini}" --arg s "$SYS" --arg u "$1 [system: $CTX]" '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$u}]}')
   curl -s -m 30 "${AI_URL:-https://api.openai.com/v1/chat/completions}" -H "Authorization: Bearer $AI_KEY" -H "Content-Type: application/json" -d "$BODY" | jq -r '.choices[0].message.content // empty'
 }

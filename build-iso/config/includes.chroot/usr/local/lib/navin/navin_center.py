@@ -5,7 +5,7 @@ Every page reads real system data; privileged actions go through pkexec + whitel
 import gi, json, os, pathlib, re, shutil, subprocess, sys, threading, time
 sys.path.insert(0, "/usr/local/lib/navin")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gdk
 import psutil
 import navin_hw
 from navin_sys import leak_candidates, parse_systemd_analyze
@@ -13,8 +13,8 @@ from navin_sys import leak_candidates, parse_systemd_analyze
 REPAIR = ["pkexec", "/usr/local/lib/navin/navin-repair"]
 FAN = ["pkexec", "/usr/local/lib/navin/navin-fan"]
 LIVE = pathlib.Path("/run/live").exists()
-PAGES = [("whatsnew", "What's New in 2.2"), ("laptop", "Laptop & Touchpad"), ("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
-         ("performance", "Performance Center"), ("fan", "Fan Control"), ("boot", "Boot Manager"),
+PAGES = [("whatsnew", "What's New in 2.2"), ("laptop", "Touchpad"), ("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
+         ("performance", "Performance Center"), ("fan", "Fan Control"), ("troubleshoot", "Touchpad & Fan Troubleshooter"), ("boot", "Boot Manager"),
          ("recovery", "Recovery"), ("repair", "System Repair"), ("updates", "Update Manager"),
          ("diagnostics", "Hardware Diagnostics")]
 
@@ -211,7 +211,7 @@ class Center(Gtk.Window):
     def p_whatsnew(self):
         b = page("What's New in NAVIN 2.2", "Every change below is in this system; the file that does it is shown in grey. 2.1 and 2.0 changes are kept and listed after the 2.2 ones.")
         items = []
-        for ver in ("2.2", "2.1", "2.0"):
+        for ver in ("2.2.1", "2.2", "2.1", "2.0"):
             try:
                 items += [dict(it, category=f"{ver} · {it['category']}") for it in json.loads(pathlib.Path(f"/usr/share/navin/whatsnew-{ver}.json").read_text())["items"]]
             except (OSError, ValueError, KeyError):
@@ -232,30 +232,94 @@ class Center(Gtk.Window):
 
     # ---- NAVIN 2.0: Laptop & Touchpad (old-laptop care, Samsung RV411 class)
     def p_laptop(self):
-        b = page("Laptop & Touchpad", "Fixes for older laptops: touchpad rescue, Samsung boot fix, light effects. Nothing here changes your files.")
-        try:
-            q = json.loads(pathlib.Path("/run/navin/quirks.json").read_text())
-        except (OSError, ValueError):
-            q = {}
-        facts = [("Samsung laptop", q.get("samsung")), ("1st-gen Intel graphics", q.get("old_gpu")), ("Older CPU (no AVX)", q.get("old_cpu"))]
-        info = Gtk.Label(xalign=0); info.set_line_wrap(True)
-        info.set_markup("<b>This computer:</b> " + " · ".join(f"{n}: {'yes' if v else 'no'}" for n, v in facts) +
-                        f"\nWindow effects: {q.get('compositor', 'xfwm')} · memory compression: {q.get('zram_algo', 'zstd')} · Chrome GPU: {q.get('chrome_gpu', 'full')}" +
-                        "".join("\n• " + GLib.markup_escape_text(n) for n in q.get("notes", [])))
-        b.pack_start(info, False, False, 0)
-        log = Log(260)
-        def doctor(*_):
-            log.set(sh(["navin-touchpad", "doctor"])); return False
-        b.pack_start(row(btn("Check touchpad", doctor), btn("Rescue touchpad now", lambda: log.stream(["navin-touchpad", "rescue"], lambda rc: doctor())),
-                         btn("Undo rescue fallback", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-touchpad-rescue", "reset"]))), False, False, 0)
-        b.pack_start(row(btn("Boot fix on", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-quirks", "on"])),
+        b = page("Touchpad Control Center", "Every switch here changes the real touchpad through libinput (xinput). Detection reads /proc/bus/input/devices, "
+                 "the PS/2 and I2C buses and the kernel log; repairs need your password and are verified by a new scan.")
+        status = Gtk.Label(xalign=0, selectable=True); status.set_line_wrap(True); b.pack_start(status, False, False, 0)
+        log = Log(200)
+        def show(d):
+            if isinstance(d, str):
+                status.set_text(d); return
+            icon = {"ok": "🟢", "basic": "🟡", "disabled": "⚪"}.get(d["state"], "🔴")
+            lines = [f"<span size='large'><b>{icon} {GLib.markup_escape_text(d['summary'])}</b></span>"]
+            lines.append(f"Computer: {GLib.markup_escape_text(d['model'] or 'unknown')}" + (" · Samsung RV411 profile active" if d.get("rv411") else (" · Samsung profile" if d.get("samsung") else "")))
+            for p in d["devices"]:
+                lines.append(GLib.markup_escape_text(f"Hardware: {p['name']} · maker {p['vendor']} · bus {p['bus']} · ID {p['id']} · driver {p['driver']}"))
+            lines.append(GLib.markup_escape_text("Kernel modules: " + (", ".join(d.get("modules", [])) or "none") + " · boot options: " + (" ".join(d.get("cmdline_i8042", [])) or "none")))
+            for p in d["problems"]:
+                lines.append(GLib.markup_escape_text(f"• Problem: {p['problem']}\n   Cause: {p['cause']}\n   Fix: {p['fix']}"))
+            status.set_markup("\n".join(lines))
+        def scan(*_):
+            import navin_tp
+            status.set_text("Scanning the real hardware…"); background(navin_tp.collect_diag, show); return False
+        def after(rc):
+            sh(["navin-touchpad", "apply"]); scan()
+        big = Gtk.Button(); big.add(Gtk.Label(label="AUTO DETECT & REPAIR TOUCHPAD")); big.get_style_context().add_class("suggested-action"); big.set_size_request(320, 52)
+        big.connect("clicked", lambda *_: log.stream(["pkexec", "/usr/lib/navin-os/navin-touchpad-repair.sh", "run", "--manual"], after))
+        rescan = Gtk.Button(label="FORCE HARDWARE RESCAN"); rescan.set_size_request(220, 52)
+        rescan.connect("clicked", lambda *_: log.stream(["pkexec", "/usr/lib/navin-os/navin-touchpad-repair.sh", "rescan"], after))
+        b.pack_start(row(big, rescan, btn("Touchpad hardware test", lambda: TouchpadTest(self)), btn("Refresh", scan)), False, False, 0)
+        import navin_tp
+        conf = {**navin_hw.TOUCHPAD_DEFAULTS, **navin_tp.load_conf()}
+        grid = Gtk.Grid(column_spacing=14, row_spacing=8); r = 0
+        def setting(*args):
+            rc = subprocess.run(["navin-touchpad", *args], capture_output=True, text=True)
+            log.add_text(f"navin-touchpad {' '.join(args)}: {'applied to the touchpad' if rc.returncode == 0 else (rc.stderr or rc.stdout).strip() or 'no touchpad found'}\n")
+        for key, label in (("enabled", "Touchpad on"), ("tap", "Tap to click"), ("drag", "Tap and drag (double tap)"), ("natural", "Natural scrolling"),
+                           ("dwt", "Disable touchpad while typing"), ("middle", "Middle click (press left + right together)"), ("lefthanded", "Left-handed buttons")):
+            sw = Gtk.Switch(active=conf.get(key) == "on", halign=Gtk.Align.START)
+            sw.connect("notify::active", lambda s, _p, k=key: setting(*(["on" if s.get_active() else "off"] if k == "enabled" else [k, "on" if s.get_active() else "off"])))
+            grid.attach(Gtk.Label(label=label, xalign=0), 0, r, 1, 1); grid.attach(sw, 1, r, 1, 1); r += 1
+        for key, label, opts in (("scrollmethod", "Scrolling", (("twofinger", "Two-finger scrolling"), ("edge", "Edge scrolling (where supported)"), ("none", "Off"))),
+                                 ("click", "Right click", (("areas", "Press bottom-right corner"), ("fingers", "Two-finger click"))),
+                                 ("accel", "Pointer acceleration", (("adaptive", "Adaptive (smooth movement)"), ("flat", "Flat (fast response, low latency)")))):
+            cb = Gtk.ComboBoxText()
+            for v, t in opts:
+                cb.append(v, t)
+            cb.set_active_id(conf.get(key) or opts[0][0]); cb.connect("changed", lambda c, k=key: setting(k, c.get_active_id()))
+            grid.attach(Gtk.Label(label=label, xalign=0), 0, r, 1, 1); grid.attach(cb, 1, r, 1, 1); r += 1
+        for key, label, lo, hi, step in (("speed", "Pointer speed / sensitivity", -1, 1, 0.05), ("scroll", "Scroll distance (lower = faster)", 5, 50, 1)):
+            sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, step); sc.set_size_request(320, -1)
+            try:
+                sc.set_value(float(conf.get(key)))
+            except (TypeError, ValueError):
+                pass
+            pend = {"id": 0}
+            def commit(s=sc, k=key, p=pend):
+                p["id"] = 0; setting(k, f"{s.get_value():.2f}" if k == "speed" else str(int(s.get_value()))); return False
+            def moved(s, p=pend, c=commit):
+                if p["id"]:
+                    GLib.source_remove(p["id"])
+                p["id"] = GLib.timeout_add(500, c)
+            sc.connect("value-changed", moved)
+            grid.attach(Gtk.Label(label=label, xalign=0), 0, r, 1, 1); grid.attach(sc, 1, r, 1, 1); r += 1
+        b.pack_start(grid, False, False, 0)
+        note = Gtk.Label(xalign=0); note.set_line_wrap(True)
+        note.set_text("Palm detection is automatic in libinput when the touchpad reports finger size or pressure (no switch exists for it). "
+                      "Left and right click always work; 'Right click' only chooses how. Settings are saved and applied again at every login. "
+                      "Touchpad key: Fn+F5 on Samsung (XF86TouchpadToggle) or Ctrl+Win+T switches the touchpad; F10 is not taken over.")
+        b.pack_start(note, False, False, 0)
+        b.pack_start(Gtk.Label(label="Touchpad performance", xalign=0), False, False, 0)
+        b.pack_start(row(btn("Fast response mode", lambda: setting("preset", "fast")), btn("Smooth movement mode", lambda: setting("preset", "smooth")),
+                         btn("Restore optimal settings", lambda: setting("preset", "optimal")),
+                         btn("Input lag diagnostics", lambda: log.set(sh(["bash", "-c", "journalctl -k -b 0 -q -o cat 2>/dev/null | grep -ciE 'lost sync|issuing reconnect' | sed 's/^/Touchpad resyncs this boot: /'; "
+                                                                          "uptime; grep -E 'MemAvailable|SwapFree' /proc/meminfo; ps -eo pcpu,comm --sort=-pcpu | head -6"])))), False, False, 0)
+        R = ["pkexec", "/usr/lib/navin-os/navin-touchpad-repair.sh"]
+        def guarded(text, args):
+            if confirm(self, text, "A backup of the NAVIN touchpad configuration is saved first. Keyboard and USB mice are not changed."):
+                log.stream(R + args, after)
+        b.pack_start(Gtk.Label(label="Touchpad driver", xalign=0), False, False, 0)
+        b.pack_start(row(btn("Driver information", lambda: log.set(sh(["python3", "/usr/local/lib/navin/navin_tp.py", "info"]) + "\n\n" +
+                                                                    sh(["dpkg-query", "-W", "-f=${Package} ${Version}\n", "xserver-xorg-input-libinput", "libinput10", "libinput-bin"]))),
+                         btn("Reload touchpad module", lambda: guarded("Reload the touchpad kernel module?", ["reload"])),
+                         btn("Update driver", lambda: guarded("Update the libinput touchpad driver from Debian?", ["driver", "update"])),
+                         btn("Reinstall driver", lambda: guarded("Reinstall the libinput touchpad driver?", ["driver", "reinstall"]))), False, False, 0)
+        b.pack_start(row(btn("Roll back last repair", lambda: guarded("Roll back to the configuration saved before the last repair?", ["driver", "rollback"])),
+                         btn("Restore default driver", lambda: guarded("Remove NAVIN's saved basic-mode fallback and use the native driver next boot?", ["driver", "restore-default"])),
+                         btn("Boot fix on", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-quirks", "on"])),
                          btn("Boot fix off", lambda: log.stream(["pkexec", "/usr/local/lib/navin/navin-quirks", "off"])),
-                         btn("Light effects", lambda: log.stream(["navin-compositor", "lite"])), btn("Full effects", lambda: log.stream(["navin-compositor", "xfwm"])),
-                         btn("Effects off", lambda: log.stream(["navin-compositor", "off"]))), False, False, 0)
-        hint = Gtk.Label(xalign=0); hint.set_line_wrap(True)
-        hint.set_text("Samsung laptops: Fn+F5 turns the touchpad off in hardware — press it once if the cursor does not move. "
-                      "If the touchpad never appears, restart and choose \"Old Laptop Mode\" in the boot menu.")
-        b.pack_start(hint, False, False, 0); b.pack_start(log, True, True, 0); doctor(); return b
+                         btn("Driver logs", lambda: log.set(sh(["tail", "-80", "/var/log/navin/touchpad-repair.log"])))), False, False, 0)
+        b.pack_start(Gtk.Label(label="Uninstalling the touchpad driver is not offered: libinput is also the driver of the keyboard and USB mouse.", xalign=0, wrap=True), False, False, 0)
+        b.pack_start(log, True, True, 0); scan(); return b
 
     # ---- Fan Control
     def p_fan(self):
@@ -272,10 +336,20 @@ class Center(Gtk.Window):
             scale.set_value(0)
         value = Gtk.Label(label="Auto" if scale.get_value() == 0 else f"{int(scale.get_value())} %"); value.set_width_chars(6)
         st = Gtk.Label(xalign=0, selectable=True); log = Log(160)
+        warn = Gtk.Label(xalign=0); warn.set_line_wrap(True); b.pack_start(warn, False, False, 0)
         def upd(*_):
             s = sh(["/usr/local/lib/navin/navin-fan", "status"])
             mode = "Monitoring only — this hardware exposes no safe fan control." if cap == "none" else ""
-            st.set_text(s + "\n" + sh(["sensors"]) + ("\n" + mode if mode else "")); return True
+            st.set_text(s + "\n" + sh(["sensors"]) + ("\n" + mode if mode else ""))
+            def shown(d):
+                if isinstance(d, str):
+                    warn.set_text(d); return
+                hot = d["max_temp"] is not None and d["max_temp"] >= 85
+                head = f"<b>{'🔥 OVERHEATING — ' if hot else ''}Hottest sensor: {d['max_temp'] if d['max_temp'] is not None else 'n/a'} °C · fan: {', '.join(f'{r} RPM' for r in d['rpm']) or 'RPM not reported by this BIOS'}"
+                head += f" · ACPI fans: {d['acpi_fans']} · Samsung mode: {d['samsung_level'] or 'n/a'}</b>"
+                warn.set_markup(head + "".join(GLib.markup_escape_text(f"\n• {p['problem']} — Cause: {p['cause']} — Fix: {p['fix']}") for p in d["problems"]))
+            import navin_tp
+            background(navin_tp.fan, shown); return True
         pending = {"id": 0}
         def commit():
             pending["id"] = 0; log.stream(FAN + ["set", str(int(scale.get_value()))], upd); return False
@@ -287,8 +361,46 @@ class Center(Gtk.Window):
         scale.connect("value-changed", moved)
         r = Gtk.Box(spacing=10); r.pack_start(Gtk.Label(label="Fan speed"), False, False, 0); r.pack_start(scale, True, True, 0); r.pack_start(value, False, False, 0)
         b.pack_start(r, False, False, 0)
-        b.pack_start(row(*[btn(n.title(), lambda n=n: log.stream(FAN + [n], upd)) for n in ("silent", "balanced", "cooling", "auto")], btn("Restore firmware control", lambda: (scale.set_value(0), log.stream(FAN + ["restore"], upd)))), False, False, 0)
+        b.pack_start(row(*[btn(n.title(), lambda n=n: log.stream(FAN + [n], upd)) for n in ("silent", "balanced", "cooling", "auto")], btn("Restore firmware control", lambda: (scale.set_value(0), log.stream(FAN + ["restore"], upd))),
+                         btn("Diagnose & repair fan", lambda: log.stream(FAN + ["repair"], upd)), btn("Fan logs", lambda: log.set(sh(["tail", "-60", "/var/log/navin/fan.log"])))), False, False, 0)
         b.pack_start(st, False, False, 0); b.pack_start(log, False, False, 0); upd(); GLib.timeout_add_seconds(5, lambda: upd() if self.stack.get_visible_child_name() == "fan" else True); return b
+
+    # ---- Touchpad & Fan Troubleshooter
+    def p_troubleshoot(self):
+        b = page("Touchpad & Fan Troubleshooter", "Problem → Cause → Recommended fix → Repair → Verification. Scans read the real hardware; repairs ask for your password.")
+        out = Gtk.Label(xalign=0, selectable=True); out.set_line_wrap(True); b.pack_start(out, False, False, 0)
+        log = Log(260)
+        def quick():
+            import navin_tp
+            def both():
+                return navin_tp.collect_diag(), navin_tp.fan()
+            def shown(v):
+                if isinstance(v, str):
+                    out.set_text(v); return
+                tp, fan = v
+                text = [f"Touchpad: {tp['summary']}"] + [f"  • {p['problem']}\n     Cause: {p['cause']}\n     Fix: {p['fix']}" + (f"\n     Repair: {p['action']}" if p.get('action') else "") for p in tp["problems"]]
+                text += [f"Fan: control {fan['control']}, hottest {fan['max_temp']} °C"] + [f"  • {p['problem']}\n     Cause: {p['cause']}\n     Fix: {p['fix']}" for p in fan["problems"]]
+                out.set_text("\n".join(text))
+            out.set_text("Scanning…"); background(both, shown)
+        R = ["pkexec", "/usr/lib/navin-os/navin-touchpad-repair.sh"]
+        b.pack_start(row(btn("Quick hardware scan", quick), btn("Full hardware scan", lambda: log.stream(["navin-hwdetect"], lambda rc: quick())),
+                         btn("Touchpad repair wizard", lambda: log.stream(R + ["run", "--manual"], lambda rc: quick())),
+                         btn("Driver repair wizard", lambda: confirm(self, "Reinstall the touchpad driver packages?", "Needs internet. A backup is made first.") and log.stream(R + ["driver", "reinstall"], lambda rc: quick())),
+                         btn("Fan repair wizard", lambda: log.stream(FAN + ["repair"], lambda rc: quick()))), False, False, 0)
+        def export():
+            rep = sh(R + ["report"], 60).splitlines()
+            path = rep[-1] if rep else ""
+            dest = pathlib.Path.home() / "NAVIN-touchpad-fan-report.txt"
+            try:
+                dest.write_text(pathlib.Path(path).read_text(errors="replace") + "\n\n== fan\n" + sh(["python3", "/usr/local/lib/navin/navin_tp.py", "fan"]) + "\n" + sh(["sensors"]))
+                log.set(f"Report saved: {dest}")
+            except OSError as e:
+                log.set(f"Report not saved: {e}")
+        b.pack_start(row(btn("Thermal diagnostics", lambda: log.set(sh(["sensors"]) + "\n" + sh(["bash", "-c", "for z in /sys/class/thermal/thermal_zone*; do echo \"${z##*/} $(cat $z/type) $(( $(cat $z/temp)/1000 )) C mode=$(cat $z/mode 2>/dev/null) policy=$(cat $z/policy 2>/dev/null)\"; done; for c in /sys/class/thermal/cooling_device*; do echo \"${c##*/} $(cat $c/type) $(cat $c/cur_state)/$(cat $c/max_state)\"; done"]))),
+                         btn("Kernel input diagnostics", lambda: log.set(sh(["python3", "/usr/local/lib/navin/navin_tp.py", "info"]) + "\n\n" + sh(["cat", "/proc/bus/input/devices"]))),
+                         btn("Hardware compatibility report", lambda: log.set(sh(["navin-hwdetect"]))),
+                         btn("Generate diagnostic report", lambda: log.set(sh(R + ["report"], 60))), btn("Export system logs", export)), False, False, 0)
+        b.pack_start(log, True, True, 0); quick(); return b
 
     # ---- Boot Manager
     def p_boot(self):
@@ -366,6 +478,52 @@ class Center(Gtk.Window):
             p.write_text(b2.get_text(b2.get_start_iter(), b2.get_end_iter(), False)); log.add_text(f"\nSaved {p}\n")
         b.pack_start(row(btn("Run diagnostics", run_all), btn("Disk health (SMART)", lambda: log.stream(REPAIR + ["smart"])), btn("Save report", save)), False, False, 0)
         b.pack_start(log, True, True, 0); return b
+
+
+
+class TouchpadTest(Gtk.Window):
+    """Touchpad hardware test: counts only real events whose source device is the built-in touchpad."""
+    def __init__(self, parent):
+        super().__init__(title="Touchpad hardware test", transient_for=parent); self.set_default_size(620, 460)
+        import navin_tp
+        names = [sh(["xinput", "list", "--name-only", i]) for i in navin_tp.xinput_ids()]
+        self.names = {n for n in names if n}
+        self.seen = {"move": 0, "left": 0, "right": 0, "middle": 0, "scroll": 0, "gesture": 0}
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); box.set_border_width(14); self.add(box)
+        head = Gtk.Label(xalign=0, wrap=True)
+        head.set_text(("Testing: " + ", ".join(sorted(self.names))) if self.names else "No touchpad device in X - run Auto Detect & Repair first. Nothing can pass without real touchpad events.")
+        box.pack_start(head, False, False, 0)
+        self.area = Gtk.EventBox(); self.area.set_size_request(-1, 220)
+        self.area.add(Gtk.Label(label="Use the touchpad here: move · left click/tap · right click · two-finger scroll"))
+        self.area.add_events(Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK |
+                             Gdk.EventMask.SMOOTH_SCROLL_MASK | Gdk.EventMask.TOUCHPAD_GESTURE_MASK)
+        self.area.connect("event", self.on_event)  # one handler: every real event is counted once
+        frame = Gtk.Frame(); frame.add(self.area); box.pack_start(frame, True, True, 0)
+        self.result = Gtk.Label(xalign=0, selectable=True); box.pack_start(self.result, False, False, 0)
+        caps = sh(["bash", "-c", "libinput list-devices 2>/dev/null | grep -A12 -iE 'Device:.*(touchpad|ps/2)' | grep -E 'Capabilities|Nat.scrolling|Tap-to-click|Scroll methods'"])
+        box.pack_start(Gtk.Label(label="libinput: " + (caps or "not available"), xalign=0, wrap=True), False, False, 0)
+        self.update(); self.show_all()
+
+    def on_event(self, w, ev):
+        dev = ev.get_source_device()
+        if not dev or dev.get_name() not in self.names:
+            return False  # other mice / keyboard never count
+        t = ev.type
+        if t == Gdk.EventType.MOTION_NOTIFY:
+            self.seen["move"] += 1
+        elif t == Gdk.EventType.BUTTON_PRESS:
+            self.seen[{1: "left", 2: "middle", 3: "right"}.get(ev.button, "left")] += 1
+        elif t == Gdk.EventType.SCROLL:
+            self.seen["scroll"] += 1
+        elif t in (Gdk.EventType.TOUCHPAD_SWIPE, Gdk.EventType.TOUCHPAD_PINCH):
+            self.seen["gesture"] += 1
+        self.update(); return False
+
+    def update(self):
+        s = self.seen
+        rows = [("Pointer movement (single finger)", s["move"] >= 20), ("Left click / tap", s["left"] > 0), ("Right click", s["right"] > 0),
+                ("Two-finger / edge scrolling", s["scroll"] >= 3), ("Multi-touch gesture (pinch/swipe, where supported)", s["gesture"] > 0)]
+        self.result.set_text("\n".join(f"{'✔ PASS' if ok else '… waiting'}  {name}" for name, ok in rows) + f"\nreal events: {s}")
 
 
 if __name__ == "__main__":

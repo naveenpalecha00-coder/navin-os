@@ -1,41 +1,8 @@
 #!/bin/bash
-# NAVIN 2.0 touchpad rescue (root). For laptops whose PS/2 touchpad does not appear or stops after
-# boot/resume (Samsung RV411 class). Steps, stopping at the first that works:
-#   1. reconnect the i8042 AUX port (resets the touchpad controller without a reboot)
-#   2. reload psmouse with its native protocol
-#   3. reload psmouse in IntelliMouse modes (exps -> imps -> bare): cursor, tap and wheel always work
-# A fallback that works on an installed system is saved to /etc/modprobe.d so the next boot uses it.
-# Usage: navin-touchpad-rescue [run|reset|status]
-LOG=/var/log/navin-hwdetect.log
-SAVE=/etc/modprobe.d/navin-touchpad-rescue.conf
-log(){ echo "$(date '+%F %T') rescue: $*" >> "$LOG"; echo "$*"; }
-aux_ports(){ for s in /sys/bus/serio/devices/serio*; do grep -qs AUX "$s/description" && echo "$s"; done; }
-# A pointer is "present" when any input device sits on an AUX serio port or is named like a touchpad.
-present(){ grep -qiE 'Phys=isa0060/serio[1-9]|touchpad|trackpad|glidepoint' /proc/bus/input/devices; }
-[ "$(id -u)" = 0 ] || { echo "run as root (pkexec navin-touchpad-rescue)" >&2; exit 1; }
+# NAVIN 2.0/2.1 name kept for older shortcuts; NAVIN 2.2.1 uses the repair engine.
+#   navin-touchpad-rescue [run|reset|status]
 case "${1:-run}" in
-  status) present && echo "touchpad/pointer present" || echo "no touchpad found"; [ -f "$SAVE" ] && echo "saved fallback: $(cat "$SAVE" | grep options)"; exit 0;;
-  reset) rm -f "$SAVE"; log "saved psmouse fallback removed (native driver on next boot)"; exit 0;;
-  run) ;;
-  *) echo "usage: navin-touchpad-rescue run|reset|status" >&2; exit 2;;
+  reset) exec /usr/lib/navin-os/navin-touchpad-repair.sh driver restore-default;;
+  status) exec /usr/lib/navin-os/navin-touchpad-repair.sh status;;
+  *) exec /usr/lib/navin-os/navin-touchpad-repair.sh run --manual;;
 esac
-[ -n "$(aux_ports)" ] || { echo "no PS/2 AUX port: nothing to rescue (USB/I2C touchpads use navin-hwdetect)"; exit 0; }
-present && { echo "touchpad already present"; exit 0; }
-for s in $(aux_ports); do echo -n reconnect > "$s/drvctl" 2>/dev/null; done
-sleep 2; present && { log "AUX port reconnect brought the touchpad back"; exit 0; }
-modprobe -r psmouse 2>/dev/null; modprobe psmouse; sleep 2
-present && { log "psmouse reload (native protocol) brought the touchpad back"; exit 0; }
-for proto in exps imps bare; do
-  modprobe -r psmouse 2>/dev/null; modprobe psmouse proto=$proto; sleep 2
-  if present; then
-    log "touchpad works with psmouse proto=$proto (basic mode: move, tap, scroll wheel)"
-    if [ ! -d /run/live ]; then
-      printf '# NAVIN 2.0 touchpad rescue: native protocol did not work on this laptop\noptions psmouse proto=%s\n' "$proto" > "$SAVE"
-      update-initramfs -u >/dev/null 2>&1 &
-    fi
-    exit 0
-  fi
-done
-modprobe -r psmouse 2>/dev/null; modprobe psmouse
-log "no touchpad responded. On Samsung laptops press Fn+F5 (hardware touchpad switch) and run the rescue again."
-exit 3

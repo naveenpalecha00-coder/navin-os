@@ -23,9 +23,7 @@ if "--apply" in args:
     log("detected: " + (", ".join(t["vendor"] + " " + t["bus"] for t in report["touchpad"]["touchpads"]) or "no touchpad"))
     q = report["quirks"]
     log("quirks: samsung=%s old_gpu=%s old_cpu=%s compositor=%s zram=%s boot=%s" % (q["samsung"], q["old_gpu"], q["old_cpu"], q["compositor"], q["zram_algo"], " ".join(q["kernel_params"]) or "-"))
-    if report["touchpad_missing"]:
-        # Laptop with a PS/2 AUX port but no touchpad: reset the controller in the background.
-        subprocess.run(["systemctl", "--no-block", "start", "navin-touchpad-rescue.service"], capture_output=True)
+    # Missing touchpads are handled by navin-touchpad-repair.service (runs right after this one).
 if "--json" in args:
     print(json.dumps(report, indent=1))
 elif "--quiet" not in args:

@@ -88,8 +88,22 @@ class BootMenu(unittest.TestCase):
 
 class Touchpad(unittest.TestCase):
     def test_login_forces_touchpad_on(self):
-        tp = (IC / 'usr/local/bin/navin-touchpad').read_text()
-        self.assertIn('[ "${2:-}" = --login ] && [ "$(get enabled)" = off ] && save enabled on', tp)
+        # NAVIN 2.2.1: the login rule lives in navin_tp.apply(login=True); the shell passes --login through.
+        import importlib.util, os, sys, tempfile
+        sys.path.insert(0, str(IC / 'usr/local/lib/navin'))
+        spec = importlib.util.spec_from_file_location('navin_tp', IC / 'usr/local/lib/navin/navin_tp.py')
+        tp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tp)
+        with tempfile.TemporaryDirectory() as d:
+            tp.CONF = pathlib.Path(d) / 'touchpad.conf'; tp.CONF.write_text('enabled=off\nspeed=0.5\n')
+            old = os.environ.pop('DISPLAY', None)
+            try:
+                tp.apply(login=True)
+            finally:
+                if old is not None:
+                    os.environ['DISPLAY'] = old
+            self.assertIn('enabled=on', tp.CONF.read_text())
+            self.assertIn('speed=0.5', tp.CONF.read_text())
+        self.assertIn('apply) apply ${2:-};;', (IC / 'usr/local/bin/navin-touchpad').read_text())
         self.assertIn('navin-touchpad apply --login', (IC / 'usr/local/bin/navin-session-init').read_text())
 
 

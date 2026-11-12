@@ -1,6 +1,6 @@
 import re
-BUILD = 40
-VERSION = "2.2"
+BUILD = 41
+VERSION = "2.2.1"
 VOICES = ("Kore", "Puck", "Charon", "Aoede", "Fenrir", "Leda")
 IMAGE_SIZES = ("1024x1024", "1536x1024")
 HOLD_SECONDS = 5
@@ -14,9 +14,9 @@ def release_build(tag):
  match = re.fullmatch(r"v2\.0-update\.(\d+)", tag)
  return int(match[1]) if match and int(match[1]) > 0 else None
 def os_version(tag):
- """'v2.1' -> (2, 1). Full NAVIN versions (new ISO / new Debian base); test tags return None."""
- match = re.fullmatch(r"v(\d+)\.(\d+)", tag)
- return (int(match[1]), int(match[2])) if match else None
+ """'v2.1' -> (2, 1), 'v2.2.1' -> (2, 2, 1). Full NAVIN versions (new ISO); test tags return None."""
+ match = re.fullmatch(r"v(\d+)\.(\d+)(?:\.(\d+))?", tag)
+ return (tuple(int(x) for x in match.groups() if x is not None)) if match else None
 def newer_os_release(releases, current=VERSION):
  """Newest stable full NAVIN version above `current` (needs a new ISO, not an OTA patch), or None."""
  cur = tuple(int(x) for x in current.split("."))

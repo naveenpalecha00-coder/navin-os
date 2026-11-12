@@ -923,7 +923,7 @@
      "n": 342,
      "name": "touchpad auto-detection",
      "kind": "file",
-     "ref": "usr/local/lib/navin/navin-touchpad-rescue::touchpad"
+     "ref": "usr/lib/navin-os/navin-touchpad-repair.sh::navin_tp.py"
     },
     {
      "n": 343,

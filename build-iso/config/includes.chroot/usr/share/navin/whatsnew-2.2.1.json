@@ -1,0 +1,132 @@
+{
+ "version": "2.2.1",
+ "title": "What's new in NAVIN 2.2.1",
+ "items": [
+  {
+   "category": "Touchpad",
+   "title": "Samsung RV411 BIOS fix: legacy-BIOS boot menu probes the PS/2 touchpad port directly (i8042.nopnp=1 i8042.noloop=1)",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "BIOS_TOUCH = \" i8042.nopnp=1 i8042.noloop=1\""
+  },
+  {
+   "category": "Touchpad",
+   "title": "UEFI boot menu adds the same touchpad port fix on Samsung laptops (read from SMBIOS)",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "smbios --type 1 --get-string 4 --set navin_vendor"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Installed Samsung laptops keep nomux/reset/nopnp/noloop in their boot menu",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "I8042_SAMSUNG = (\"i8042.nomux=1\", \"i8042.reset=1\", \"i8042.nopnp=1\", \"i8042.noloop=1\")"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Full Installation carries the Live touchpad fix to the installed system from its first start",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-grub-install",
+   "check": "NAVIN touchpad fix carried over from Live Mode"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Automatic touchpad repair engine at every start (navin-touchpad-repair.service)",
+   "path": "build-iso/config/includes.chroot/etc/systemd/system/navin-touchpad-repair.service",
+   "check": "ExecStart=/usr/lib/navin-os/navin-touchpad-repair.sh run --boot"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Repair runs only safe steps for the exact problem and reports success only after a new hardware scan",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-touchpad-repair.sh",
+   "check": "log \"VERIFIED: $(summary)\""
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad found in basic PS/2 mode (vendor driver failed) is now recognised and controlled",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "def is_internal_pointer(dev):"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Kernel log check: lost sync, ELAN/Synaptics/ALPS failures, SMBus, missing PS/2 port, I2C-HID, firmware, ACPI errors",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "KERNEL_LOG_ISSUES = ("
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad Control Center in Settings with AUTO DETECT & REPAIR TOUCHPAD and FORCE HARDWARE RESCAN",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "\"AUTO DETECT & REPAIR TOUCHPAD\""
+  },
+  {
+   "category": "Touchpad",
+   "title": "Real settings: on/off, speed, acceleration, tap, tap-and-drag, two-finger/edge scrolling, natural scrolling, right-click method, disable while typing, middle click, left-handed",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "def touchpad_props(settings, available):"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad performance modes: fast response, smooth movement, restore optimal",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "PERFORMANCE_PRESETS = {"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad hardware test counts only real events from the touchpad device",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "class TouchpadTest(Gtk.Window):"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad driver tools: information, reload module, update, reinstall, roll back, restore default, logs",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-touchpad-repair.sh",
+   "check": "rollback) d=$(cat \"$BACKUP/last\""
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad on/off keys (XF86TouchpadOn/Off) besides the toggle key",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "XF86TouchpadOff"
+  },
+  {
+   "category": "Touchpad",
+   "title": "After sleep the touchpad is checked once and repaired only if it did not come back",
+   "path": "build-iso/config/includes.chroot/usr/lib/systemd/system-sleep/navin-input",
+   "check": "navin-touchpad-repair.sh run --resume"
+  },
+  {
+   "category": "Fan",
+   "title": "Fan diagnosis: Samsung silent mode, disabled thermal zones, missing ACPI fan or temperature driver, overheating",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "def fan_diagnose("
+  },
+  {
+   "category": "Fan",
+   "title": "Samsung performance level follows the fan mode (silent / normal, never overclock)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-fan",
+   "check": "SAM=/sys/devices/platform/samsung/performance_level"
+  },
+  {
+   "category": "Fan",
+   "title": "Diagnose & repair fan button and fan logs",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "\"Diagnose & repair fan\""
+  },
+  {
+   "category": "Troubleshooter",
+   "title": "Touchpad & Fan Troubleshooter: quick/full scan, repair wizards, thermal and kernel input diagnostics, report export",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_center.py",
+   "check": "def p_troubleshoot(self):"
+  },
+  {
+   "category": "AI Doctor",
+   "title": "NAVIN AI Doctor finds touchpad and fan problems and offers the real repair",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-ai-doctor",
+   "check": "touchpad) pkexec /usr/lib/navin-os/navin-touchpad-repair.sh run --manual"
+  },
+  {
+   "category": "Release",
+   "title": "ISO size guard: the ISO must stay under 2 GB",
+   "path": ".github/workflows/build-iso.yml",
+   "check": "-gt 2000000000"
+  }
+ ]
+}

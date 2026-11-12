@@ -6,7 +6,7 @@
 #  * navin-thermal still forces full cooling at 90 C, whatever the slider says
 #  * no fan interface (many older laptops, e.g. Samsung RV411): "set" limits CPU speed instead (less heat)
 #  * "restore" (also run on any error and when navin-thermal stops) hands control back to BIOS/EC
-#   navin-fan status | silent | balanced | cooling | auto | restore | set 0..100 | capability   (legacy: turbo = cooling)
+#   navin-fan status | silent | balanced | cooling | auto | restore | repair | set 0..100 | capability   (legacy: turbo = cooling)
 set -u
 ORIG=/run/navin/fan-orig; mkdir -p /run/navin
 TP=/proc/acpi/ibm/fan
@@ -14,6 +14,12 @@ plat(){ local f=/sys/firmware/acpi/platform_profile c; [ -w $f ] || return 1; fo
 gov(){ for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do grep -qw "$1" "${f%/*}/scaling_available_governors" 2>/dev/null && echo "$1" > "$f"; done; }
 pwms(){ for p in /sys/class/hwmon/hwmon*/pwm[0-9]; do [ -w "$p" ] && [ -w "${p}_enable" ] && echo "$p"; done; }
 control(){ if [ -w $TP ] && grep -q '^commands:.*level' $TP; then echo thinkpad; elif [ -n "$(pwms)" ]; then echo hwmon-pwm; elif [ -w /sys/firmware/acpi/platform_profile ]; then echo platform-profile; else echo none; fi; }
+SAM=/sys/devices/platform/samsung/performance_level
+# Samsung SABI performance level (samsung_laptop): 'silent' keeps the EC fan slow; NAVIN never uses 'overclock'.
+samsung(){ [ -w $SAM ] || return 0; local want=normal; [ "$1" = silent ] && want=silent; { echo "$want" > $SAM && echo "samsung performance level: $want"; } 2>/dev/null || true; }
+# ACPI fans (thermal cooling devices of type Fan): only ever raised; the kernel thermal governor lowers them again.
+acpifan_max(){ for c in /sys/class/thermal/cooling_device*; do [ "$(cat $c/type 2>/dev/null)" = Fan ] && [ -w $c/cur_state ] && cat $c/max_state > $c/cur_state 2>/dev/null && echo "ACPI fan ${c##*/}: maximum"; done; return 0; }
+zones_refresh(){ for z in /sys/class/thermal/thermal_zone*; do [ -w $z/mode ] && [ "$(cat $z/mode)" = enabled ] && { echo disabled > $z/mode; echo enabled > $z/mode; }; done 2>/dev/null; return 0; }
 heat(){ # CPU speed limit in percent of maximum (100 = no limit)
   local pol max min t
   for pol in /sys/devices/system/cpu/cpufreq/policy*; do
@@ -35,22 +41,36 @@ trap 'restore' ERR
 case "${1:-status}" in
   status)
     echo "control=$(control)"
-    echo "platform=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo n/a)"
+    echo "platform=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo n/a) samsung=$(cat $SAM 2>/dev/null || echo n/a)"
     echo "slider=$(cat /run/navin/fan-slider 2>/dev/null || echo auto) cpu_limit=$(cat /run/navin/heat-limit 2>/dev/null || echo none)"
     [ -r $TP ] && grep -E '^(status|speed|level):' $TP | tr -s '\t ' ' '
     for h in /sys/class/hwmon/hwmon*; do [ -d "$h" ] || continue; n=$(cat $h/name); for f in $h/fan*_input; do [ -f "$f" ] && echo "fan $n $(basename ${f%_input})=$(cat $f) rpm"; done; done
     exit 0;;
-  silent) restore; plat quiet low-power cool balanced; gov powersave; echo "silent: firmware keeps fan control; low-power platform profile";;
-  balanced|auto) restore; plat balanced; /usr/local/bin/navin-power apply >/dev/null 2>&1; echo "$1: BIOS/EC automatic fan control";;
+  silent) restore; plat quiet low-power cool balanced; gov powersave; samsung silent; echo "silent: firmware keeps fan control; low-power platform profile";;
+  balanced|auto) restore; plat balanced; samsung normal; /usr/local/bin/navin-power apply >/dev/null 2>&1; echo "$1: BIOS/EC automatic fan control";;
   cooling|turbo)
     plat cool balanced
     gov powersave
+    samsung normal; acpifan_max
     case "$(control)" in
       thinkpad) echo 'level 7' > $TP && echo "cooling: ThinkPad fan level 7";;
       hwmon-pwm) [ -f $ORIG ] || for p in $(pwms); do echo "$p $(cat ${p}_enable) $(cat $p)" >> $ORIG; done; for p in $(pwms); do echo 1 > "${p}_enable" && echo 255 > "$p"; done; echo "cooling: PWM fans at maximum";;
       *) echo "cooling: no safe fan-speed interface; using cool/low-heat CPU settings only (monitoring mode)";;
     esac;;
-  restore) restore; heat 100; echo "restored BIOS/EC automatic fan control";;
+  restore) restore; heat 100; zones_refresh; echo "restored BIOS/EC automatic fan control";;
+  repair) # NAVIN 2.2.1: fix the software causes found by navin_hw.fan_diagnose (Settings › Fan › Diagnose & Repair)
+    L=/var/log/navin/fan.log; mkdir -p /var/log/navin
+    for a in $(python3 /usr/local/lib/navin/navin_tp.py fan --json | jq -r '.actions[]'); do
+      case "$a" in
+        samsung-normal) samsung normal;;
+        load-samsung) if [ ! -d /sys/firmware/efi ] && modprobe samsung_laptop; then echo "loaded samsung_laptop"; else echo "samsung_laptop not loaded (it refuses UEFI boots to protect the BIOS)"; fi;;
+        enable-zones) for z in /sys/class/thermal/thermal_zone*; do [ "$(cat $z/mode 2>/dev/null)" = disabled ] && echo enabled > $z/mode && echo "enabled ${z##*/}"; done;;
+        load-fan) modprobe fan && echo "loaded ACPI fan driver";;
+        load-sensors) grep -q GenuineIntel /proc/cpuinfo && modprobe coretemp; grep -q AuthenticAMD /proc/cpuinfo && modprobe k10temp; echo "loaded temperature driver";;
+        *) echo "refused: $a";;
+      esac | while read -r l; do echo "$(date '+%F %T') $l" >> $L; echo "$l"; done
+    done
+    python3 /usr/local/lib/navin/navin_tp.py fan; exit 0;;
   capability) # readable without root (for the slider screen)
     if [ -r $TP ] && grep -q '^commands:.*level' $TP; then echo thinkpad
     elif ls /sys/class/hwmon/hwmon*/pwm[0-9]_enable >/dev/null 2>&1; then echo hwmon-pwm
@@ -76,5 +96,5 @@ case "${1:-status}" in
       esac
     fi
     echo "$2" > /run/navin/fan-slider;;
-  *) echo "usage: navin-fan status|silent|balanced|cooling|auto|restore|set 0..100|capability" >&2; exit 2;;
+  *) echo "usage: navin-fan status|silent|balanced|cooling|auto|restore|repair|set 0..100|capability" >&2; exit 2;;
 esac
