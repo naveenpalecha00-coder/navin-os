@@ -220,3 +220,5 @@ grub-pc-bin
 xserver-xorg-video-intel
 # lz4: fast start-up image compression (initramfs COMPRESS=lz4)
 lz4
+# ---- NAVIN 2.1: NAVIN Toolbox (PDF merge/split/compress, Wi-Fi QR, disk health) ----
+qpdf ghostscript qrencode smartmontools

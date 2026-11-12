@@ -91,10 +91,8 @@ class OldLaptop(unittest.TestCase):
         self.assertNotIn('options psmouse', conf)
         self.assertNotIn('enable_fbc=1', conf)
 
-    def test_boot_menu_has_old_laptop_mode_and_3s_timeout(self):
+    def test_boot_menu_3s_timeout(self):
         hook = (ROOT / 'config/hooks/live/02-navin-bootmenu.hook.binary').read_text()
-        self.assertIn('Old Laptop Mode', hook)
-        self.assertIn('i8042.nomux=1 i8042.reset=1 navin.oldlaptop=1', hook)
         self.assertIn('set timeout=3', hook)
         self.assertIn('GRUB_TIMEOUT=3', (IC / 'etc/default/grub.d/navin.cfg').read_text())
 
@@ -164,9 +162,9 @@ class WhatsNew(unittest.TestCase):
 
     def test_version_strings(self):
         hook = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
-        self.assertIn('PRETTY_NAME="NAVIN 2.0 (Debian 13 Trixie base)"', hook)
-        self.assertIn("printf '20\\n' > /etc/navin/build", hook)
-        self.assertIn('navin-2.0-x86_64.iso', (ROOT / 'build.sh').read_text())
+        self.assertIn('PRETTY_NAME="NAVIN 2.1 (Debian 13 Trixie base)"', hook)
+        self.assertIn("printf '30\\n' > /etc/navin/build", hook)
+        self.assertIn('navin-2.1-x86_64.iso', (ROOT / 'build.sh').read_text())
 
 
 if __name__ == '__main__':

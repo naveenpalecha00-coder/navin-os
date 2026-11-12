@@ -1,5 +1,7 @@
 #!/bin/bash
-# NAVIN 2.0 touchpad control (libinput through xinput, per user, persistent).
+# NAVIN 2.1 touchpad control (libinput through xinput, per user, persistent).
+#   apply --login : used at every login — the touchpad is always switched ON again, so a stray Fn/toggle
+#                   press (or a Samsung hardware toggle) can never leave it off after a restart.
 #   navin-touchpad status | on | off | toggle | speed -1..1 | scroll 5..50 | tap on|off | drag on|off | natural on|off | pinch on|off | apply
 #   navin-touchpad doctor | rescue | quirks on|off   (old laptops: missing or stuttering touchpad)
 CONF="$HOME/.config/navin/touchpad.conf"; mkdir -p "${CONF%/*}"
@@ -51,6 +53,6 @@ case "${1:-status}" in
   pinch) [[ "${2:-}" =~ ^(on|off)$ ]] || { echo "pinch on|off" >&2; exit 2; }
     # Gesture service is system-wide (root); the setting lives in /etc/navin/gestures.conf.
     echo "pinch=$2" | pkexec /usr/bin/tee /etc/navin/gestures.conf >/dev/null && pkexec /usr/bin/systemctl restart navin-gestures.service && notify-send -i input-touchpad "Pinch to zoom $2" 2>/dev/null;;
-  apply) apply;;
+  apply) [ "${2:-}" = --login ] && [ "$(get enabled)" = off ] && save enabled on; apply;;
   *) echo "usage: navin-touchpad status|on|off|toggle|speed N|scroll N|tap on/off|drag on/off|natural on/off|pinch on/off|apply|doctor|rescue|quirks on/off" >&2; exit 2;;
 esac

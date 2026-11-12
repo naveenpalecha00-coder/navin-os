@@ -509,7 +509,7 @@
    "category": "Tools",
    "title": "Welcome window: What's new button",
    "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_desktop.py",
-   "check": "What's new in NAVIN 2.0"
+   "check": "What's new in NAVIN 2."
   },
   {
    "category": "Tools",

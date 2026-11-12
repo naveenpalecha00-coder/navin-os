@@ -7,6 +7,9 @@ connection=display.Display(); keys={name:connection.keysym_to_keycode(XK.string_
 last_privacy=0
 thermal_level='ok'
 usb=set(pathlib.Path('/sys/bus/usb/devices').glob('*')); last_bt=0
+# NAVIN 2.1 (less lag on dual-core laptops): USB check every 2 s, privacy check every 15 s,
+# Bluetooth only when an adapter exists, nothing run while no camera/mic device exists.
+has_bt=pathlib.Path('/sys/class/bluetooth').is_dir() and any(pathlib.Path('/sys/class/bluetooth').iterdir())
 while True:
  try:
   state=connection.query_keymap()
@@ -20,10 +23,10 @@ while True:
      subprocess.Popen(cmd)
    else:started.pop(name,None); fired.discard(name)
   tick=getattr(connection,'_navin_tick',0)+1; connection._navin_tick=tick
-  now=set(pathlib.Path('/sys/bus/usb/devices').glob('*')) if tick%5==0 else usb
+  now=set(pathlib.Path('/sys/bus/usb/devices').glob('*')) if tick%8==0 else usb
   if now!=usb:
    sound='device-added.oga' if len(now)>len(usb) else 'device-removed.oga'; subprocess.Popen(['paplay','/usr/share/sounds/freedesktop/stereo/'+sound]); usb=now
-  if time.monotonic()-last_privacy>10:
+  if time.monotonic()-last_privacy>15:
    last_privacy=time.monotonic()
    # NAVIN OS 1.2: overheating warnings from the root thermal guard (/run/navin/thermal.json)
    try:
@@ -36,11 +39,11 @@ while True:
    status=subprocess.run(['pactl','list','source-outputs'],capture_output=True,text=True,timeout=3).stdout
    active_mic='Source Output #' in status
    videos=list(pathlib.Path('/dev').glob('video*'))
-   active_camera=bool(videos and subprocess.run(['fuser',*map(str,videos)],capture_output=True,text=True,timeout=3).stdout.strip())
+   active_camera=bool(videos and not active_mic and subprocess.run(['fuser',*map(str,videos)],capture_output=True,text=True,timeout=3).stdout.strip())
    if active_mic or active_camera:
     subprocess.Popen(['notify-send','--hint=string:x-canonical-private-synchronous:navin-privacy','-t','3500','Privacy',('Microphone active' if active_mic else '')+(' · Camera active' if active_camera else '')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   # Reconnect trusted, paired earbuds only; never newly pair devices automatically.
-  if time.monotonic()-last_bt>60:
+  if has_bt and time.monotonic()-last_bt>120:
    last_bt=time.monotonic()
    info=subprocess.run(['bluetoothctl','devices','Trusted'],capture_output=True,text=True,timeout=5)
    for line in info.stdout.splitlines():

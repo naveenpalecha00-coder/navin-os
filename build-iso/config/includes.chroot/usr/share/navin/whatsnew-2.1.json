@@ -1,0 +1,305 @@
+{
+ "version": "2.1",
+ "items": [
+  {
+   "category": "Boot",
+   "title": "Boot menu shows only two choices: Live Mode and Full Installation",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "two choices only"
+  },
+  {
+   "category": "Boot",
+   "title": "Safe Graphics (black-screen fix) moved into the Tools submenu",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "Tools (memory test, safe graphics)"
+  },
+  {
+   "category": "Boot",
+   "title": "Live USB boots with the PS/2 touchpad controller fix on every laptop",
+   "path": "build-iso/auto/config",
+   "check": "persistence i8042.nomux=1 i8042.reset=1"
+  },
+  {
+   "category": "Boot",
+   "title": "Installed system boots with the same touchpad controller fix",
+   "path": "build-iso/config/includes.chroot/etc/default/grub.d/navin.cfg",
+   "check": "GRUB_CMDLINE_LINUX_DEFAULT=\"i8042.nomux=1 i8042.reset=1"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpad is switched on again at every login (a stray toggle can't keep it off)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-touchpad",
+   "check": "apply --login"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Touchpads that appear late get their settings again 15 s after login",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-session-init",
+   "check": "sleep 15; navin-touchpad apply --login"
+  },
+  {
+   "category": "Touchpad",
+   "title": "Normal (not reversed) scrolling from the first second",
+   "path": "build-iso/config/includes.chroot/etc/X11/xorg.conf.d/40-navin-touchpad.conf",
+   "check": "\"NaturalScrolling\" \"false\""
+  },
+  {
+   "category": "Speed",
+   "title": "Background service checks USB every 2 s instead of 1.25 s",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-session-daemon",
+   "check": "tick%8==0"
+  },
+  {
+   "category": "Speed",
+   "title": "Privacy (mic/camera) check every 15 s and skips the camera scan while the mic is in use",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-session-daemon",
+   "check": "not active_mic and"
+  },
+  {
+   "category": "Speed",
+   "title": "Bluetooth earbud reconnect only runs when a Bluetooth adapter exists",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-session-daemon",
+   "check": "has_bt and"
+  },
+  {
+   "category": "Speed",
+   "title": "Disk health daemon is not left running (Toolbox asks the disk only when you click)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "systemctl disable smartmontools.service"
+  },
+  {
+   "category": "Shortcuts",
+   "title": "Ctrl+Alt+Delete opens Lock / Switch user / Sign out / Change password / Task Manager",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "navin-security-options"
+  },
+  {
+   "category": "Shortcuts",
+   "title": "Win+Tab shows all open windows",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "&lt;Super&gt;Tab"
+  },
+  {
+   "category": "Shortcuts",
+   "title": "Win+Ctrl+D adds a new desktop, Win+Ctrl+F4 removes one",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-workspace",
+   "check": "workspace_count(cur, action)"
+  },
+  {
+   "category": "Shortcuts",
+   "title": "Win+Ctrl+Left/Right switch desktops",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "&lt;Primary&gt;&lt;Super&gt;Left"
+  },
+  {
+   "category": "Shortcuts",
+   "title": "Win+B opens NAVIN Toolbox",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "&lt;Super&gt;b"
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Large File Finder",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"large\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Duplicate File Finder (SHA-256)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"dupes\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Folder Size View",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"sizes\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: File Content Search",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"search\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Checksum Generator (MD5/SHA-1/SHA-256)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"checksum\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Secure File Shredder (home/USB files only)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"shred\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Organize Downloads by file type",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"organize\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Batch Rename with collision check",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"rename\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: PDF Merger",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"pdfmerge\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: PDF Splitter",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"pdfsplit\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: PDF Compressor",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"pdfsmall\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Image Resizer & Format Converter",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"image\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Video Trimmer (no re-encoding)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"trim\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Audio Recorder",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"record\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Webcam Preview",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"webcam\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: DNS Speed Check (real lookups, 4 servers)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"dns\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Network Usage Monitor",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"netuse\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Share Wi-Fi by QR code",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"wifiqr\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Internet Troubleshooter",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"nettrouble\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Startup Time Analyzer",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"boot\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Service Manager",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"services\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Kernel Information",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"kernel\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Error Log Viewer",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"logs\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Battery Health",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"battery\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Disk Health (SMART)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"disk\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: USB Devices",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"usb\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: System Health Report into Documents",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"report\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Pomodoro Timer",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"pomodoro\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Focus Mode (silent notifications)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"focus\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Window Always on Top",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"ontop\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox: Keyboard Key Tester (Fn keys too)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"keys\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "NAVIN Toolbox in the app menu",
+   "path": "build-iso/config/includes.chroot/usr/share/applications/navin-toolbox.desktop",
+   "check": "Exec=navin-toolbox"
+  },
+  {
+   "category": "Toolbox",
+   "title": "PDF, Wi-Fi QR and disk tools installed (qpdf, ghostscript, qrencode, smartmontools)",
+   "path": "build-iso/config/package-lists/navin-os.list.chroot",
+   "check": "qpdf ghostscript qrencode smartmontools"
+  },
+  {
+   "category": "Welcome",
+   "title": "Welcome window opens NAVIN Toolbox and What's New in 2.1",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_desktop.py",
+   "check": "('NAVIN Toolbox','navin-toolbox')"
+  }
+ ]
+}

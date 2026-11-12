@@ -1,0 +1,450 @@
+#!/usr/bin/python3
+"""NAVIN Toolbox (NAVIN 2.1): real everyday tools in one light window.
+Files · PDF & Media · Network · System · Productivity. Logic and command lines come from navin_tools.py
+(unit-tested); this window only collects the inputs, runs the real program and shows its real output.
+Usage: navin-toolbox [tool-id]"""
+import gi, os, pathlib, shutil, subprocess, sys, threading, time
+sys.path.insert(0, "/usr/local/lib/navin")
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
+import navin_tools as T
+
+HOME = os.path.expanduser("~")
+CSS = b"""
+window { background: #F4F7FB; color: #111; }
+.side { background: #FFFFFF; border-right: 1px solid #DCE6F5; }
+.side row:selected { background: #1677F2; color: #FFF; }
+.cat { color: #5A6B85; font-weight: bold; margin: 10px 8px 2px 8px; }
+.title { font-size: 18px; font-weight: bold; }
+.hint { color: #555; }
+textview, textview text { background: #FFFFFF; font-family: monospace; }
+button.run { background: #1677F2; color: #FFF; border-radius: 8px; padding: 6px 18px; }
+"""
+
+
+def which(prog):
+    return shutil.which(prog) is not None
+
+
+class Out:
+    """Thread-safe output box."""
+    def __init__(self, view):
+        self.buf = view.get_buffer()
+
+    def clear(self):
+        GLib.idle_add(lambda: self.buf.set_text("") or False)
+
+    def write(self, text):
+        def add():
+            self.buf.insert(self.buf.get_end_iter(), text if text.endswith("\n") else text + "\n")
+            return False
+        GLib.idle_add(add)
+
+
+def run_cmd(cmd, out, ok_msg=None, timeout=None):
+    prog = cmd[1] if cmd[0] == "pkexec" else cmd[0]
+    if not which(prog):
+        out.write(f"'{prog}' is not installed on this system.")
+        return False
+    out.write("$ " + " ".join(cmd))
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        out.write("Stopped: took too long.")
+        return False
+    if p.stdout.strip():
+        out.write(p.stdout.strip()[:20000])
+    if p.returncode != 0:
+        out.write((p.stderr.strip() or f"failed (exit {p.returncode})")[:4000])
+        return False
+    if ok_msg:
+        out.write(ok_msg)
+    return True
+
+
+def need(v, *keys):
+    for k in keys:
+        if not v.get(k):
+            raise ValueError(f"Please choose: {k}")
+
+
+# ---------------- tools (id, category, name, help, fields, function) ----------------
+
+def t_large(v, out):
+    need(v, "folder")
+    out.write(f"Scanning {v['folder']} for files over {v['min MB']} MB ...")
+    res = T.large_files(T.walk_files(v["folder"]), int(v["min MB"] or 100) * 1024 * 1024)
+    out.write("\n".join(f"{T.human_size(s):>10}  {p}" for p, s in res) or "No files that large.")
+
+
+def t_dupes(v, out):
+    need(v, "folder")
+    out.write("Comparing files with the same size by SHA-256 ...")
+    groups = T.duplicate_groups(list(T.walk_files(v["folder"])), min_bytes=1024)
+    if not groups:
+        out.write("No duplicate files found."); return
+    waste = sum(s * (len(g) - 1) for s, g in groups)
+    out.write(f"{len(groups)} groups, {T.human_size(waste)} could be freed by keeping one copy of each:")
+    for s, g in groups[:200]:
+        out.write(f"\n{T.human_size(s)}:\n  " + "\n  ".join(g))
+
+
+def t_sizes(v, out):
+    need(v, "folder")
+    for name, s in T.folder_sizes(v["folder"], T.walk_files(v["folder"]))[:60]:
+        out.write(f"{T.human_size(s):>10}  {'#' * max(1, min(40, int(s / max(1, 1 << 24))))}  {name}")
+
+
+def t_search(v, out):
+    need(v, "folder", "text")
+    run_cmd(T.content_search_cmd(v["folder"], v["text"]), out, timeout=300) or out.write("No file contains that text.")
+
+
+def t_checksum(v, out):
+    need(v, "file")
+    for algo in ("md5", "sha1", "sha256"):
+        out.write(f"{algo.upper():7} {T.file_hash(v['file'], algo)}")
+
+
+def t_shred(v, out):
+    need(v, "file")
+    if not T.safe_user_path(v["file"], HOME):
+        out.write("Only your own files (home folder or USB drives) can be shredded."); return
+    if confirm(f"Destroy {os.path.basename(v['file'])} permanently? It cannot be recovered."):
+        run_cmd(T.shred_cmd(v["file"]), out, "File overwritten and deleted.")
+
+
+def t_organize(v, out):
+    folder = v.get("folder") or os.path.join(HOME, "Downloads")
+    if not T.safe_user_path(folder, HOME):
+        out.write("Choose a folder inside your home folder."); return
+    names = [n for n in os.listdir(folder) if os.path.isfile(os.path.join(folder, n))]
+    existing = [f"{c}/{n}" for c in T.CATEGORIES if os.path.isdir(os.path.join(folder, c)) for n in os.listdir(os.path.join(folder, c))]
+    plan = T.organize_plan(names, existing)
+    for old, new in plan:
+        os.makedirs(os.path.join(folder, os.path.dirname(new)), exist_ok=True)
+        os.rename(os.path.join(folder, old), os.path.join(folder, new))
+        out.write(f"{old}  ->  {new}")
+    out.write(f"{len(plan)} files sorted." if plan else "Nothing to sort.")
+
+
+def t_rename(v, out):
+    need(v, "folder", "pattern")
+    folder = v["folder"]
+    names = [n for n in os.listdir(folder) if os.path.isfile(os.path.join(folder, n)) and not n.startswith(".")]
+    plan = T.batch_rename_plan(names, v["pattern"], int(v.get("start") or 1))
+    clash = [n for o, n in plan if os.path.exists(os.path.join(folder, n)) and n not in names]
+    if clash:
+        out.write("Stopped: these names already exist: " + ", ".join(clash[:10])); return
+    tmp = [(o, n, f".navin-rename-{i}") for i, (o, n) in enumerate(plan)]
+    for o, n, t in tmp:
+        os.rename(os.path.join(folder, o), os.path.join(folder, t))
+    for o, n, t in tmp:
+        os.rename(os.path.join(folder, t), os.path.join(folder, n)); out.write(f"{o}  ->  {n}")
+
+
+def t_pdf_merge(v, out):
+    files = v.get("files") or []
+    need(v, "save")
+    run_cmd(T.pdf_merge_cmd(files, v["save"]), out, f"Saved {v['save']}")
+
+
+def t_pdf_split(v, out):
+    need(v, "file")
+    run_cmd(T.pdf_split_cmd(v["file"], os.path.dirname(v["file"])), out, "Pages saved next to the original PDF.")
+
+
+def t_pdf_compress(v, out):
+    need(v, "file")
+    dst = os.path.splitext(v["file"])[0] + f"-{v['level']}.pdf"
+    if run_cmd(T.pdf_compress_cmd(v["file"], dst, v["level"]), out):
+        out.write(f"{T.human_size(os.path.getsize(v['file']))} -> {T.human_size(os.path.getsize(dst))}  ({dst})")
+
+
+def t_image(v, out):
+    need(v, "file", "format")
+    dst = os.path.splitext(v["file"])[0] + (f"-{v['width']}px" if v.get("width") else "-converted") + "." + v["format"]
+    run_cmd(T.image_convert_cmd(v["file"], dst, v.get("width") or None), out, f"Saved {dst}")
+
+
+def t_trim(v, out):
+    need(v, "file", "start", "end")
+    base, ext = os.path.splitext(v["file"])
+    run_cmd(T.video_trim_cmd(v["file"], f"{base}-trim{ext}", v["start"], v["end"]), out, f"Saved {base}-trim{ext}")
+
+
+def t_record(v, out):
+    dst = os.path.join(HOME, "Music", time.strftime("Recording %Y-%m-%d %H-%M-%S.ogg"))
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    out.write(f"Recording {v['seconds']} s from the microphone ...")
+    run_cmd(T.audio_record_cmd(dst, v["seconds"]), out, f"Saved {dst}")
+
+
+def t_webcam(v, out):
+    if not list(pathlib.Path("/dev").glob("video*")):
+        out.write("No camera found on this computer."); return
+    subprocess.Popen(["guvcview"]); out.write("Camera preview opened.")
+
+
+def t_dns(v, out):
+    host = v.get("text") or "debian.org"
+    for name, ip in T.DNS_SERVERS:
+        ms = T.dns_time_ms(ip, host)
+        out.write(f"{name:11} {ip:16} {'%6.1f ms' % ms if ms is not None else '  no answer'}")
+
+
+def t_netuse(v, out):
+    import psutil
+    a = psutil.net_io_counters(pernic=True); time.sleep(5); b = psutil.net_io_counters(pernic=True)
+    for nic in b:
+        if nic == "lo" or nic not in a:
+            continue
+        down = T.rate(a[nic].bytes_recv, b[nic].bytes_recv, 5); up = T.rate(a[nic].bytes_sent, b[nic].bytes_sent, 5)
+        out.write(f"{nic:10} down {T.human_size(down)}/s   up {T.human_size(up)}/s   total since boot {T.human_size(b[nic].bytes_recv)} / {T.human_size(b[nic].bytes_sent)}")
+
+
+def t_wifiqr(v, out):
+    ssid = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], capture_output=True, text=True).stdout
+    ssid = next((l.split(":", 1)[1] for l in ssid.splitlines() if l.startswith("yes:")), "")
+    if not ssid:
+        out.write("Not connected to Wi-Fi."); return
+    pw = subprocess.run(["nmcli", "-s", "-g", "802-11-wireless-security.psk", "connection", "show", ssid], capture_output=True, text=True).stdout.strip()
+    png = os.path.join(GLib.get_user_runtime_dir() or "/tmp", "navin-wifi-qr.png")
+    if run_cmd(["qrencode", "-s", "10", "-o", png, T.wifi_qr_payload(ssid, pw)], out):
+        GLib.idle_add(show_image, png, f"Scan to join {ssid}"); out.write(f"QR code for {ssid} shown. Phones join by scanning it.")
+
+
+def t_nettrouble(v, out):
+    gw = subprocess.run(["ip", "route", "show", "default"], capture_output=True, text=True).stdout.split()
+    gw = gw[2] if len(gw) > 2 else ""
+    out.write("1. Network connection: " + ("router " + gw if gw else "NOT connected (connect Wi-Fi or cable)"))
+    if gw:
+        out.write("2. Router reachable: " + ("yes" if subprocess.run(["ping", "-c", "2", "-W", "2", gw], capture_output=True).returncode == 0 else "NO"))
+    out.write("3. Internet (1.1.1.1): " + ("yes" if subprocess.run(["ping", "-c", "2", "-W", "3", "1.1.1.1"], capture_output=True).returncode == 0 else "NO"))
+    ms = T.dns_time_ms("1.1.1.1")
+    out.write("4. Name lookup (DNS): " + (f"works ({ms} ms)" if ms else "NOT working - try Settings > Network > DNS 1.1.1.1"))
+
+
+def t_boot(v, out):
+    p = subprocess.run(["systemd-analyze"], capture_output=True, text=True); out.write(p.stdout.strip() or p.stderr.strip())
+    b = subprocess.run(["systemd-analyze", "blame"], capture_output=True, text=True).stdout
+    out.write("\nSlowest start-up items:")
+    for s, u in T.parse_blame(b):
+        out.write(f"{s:8.2f} s  {u}")
+
+
+def t_services(v, out):
+    if v.get("service") and v.get("action") != "show":
+        run_cmd(T.service_cmd(v["action"], v["service"]), out, f"{v['action']} {v['service']}: done")
+    text = subprocess.run(["systemctl", "list-units", "--type=service", "--all", "--no-legend", "--plain"], capture_output=True, text=True).stdout
+    for unit, active, sub, desc in T.parse_services(text):
+        out.write(f"{active:9} {sub:9} {unit:40} {desc}")
+
+
+def t_kernel(v, out):
+    u = os.uname(); out.write(f"Kernel  : {u.release}\nBuilt   : {u.version}\nMachine : {u.machine}")
+    out.write("Boot options: " + pathlib.Path("/proc/cmdline").read_text().strip())
+    run_cmd(["lsmod"], out)
+
+
+def t_logs(v, out):
+    run_cmd(["journalctl", "-b", "-p", "3", "--no-pager", "-n", "300"], out) or out.write("Tip: errors need the 'adm' group or administrator rights.")
+
+
+def t_battery(v, out):
+    bats = [b for b in pathlib.Path("/sys/class/power_supply").glob("BAT*")]
+    if not bats:
+        out.write("No battery found (desktop PC or battery removed)."); return
+    rd = lambda b, n: (b / n).read_text().strip() if (b / n).exists() else None
+    for b in bats:
+        full = rd(b, "energy_full") or rd(b, "charge_full"); design = rd(b, "energy_full_design") or rd(b, "charge_full_design")
+        h = T.battery_health(full, design)
+        out.write(f"{b.name}: {rd(b, 'status')}, {rd(b, 'capacity')}% charged, health {f'{h}% of new' if h else 'not reported by this battery'}, cycles {rd(b, 'cycle_count') or '-'}")
+
+
+def t_disk(v, out):
+    disks = [l.split()[0] for l in subprocess.run(["lsblk", "-dno", "NAME,TYPE"], capture_output=True, text=True).stdout.splitlines() if l.endswith("disk")]
+    for d in disks:
+        run_cmd(["pkexec", "smartctl", "-H", "-A", f"/dev/{d}"], out, timeout=60)
+
+
+def t_usb(v, out):
+    run_cmd(["lsusb"], out)
+
+
+def t_report(v, out):
+    import psutil
+    grab = lambda c: subprocess.run(c, capture_output=True, text=True).stdout if which(c[0]) else ""
+    sections = [("System", grab(["fastfetch", "--pipe"]) or grab(["uname", "-a"])),
+                ("Memory", f"RAM {T.human_size(psutil.virtual_memory().total)}, used {psutil.virtual_memory().percent}%  swap/ZRAM used {psutil.swap_memory().percent}%"),
+                ("Disks", grab(["df", "-h", "-x", "tmpfs", "-x", "devtmpfs", "-x", "squashfs"])),
+                ("Start-up", grab(["systemd-analyze"])), ("Failed services", grab(["systemctl", "--failed", "--no-legend"])),
+                ("Hardware fixes", grab(["navin-hwdetect"])), ("Touchpad", grab(["navin-touchpad", "doctor"])),
+                ("Errors this boot", grab(["journalctl", "-b", "-p", "3", "--no-pager", "-n", "80"]))]
+    dst = os.path.join(HOME, "Documents", time.strftime("NAVIN health report %Y-%m-%d %H-%M.txt"))
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    pathlib.Path(dst).write_text(T.health_report(sections)); out.write(f"Report saved: {dst}")
+    subprocess.Popen(["xdg-open", dst])
+
+
+def t_pomodoro(v, out):
+    rounds = int(v.get("rounds") or 4) * 2
+    for i in range(rounds):
+        name, secs = T.pomodoro_step(i)
+        out.write(f"{time.strftime('%H:%M')}  {name} for {secs // 60} minutes")
+        subprocess.run(["notify-send", "-i", "alarm-symbolic", "Pomodoro", f"{name}: {secs // 60} minutes"])
+        time.sleep(secs)
+    subprocess.run(["notify-send", "Pomodoro", "All rounds finished. Well done!"]); out.write("Finished.")
+
+
+def t_focus(v, out):
+    cur = subprocess.run(["xfconf-query", "-c", "xfce4-notifyd", "-p", "/do-not-disturb"], capture_output=True, text=True).stdout.strip() == "true"
+    new = "false" if cur else "true"
+    subprocess.run(["xfconf-query", "-c", "xfce4-notifyd", "-p", "/do-not-disturb", "-n", "-t", "bool", "-s", new])
+    out.write("Focus mode ON: notifications are silent." if new == "true" else "Focus mode OFF: notifications are back.")
+
+
+def t_ontop(v, out):
+    out.write("Click the window that should stay on top (click it again later and run this tool to undo).")
+    run_cmd(["wmctrl", "-r", ":SELECT:", "-b", "toggle,above"], out, "Done: that window now toggles always-on-top.")
+
+
+def t_keys(v, out):
+    GLib.idle_add(key_tester)
+
+
+TOOLS = [
+    ("large", "Files", "Large File Finder", "Biggest files in a folder.", [("folder", "folder"), ("min MB", "text:100")], t_large),
+    ("dupes", "Files", "Duplicate File Finder", "Identical files (same SHA-256). Nothing is deleted.", [("folder", "folder")], t_dupes),
+    ("sizes", "Files", "Folder Size View", "How much space each sub-folder uses.", [("folder", "folder")], t_sizes),
+    ("search", "Files", "File Content Search", "Find files that contain some text.", [("folder", "folder"), ("text", "text")], t_search),
+    ("checksum", "Files", "Checksum Generator", "MD5, SHA-1 and SHA-256 of a file.", [("file", "file")], t_checksum),
+    ("shred", "Files", "Secure File Shredder", "Overwrite a file and delete it for good.", [("file", "file")], t_shred),
+    ("organize", "Files", "Organize Downloads", "Sort files into Images, Videos, Music, Documents, Archives, Programs.", [("folder", "folder")], t_organize),
+    ("rename", "Files", "Batch Rename", "Pattern: {name}, {n} (number), {ext}. Example: Holiday {n}", [("folder", "folder"), ("pattern", "text:{name} {n}"), ("start", "text:1")], t_rename),
+    ("pdfmerge", "PDF & Media", "PDF Merger", "Join PDFs in the order chosen.", [("files", "files"), ("save", "save:merged.pdf")], t_pdf_merge),
+    ("pdfsplit", "PDF & Media", "PDF Splitter", "One PDF per page, next to the original.", [("file", "file")], t_pdf_split),
+    ("pdfsmall", "PDF & Media", "PDF Compressor", "Smaller PDF for e-mail/WhatsApp.", [("file", "file"), ("level", "choice:medium,small,print")], t_pdf_compress),
+    ("image", "PDF & Media", "Image Resizer & Converter", "Width in pixels (empty = same size).", [("file", "file"), ("width", "text:"), ("format", "choice:jpg,png,webp,bmp")], t_image),
+    ("trim", "PDF & Media", "Video Trimmer", "Cut without re-encoding (fast). Times as HH:MM:SS.", [("file", "file"), ("start", "text:00:00:00"), ("end", "text:00:01:00")], t_trim),
+    ("record", "PDF & Media", "Audio Recorder", "Records the microphone into Music.", [("seconds", "text:60")], t_record),
+    ("webcam", "PDF & Media", "Webcam Preview", "Opens the camera preview.", [], t_webcam),
+    ("dns", "Network", "DNS Speed Check", "Real lookups against 4 public DNS servers.", [("text", "text:debian.org")], t_dns),
+    ("netuse", "Network", "Network Usage Monitor", "Measures 5 seconds of traffic.", [], t_netuse),
+    ("wifiqr", "Network", "Share Wi-Fi by QR", "Shows a QR code of the current Wi-Fi.", [], t_wifiqr),
+    ("nettrouble", "Network", "Internet Troubleshooter", "Checks cable/Wi-Fi, router, internet and DNS step by step.", [], t_nettrouble),
+    ("boot", "System", "Startup Time Analyzer", "How long start-up took and what was slowest.", [], t_boot),
+    ("services", "System", "Service Manager", "List services; start/stop/restart/enable/disable one (asks for password).", [("service", "text:"), ("action", "choice:show,start,stop,restart,enable,disable")], t_services),
+    ("kernel", "System", "Kernel Information", "Kernel version, boot options and loaded drivers.", [], t_kernel),
+    ("logs", "System", "Error Log Viewer", "Errors recorded since this start-up.", [], t_logs),
+    ("battery", "System", "Battery Health", "Charge, health compared to new, cycles.", [], t_battery),
+    ("disk", "System", "Disk Health (SMART)", "Asks the disks for their health (password).", [], t_disk),
+    ("usb", "System", "USB Devices", "Everything plugged into USB.", [], t_usb),
+    ("report", "System", "System Health Report", "Saves a full report into Documents.", [], t_report),
+    ("pomodoro", "Productivity", "Pomodoro Timer", "25 min focus / 5 min break, with notifications.", [("rounds", "text:4")], t_pomodoro),
+    ("focus", "Productivity", "Focus Mode", "Silences notifications (run again to turn off).", [], t_focus),
+    ("ontop", "Productivity", "Window Always on Top", "Pick a window with the mouse.", [], t_ontop),
+    ("keys", "Productivity", "Keyboard Key Tester", "Shows every key you press (Fn keys too).", [], t_keys),
+]
+
+
+def confirm(text):
+    ev, res = threading.Event(), {}
+    def ask():
+        d = Gtk.MessageDialog(message_type=Gtk.MessageType.WARNING, buttons=Gtk.ButtonsType.OK_CANCEL, text=text)
+        res["ok"] = d.run() == Gtk.ResponseType.OK; d.destroy(); ev.set(); return False
+    GLib.idle_add(ask); ev.wait(); return res.get("ok", False)
+
+
+def show_image(path, title):
+    w = Gtk.Window(title=title); w.add(Gtk.Image.new_from_file(path)); w.show_all(); return False
+
+
+def key_tester():
+    w = Gtk.Window(title="Keyboard Key Tester"); w.set_default_size(520, 260)
+    lab = Gtk.Label(label="Press any key (Fn + F-keys too). Close the window to stop."); lab.set_line_wrap(True)
+    hist = []
+    def on_key(_w, e):
+        name = Gdk.keyval_name(e.keyval) or "?"
+        hist.insert(0, f"{name}   (key code {e.hardware_keycode})"); del hist[12:]
+        lab.set_markup(f"<big><b>{GLib.markup_escape_text(name)}</b></big>\n\n" + GLib.markup_escape_text("\n".join(hist[1:])))
+        return True
+    w.connect("key-press-event", on_key); w.add(lab); w.show_all(); return False
+
+
+class Win(Gtk.Window):
+    def __init__(self, start=None):
+        super().__init__(title="NAVIN Toolbox"); self.set_default_size(980, 640); self.connect("destroy", Gtk.main_quit)
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        pane = Gtk.Box(); self.add(pane)
+        side = Gtk.ScrolledWindow(); side.set_size_request(250, -1); side.get_style_context().add_class("side")
+        self.list = Gtk.ListBox(); side.add(self.list); pane.pack_start(side, False, False, 0)
+        self.rows = {}
+        last = None
+        for tid, cat, name, *_ in TOOLS:
+            if cat != last:
+                h = Gtk.Label(label=cat.upper(), xalign=0); h.get_style_context().add_class("cat")
+                r = Gtk.ListBoxRow(); r.add(h); r.set_selectable(False); r.set_activatable(False); self.list.add(r); last = cat
+            r = Gtk.ListBoxRow(); r.add(Gtk.Label(label=name, xalign=0, margin=6)); r.tool = tid; self.list.add(r); self.rows[tid] = r
+        self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); self.body.set_border_width(18)
+        pane.pack_start(self.body, True, True, 0)
+        self.list.connect("row-selected", lambda _l, r: r is not None and hasattr(r, "tool") and self.open(r.tool))
+        self.list.select_row(self.rows.get(start) or self.rows["large"])
+
+    def open(self, tid):
+        for c in self.body.get_children():
+            self.body.remove(c)
+        _, cat, name, help_, fields, fn = next(t for t in TOOLS if t[0] == tid)
+        t = Gtk.Label(label=name, xalign=0); t.get_style_context().add_class("title"); self.body.pack_start(t, False, False, 0)
+        h = Gtk.Label(label=help_, xalign=0); h.set_line_wrap(True); h.get_style_context().add_class("hint"); self.body.pack_start(h, False, False, 0)
+        grid = Gtk.Grid(column_spacing=10, row_spacing=8); getters = {}
+        for i, (key, kind) in enumerate(fields):
+            grid.attach(Gtk.Label(label=key.capitalize(), xalign=1), 0, i, 1, 1)
+            kind, _, default = kind.partition(":")
+            if kind in ("file", "folder"):
+                w = Gtk.FileChooserButton(title=key, action=Gtk.FileChooserAction.SELECT_FOLDER if kind == "folder" else Gtk.FileChooserAction.OPEN)
+                w.set_current_folder(HOME); getters[key] = w.get_filename
+            elif kind == "files":
+                store = []; lab = Gtk.Label(label="none chosen", xalign=0)
+                def pick(_b, store=store, lab=lab):
+                    d = Gtk.FileChooserDialog(title="Choose files (order = order chosen)", parent=self, action=Gtk.FileChooserAction.OPEN)
+                    d.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Add", Gtk.ResponseType.OK); d.set_select_multiple(True)
+                    if d.run() == Gtk.ResponseType.OK:
+                        store.extend(d.get_filenames()); lab.set_text(", ".join(os.path.basename(f) for f in store))
+                    d.destroy()
+                w = Gtk.Box(spacing=6); b = Gtk.Button(label="Add files..."); b.connect("clicked", pick)
+                w.pack_start(b, False, False, 0); w.pack_start(lab, True, True, 0); getters[key] = lambda s=store: list(s)
+            elif kind == "save":
+                w = Gtk.Entry(text=os.path.join(HOME, "Documents", default)); getters[key] = w.get_text
+            elif kind == "choice":
+                w = Gtk.ComboBoxText()
+                for o in default.split(","):
+                    w.append_text(o)
+                w.set_active(0); getters[key] = w.get_active_text
+            else:
+                w = Gtk.Entry(text=default); getters[key] = w.get_text
+            w.set_hexpand(True); grid.attach(w, 1, i, 1, 1)
+        self.body.pack_start(grid, False, False, 0)
+        run = Gtk.Button(label="Run"); run.get_style_context().add_class("run"); run.set_halign(Gtk.Align.START)
+        self.body.pack_start(run, False, False, 0)
+        sw = Gtk.ScrolledWindow(); view = Gtk.TextView(editable=False, wrap_mode=Gtk.WrapMode.WORD_CHAR); sw.add(view)
+        self.body.pack_start(sw, True, True, 0); out = Out(view)
+
+        def go(_b):
+            values = {k: g() for k, g in getters.items()}
+            out.clear(); run.set_sensitive(False)
+            def work():
+                try:
+                    fn(values, out)
+                except Exception as e:  # real error shown to the user
+                    out.write(f"Error: {e}")
+                GLib.idle_add(run.set_sensitive, True)
+            threading.Thread(target=work, daemon=True).start()
+        run.connect("clicked", go)
+        self.body.show_all()
+
+
+if __name__ == "__main__":
+    Win(sys.argv[1] if len(sys.argv) > 1 else None).show_all()
+    Gtk.main()

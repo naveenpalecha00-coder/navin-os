@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Toolbox
+Comment=Files, PDF, images, video, audio, network and system tools
+Exec=navin-toolbox
+Icon=applications-utilities
+Terminal=false
+Categories=System;Utility;
+Keywords=pdf;merge;split;compress;image;resize;convert;video;trim;duplicate;large;checksum;shred;dns;wifi;qr;battery;disk;smart;service;log;pomodoro;focus;

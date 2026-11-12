@@ -13,6 +13,12 @@
       <property name="&lt;Super&gt;s" type="string" value="navin-search"/>
       <property name="&lt;Super&gt;a" type="string" value="navin-control-center"/>
       <property name="&lt;Super&gt;w" type="string" value="rofi -show window -show-icons"/>
+      <!-- NAVIN 2.1: Windows-style shortcuts -->
+      <property name="&lt;Super&gt;Tab" type="string" value="rofi -show window -show-icons"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Delete" type="string" value="navin-security-options"/>
+      <property name="&lt;Primary&gt;&lt;Super&gt;d" type="string" value="navin-workspace add"/>
+      <property name="&lt;Primary&gt;&lt;Super&gt;F4" type="string" value="navin-workspace remove"/>
+      <property name="&lt;Super&gt;b" type="string" value="navin-toolbox"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="xfce4-terminal"/>
       <property name="Print" type="string" value="xfce4-screenshooter"/>
       <property name="&lt;Shift&gt;Print" type="string" value="xfce4-screenshooter -r"/>
@@ -48,6 +54,8 @@
       <property name="&lt;Super&gt;Down" type="string" value="hide_window_key"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;Left" type="string" value="left_workspace_key"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;Right" type="string" value="right_workspace_key"/>
+      <property name="&lt;Primary&gt;&lt;Super&gt;Left" type="string" value="left_workspace_key"/>
+      <property name="&lt;Primary&gt;&lt;Super&gt;Right" type="string" value="right_workspace_key"/>
       <property name="&lt;Alt&gt;F7" type="string" value="move_window_key"/>
       <property name="&lt;Alt&gt;F8" type="string" value="resize_window_key"/>
       <property name="&lt;Alt&gt;space" type="string" value="popup_menu_key"/>

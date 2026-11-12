@@ -1,11 +1,11 @@
 #!/bin/bash
-# NAVIN 2.0 over-the-air patch builder. Usage: build-iso/tools/make-update.sh NUMBER
+# NAVIN 2.x over-the-air patch builder. Usage: build-iso/tools/make-update.sh NUMBER
 # Packs only files that navin-apply-update is allowed to install (navin_logic.safe_patch_path:
 # NAVIN tools, NAVIN settings, NAVIN app entries) from build-iso/config/includes.chroot.
 # Kernel, package or boot changes are NOT patchable: they need APT or a new ISO.
 set -euo pipefail
 N=${1:?patch number (greater than 20)}
-[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -gt 20 ] || { echo "patch number must be > 20 (NAVIN 2.0 ISO is build 20)" >&2; exit 2; }
+[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -gt 30 ] || { echo "patch number must be > 30 (NAVIN 2.1 ISO is build 30)" >&2; exit 2; }
 cd "$(dirname "$0")/../.."
 python3 - "$N" <<'PY'
 import importlib.util, io, pathlib, sys, tarfile

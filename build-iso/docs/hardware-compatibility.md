@@ -24,10 +24,10 @@ Run `navin-hwdetect > hw.txt` and `navin-benchmark run`, then open a GitHub issu
 what worked or failed.
 
 
-## NAVIN 2.0 — Samsung RV411 class (older laptops)
+## NAVIN 2.1 — Samsung RV411 class (older laptops)
 | Area | What NAVIN 2.0 does | Status |
 |---|---|---|
-| PS/2 touchpad | No forced InterTouch; Samsung laptops get `i8042.nomux=1 i8042.reset=1`; touchpad rescue (port reset, basic modes); "Old Laptop Mode" boot entry | Code + unit tests; not yet tried on a real RV411 |
+| PS/2 touchpad | NAVIN 2.1: `i8042.nomux=1 i8042.reset=1` on every boot (Live Mode, Full Installation and the installed system), touchpad forced on at login, touchpad rescue (port reset, basic modes); no forced InterTouch | Code + unit tests; not yet tried on a real RV411 |
 | 1st-gen Intel graphics (Ironlake/GMA 4500) | Intel SNA driver + TearFree, light effects, Chrome safe GPU mode | Code + unit tests; not hardware-tested |
 | Hard disk | BFQ scheduler, 1 MB read-ahead, no SATA link power saving | Code; not hardware-tested |
 | Fan | Slider works only where firmware allows (ThinkPad ACPI, hwmon PWM, platform profile). Samsung RV411 normally exposes none: slider then limits CPU heat instead | Honest fallback; no fake fan control |

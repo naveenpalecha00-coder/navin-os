@@ -27,10 +27,10 @@ sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable
 apt-get clean
 
 echo "[navin-os] 2/9 OS branding"
-sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN 2.0 (Debian 13 Trixie base)"/' /usr/lib/os-release
-sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.0"' >> /usr/lib/os-release
-printf 'NAVIN 2.0 \\n \\l\n\n' > /etc/issue
-echo "NAVIN 2.0" > /etc/issue.net
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN 2.1 (Debian 13 Trixie base)"/' /usr/lib/os-release
+sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.1"' >> /usr/lib/os-release
+printf 'NAVIN 2.1 \\n \\l\n\n' > /etc/issue
+echo "NAVIN 2.1" > /etc/issue.net
 echo "navin-os" > /etc/hostname
 
 echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
@@ -80,10 +80,10 @@ if [ -d /etc/calamares/branding/debian ]; then
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
   sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
   sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
-  sed -i 's/version:.*/version:             "2.0"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "2.0"/' "$D"
-  sed -i 's/versionedName:.*/versionedName:       "NAVIN 2.0"/' "$D"
-  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN 2.0"/' "$D"
+  sed -i 's/version:.*/version:             "2.1"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "2.1"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN 2.1"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN 2.1"/' "$D"
   sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
   sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
   sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
@@ -291,7 +291,7 @@ sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEna
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '20\n' > /etc/navin/build
+printf '30\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
@@ -299,9 +299,11 @@ rm -f /etc/skel/.config/touchegg/touchegg.conf /etc/xdg/autostart/navin-picom.de
 chmod 0755 /usr/local/bin/navin-* /usr/local/sbin/navin-* /usr/local/lib/navin/navin-* /usr/lib/systemd/system-sleep/navin-input || true
 for s in navin-hwdetect navin-memprofile navin-power navin-gestures navin-thermal navin-boot-ok navin-autotest fstrim.timer; do systemctl enable "$s" 2>/dev/null || echo "[navin-os] WARNING: could not enable $s"; done
 systemctl enable thermald.service 2>/dev/null || true
+# NAVIN 2.1: smartctl is used on demand by NAVIN Toolbox (Disk Health); no always-running disk daemon.
+systemctl disable smartmontools.service smartd.service 2>/dev/null || true
 systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
 mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
-printf '2.0\n' > /etc/navin/version
+printf '2.1\n' > /etc/navin/version
 # Installed system boot menu (written into the target by Calamares' bootloader module)
 if [ -f /etc/default/grub ]; then
   sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN OS"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
@@ -311,7 +313,7 @@ if [ -d /etc/calamares ]; then
   B=/etc/calamares/branding/navin
   if [ -f "$B/branding.desc" ]; then
     cp /usr/share/navin/calamares/show.qml "$B/show.qml"
-    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-2.0/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
+    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-2.1/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
     sed -i 's|SidebarBackground:.*|SidebarBackground:    "#eaf1f9"|; s|SidebarText:.*|SidebarText:          "#14202b"|; s|SidebarTextCurrent:.*|SidebarTextCurrent:   "#0b4f8a"|; s|SidebarBackgroundCurrent:.*|SidebarBackgroundCurrent: "#cfe2f6"|' "$B/branding.desc"
   fi
   install -m 0644 /usr/share/navin/calamares/welcome.conf /etc/calamares/modules/welcome.conf
@@ -335,7 +337,7 @@ update-desktop-database /usr/share/applications || true
 dpkg-query -W -f='${Package}\t${Version}\t${Installed-Size}\n' | sort > /usr/share/navin/reports/package-manifest.tsv
 . /etc/os-release; echo "base=$VERSION_CODENAME debian_version=$(cat /etc/debian_version) kernel=$(ls /boot/vmlinuz-* | xargs -n1 basename | tr '\n' ' ')" > /usr/share/navin/reports/base.txt
 
-echo "[navin-os] 2.0: old-laptop fixes, fast boot, smaller image"
+echo "[navin-os] 2.1: two-choice boot menu, touchpad fix on every boot, NAVIN Toolbox (2.0 old-laptop fixes kept)"
 # --- fast boot: no 30 s waits ---
 # RESUME=none: no "waiting for suspend/resume device" stall (NAVIN uses ZRAM, not hibernation).
 # lz4 initramfs: decompresses several times faster than zstd/xz on old CPUs.

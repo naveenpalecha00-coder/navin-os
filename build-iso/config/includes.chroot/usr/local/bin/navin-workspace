@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+"""NAVIN 2.1 virtual desktops: navin-workspace add|remove (Win+Ctrl+D / Win+Ctrl+F4).
+Adds a desktop and switches to it, or removes the last one (never below 1, never above 12)."""
+import subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+from navin_tools import workspace_count
+action = sys.argv[1] if len(sys.argv) > 1 else ""
+if action not in ("add", "remove"):
+    sys.exit("usage: navin-workspace add|remove")
+q = lambda *a: subprocess.run(["xfconf-query", "-c", "xfwm4", "-p", "/general/workspace_count", *a], capture_output=True, text=True).stdout.strip()
+cur = int(q() or 1)
+new = workspace_count(cur, action)
+if new != cur:
+    q("-s", str(new))
+    if action == "add":
+        subprocess.run(["wmctrl", "-s", str(new - 1)])
+subprocess.run(["notify-send", "-t", "1500", "-i", "preferences-desktop", "Desktops", f"{new} desktop{'s' if new > 1 else ''}"])
