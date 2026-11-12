@@ -1,0 +1,116 @@
+#!/usr/bin/python3
+"""NAVIN XP Update Center root helper (run through pkexec, polkit action org.navin.update, or the daily timer).
+
+Only the whitelisted actions in navin_update.ACTIONS (+ stop, set-mode) are accepted. Commands come from
+navin_update.plan(): APT and Flatpak from signed repositories only. Shutdown/sleep are blocked while packages
+install (systemd-inhibit). Success is printed only after a fresh `apt list --upgradable` check."""
+import json, os, pathlib, shutil, subprocess, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_update as U
+
+LOG = pathlib.Path("/var/log/navin/update-center.log")
+STATE = pathlib.Path("/var/lib/navin/update-last.json")
+MODE = pathlib.Path("/etc/navin/update-mode")
+INHIBIT = ["systemd-inhibit", "--what=shutdown:sleep:handle-power-key", "--who=NAVIN XP Update Center",
+           "--why=Installing updates - please do not switch off", "--mode=block"]
+
+
+def log(msg):
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+
+
+def run(cmd, inhibit=False):
+    """Run one planned command, stream its output (APT status lines included), return (rc, full text)."""
+    full = (INHIBIT + cmd) if inhibit and shutil.which("systemd-inhibit") else cmd
+    log("run: " + " ".join(cmd))
+    p = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    out = []
+    for line in p.stdout:
+        out.append(line); sys.stdout.write(line); sys.stdout.flush()
+    rc = p.wait(); text = "".join(out)
+    log(f"exit {rc}")
+    return rc, text
+
+
+def upgradable():
+    r = subprocess.run(["apt", "list", "--upgradable"], capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"})
+    return U.parse_upgradable(r.stdout)
+
+
+def snapshot_first():
+    """Backup before a major update when Timeshift is installed and the system is not the live USB."""
+    if pathlib.Path("/run/live").exists() or not shutil.which("timeshift"):
+        print("NAVIN_UPDATE_NOTE no snapshot (live USB or Timeshift not installed)"); return
+    rc, _ = run(["timeshift", "--create", "--scripted", "--comments", "NAVIN XP before updates"])
+    print("NAVIN_UPDATE_NOTE snapshot " + ("created" if rc == 0 else "failed - continuing only because you confirmed"))
+
+
+def finish(action, rc, text, before):
+    after = upgradable()
+    problems = U.diagnose(text)
+    done = len(before) - len(after) if action in ("upgrade", "security", "auto") else 0
+    state = {"time": int(time.time()), "action": action, "exit": rc, "installed": max(0, done),
+             "remaining": len(after), "problems": problems,
+             "reboot": U.reboot_needed(pathlib.Path("/run/reboot-required").exists(), os.uname().release,
+                                       [d.name for d in pathlib.Path("/lib/modules").iterdir()] if pathlib.Path("/lib/modules").is_dir() else [])}
+    STATE.parent.mkdir(parents=True, exist_ok=True); STATE.write_text(json.dumps(state))
+    for p in problems:
+        print("NAVIN_UPDATE_PROBLEM " + p)
+    print(f"NAVIN_UPDATE_RESULT {'ok' if rc == 0 and not problems else 'failed'} action={action} installed={state['installed']} "
+          f"remaining={state['remaining']} reboot={'yes' if state['reboot'] else 'no'}")
+    return 0 if rc == 0 and not problems else 1
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        print("navin-update-helper must run as root (pkexec)"); return 2
+    if not argv:
+        print("usage: navin-update-helper " + "|".join(U.ACTIONS + ("stop", "set-mode"))); return 2
+    action, low = argv[0], "--low-bandwidth" in argv
+    if action == "stop":  # pause a download: apt keeps partial files in /var/cache/apt/archives/partial
+        rc = subprocess.run(["pkill", "-TERM", "-f", "apt-get .*--download-only"]).returncode
+        print("NAVIN_UPDATE_RESULT " + ("ok action=stop" if rc == 0 else "failed action=stop (no download running)")); return 0
+    if action == "set-mode":
+        mode = argv[1] if len(argv) > 1 else ""
+        if mode not in U.MODES:
+            print("modes: " + " ".join(U.MODES)); return 2
+        MODE.parent.mkdir(parents=True, exist_ok=True); MODE.write_text(mode + "\n")
+        print("NAVIN_UPDATE_RESULT ok action=set-mode mode=" + MODE.read_text().strip()); return 0
+    if action not in U.ACTIONS:
+        print("unknown action"); return 2
+    if action == "auto":
+        mode = MODE.read_text().strip() if MODE.exists() else "notify"
+        rc, text = run(U.plan("refresh")[0])
+        if mode != "security-auto":
+            return finish("refresh", rc, text, [])
+        on_ac = any(pathlib.Path(p, "online").read_text().strip() == "1" for p in pathlib.Path("/sys/class/power_supply").glob("A*") if pathlib.Path(p, "online").exists()) or not list(pathlib.Path("/sys/class/power_supply").glob("BAT*"))
+        if not on_ac:
+            print("NAVIN_UPDATE_NOTE on battery - automatic security updates wait for the charger"); return 0
+    before = upgradable()
+    if action == "preview":
+        rc, text = run(U.plan("preview")[0])
+        sim = U.parse_simulation(text)
+        size = subprocess.run(["apt-get", "--assume-no", "--with-new-pkgs", "upgrade"], capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"}).stdout
+        dl, disk = U.parse_sizes(size)
+        print("NAVIN_UPDATE_PREVIEW " + json.dumps({**sim, "download_bytes": dl, "disk_bytes": disk, "summary": U.summary(before),
+                                                    "major": U.is_major(before)}))
+        return 0
+    pkgs = [r["name"] for r in before if r["security"]] if action in ("security", "auto") else []
+    if action in ("security", "auto") and not pkgs:
+        print("NAVIN_UPDATE_RESULT ok action=" + action + " installed=0 remaining=" + str(len(before)) + " (no security updates)"); return 0
+    if action == "upgrade" and "--confirmed-major" in argv and U.is_major(before):
+        snapshot_first()
+    if action == "upgrade" and U.is_major(before) and "--confirmed-major" not in argv:
+        print("NAVIN_UPDATE_RESULT failed action=upgrade major update needs confirmation"); return 1
+    rc, text = 0, ""
+    for cmd in U.plan(action, pkgs, low_bandwidth=low):
+        rc, out = run(cmd, inhibit=action != "refresh"); text += out
+        if rc != 0:
+            break
+    return finish(action, rc, text, before)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

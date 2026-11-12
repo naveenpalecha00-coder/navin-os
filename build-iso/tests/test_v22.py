@@ -87,6 +87,8 @@ class WhatsNew22(unittest.TestCase):
         data = json.loads((IC / 'usr/share/navin/whatsnew-2.2.json').read_text())
         self.assertEqual(data['version'], '2.2')
         for it in data['items']:
+            if it.get('superseded'):
+                continue  # replaced by a later release (shown in What's New with the reason)
             path = REPO / it['path']
             self.assertTrue(path.exists(), it['path'])
             self.assertIn(it['check'], path.read_text(), it['title'])

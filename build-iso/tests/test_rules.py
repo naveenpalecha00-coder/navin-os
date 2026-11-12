@@ -19,8 +19,8 @@ logic = load('navin_logic')
 
 class Rules(unittest.TestCase):
     def test_build(self):
-        self.assertEqual(logic.BUILD, 41)
-        self.assertEqual(logic.VERSION, '2.2.1')
+        self.assertEqual(logic.BUILD, 50)
+        self.assertEqual(logic.VERSION, '3.0')
         self.assertEqual(logic.release_build('v2.0-update.21'), 21)
         # Debian 12 patches are a different base and are never applied to NAVIN 2.0.
         self.assertIsNone(logic.release_build('v1.0-build.10'))

@@ -35,3 +35,13 @@
 - Samsung RV411: if the cursor does not move, press Fn+F5 once (hardware touchpad switch), then run `navin-touchpad rescue` or choose "Old Laptop Mode" at boot.
 - The fan slider cannot change fan speed on laptops whose BIOS hides the fan from Linux; it limits CPU speed (less heat) instead and says so.
 - Boot-time goal ~10 s is realistic on an SSD; on the RV411's original hard disk expect longer. Measure with `systemd-analyze`.
+
+## NAVIN XP 3.0
+- Not yet tested on a real Samsung RV411: boot splash, display guard and Update Center were checked by unit tests and the
+  virtual-machine tests only.
+- Display guard: when the desktop does not start it can take up to about 45 s per graphics driver before the next one is tried.
+- The boot splash needs kernel modesetting; with Safe Graphics / Recovery (nomodeset) it shows plain text instead.
+- Boot menu rows are large list items (GRUB cannot draw side-by-side cards).
+- Update Center "pause" stops the download; "resume" starts it again and APT continues the partly downloaded files.
+  Installing packages cannot be paused (that would break the system). Rollback needs Timeshift set up on an installed system.
+- The installed system's boot menu still waits 3 s (fast start); the 15 s countdown is on the USB stick.

@@ -1,12 +1,13 @@
-name: Build NAVIN 2.2.1 ISO (Debian 13 Trixie)
+name: Build NAVIN XP 3.0 ISO (Debian 13 Trixie)
 
-# NAVIN 2.2 is developed on its own branch (navin-2.2, started from navin-2.1).
+# NAVIN XP 3.0 is developed on its own branch (navin-xp, started from navin-2.2 = v2.2.1).
+# navin-2.2 keeps v2.2 and v2.2.1.
 # navin-2.1 keeps v2.1.
 # navin-2.0 keeps v2.0, navin-1.2-trixie keeps v1.2 and main keeps Build 10 for rollback.
 # main keeps the Debian 12 Build 10 pipeline/release and navin-1.2-trixie keeps v1.2 for rollback.
 on:
   push:
-    branches: [navin-2.2]
+    branches: [navin-xp]
     paths: ["build-iso/**", ".github/workflows/build-iso.yml"]
   workflow_dispatch:
 
@@ -14,13 +15,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-iso-2.2
+  group: build-iso-xp
   cancel-in-progress: true
 
 env:
-  ISO: navin-2.2.1-x86_64.iso
-  TAG: v2.2.1-test
-  FINAL_TAG: v2.2.1
+  ISO: navin-xp-3.0-x86_64.iso
+  TAG: v3.0-test
+  FINAL_TAG: v3.0
 
 jobs:
   build:
@@ -50,11 +51,13 @@ jobs:
             mkdir -p /usr/share/navin && cp -a build-iso/config/includes.chroot/usr/share/navin/. /usr/share/navin/
             mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml && cp build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/*.xml /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/
             fail=0
-            for app in "navin_install_guide.py -" "navin_center.py whatsnew" "navin_center.py laptop" "navin_center.py fan" "navin_center.py troubleshoot" "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
+            for app in "navin_install_guide.py -" "navin_center.py whatsnew" "navin_center.py laptop" "navin_center.py fan" "navin_center.py troubleshoot" "navin_center.py hardware" "navin_center.py monitor" "navin_center.py updates" "navin_center.py whatsnew" "navin_desktop.py store" "navin_desktop.py flathub" "navin_desktop.py fan" "navin_desktop.py controls" "navin_desktop.py devices" "navin_desktop.py display" "navin_desktop.py search"; do
               set -- $app
               rc=0; a=$2; [ "$a" = - ] && a=; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/lib/navin/$1 $a > /tmp/out 2>&1 || rc=$?
               if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL $app (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   $app"; fi
             done
+            rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-update-center > /tmp/out 2>&1 || rc=$?
+            if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-update-center (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   navin-update-center"; fi
             rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-shortcuts > /tmp/out 2>&1 || rc=$?
             if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-shortcuts"; cat /tmp/out; fail=1; else echo "ok   navin-shortcuts"; fi
             # NAVIN 2.2 Toolbox: one tool page per input type + the new 2.2 categories (Desktop, Laptop, Security, NAVIN)
@@ -107,7 +110,7 @@ jobs:
           B=build-iso; R=$B/reports; mkdir -p $R
           cp $B/docs/hardware-compatibility.md $B/docs/known-issues.md $R/
           {
-            echo "# NAVIN 2.2 — Debian 13 Trixie build report"
+            echo "# NAVIN XP 3.0 — Debian 13 Trixie build report"
             echo
             echo "- Commit: $GITHUB_SHA · Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- ISO: $ISO · $(( ${{ steps.verify.outputs.size }} / 1048576 )) MB · SHA256 ${{ steps.verify.outputs.sha }}"
@@ -151,7 +154,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: navin-2.2-build-evidence
+          name: navin-xp-build-evidence
           path: |
             build-iso/build.log
             build-iso/reports/
@@ -162,10 +165,10 @@ jobs:
         if: always() && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: navin-2.2-iso
+          name: navin-xp-iso
           path: |
-            build-iso/navin-2.2.1-x86_64.iso
-            build-iso/navin-2.2.1-x86_64.iso.sha256
+            build-iso/navin-xp-3.0-x86_64.iso
+            build-iso/navin-xp-3.0-x86_64.iso.sha256
           retention-days: 7
           compression-level: 0
 
@@ -180,26 +183,24 @@ jobs:
           done
           echo "final=$final" >> "$GITHUB_OUTPUT"
 
-      - name: Publish NAVIN 2.2 release (only when every live, install and reboot VM test passes)
+      - name: Publish NAVIN XP 3.0 release (only when every live, install and reboot VM test passes)
         if: steps.gate.outputs.final == 'yes'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.FINAL_TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN 2.2.1 (Debian 13)
+          name: NAVIN XP 3.0 (Debian 13)
           prerelease: false
           make_latest: false
           body: |
-            NAVIN 2.2.1 — update of NAVIN 2.2 (v2.2 stays available). Touchpad & Fan Control Center in Settings:
-            automatic touchpad repair engine (navin-touchpad-repair.service), direct PS/2 touchpad probing on legacy BIOS
-            and Samsung laptops (i8042.nopnp/noloop, Samsung RV411 BIOS fix), real libinput settings, touchpad hardware test,
-            fan diagnosis (Samsung silent mode, thermal zones, ACPI fan) and Touchpad & Fan Troubleshooter. Not yet tested on a real RV411.
-            NAVIN 2.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
-            Every feature of the 1,100-feature request is matched to a real app, tool, shortcut or setting
-            (/usr/share/navin/features-2.2.json, checked by tests). NAVIN Toolbox now has 94 tools (Desktop, Files,
-            PDF & Media, Laptop, Network, Security, System, Productivity, NAVIN). Battery/RAM/CPU/Wi-Fi history,
-            automatic screen lock (installed system), parental controls, scheduled backups, PDF reader, 7z, file recovery.
-            All 2.1 fixes kept: two-choice boot menu, touchpad controller fix on every boot. Full list: System Center → What's New.
+            NAVIN XP 3.0 — the next NAVIN release after 2.2.1 (v2.2.1, v2.2, v2.1 and v2.0 stay available for rollback).
+            Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
+            New: NAVIN XP boot splash (logo fade-in, blue glow, loading circle, real hardware line), boot menu with
+            Live Mode / Install / Safe Graphics / Recovery / Restart / Shutdown (15 s), display guard that falls back to safer
+            graphics drivers when the desktop does not start (fixes the 2.2.1 stop at the text screen), and the NAVIN XP
+            Update Center (APT + Flatpak + NAVIN releases, security-only mode, real APT progress, history, restart detection).
+            Everything from 2.2.1 is kept (touchpad & fan control center, 94-tool Toolbox). Full list: System Center → What's New.
+            Not yet tested on a real Samsung RV411.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -212,8 +213,8 @@ jobs:
             Please report problems on GitHub Issues. NAVIN 2.0, 1.2 and Build 10 (Debian 12) stay available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-2.2.1-x86_64.iso
-            build-iso/navin-2.2.1-x86_64.iso.sha256
+            build-iso/navin-xp-3.0-x86_64.iso
+            build-iso/navin-xp-3.0-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md
@@ -225,20 +226,20 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN 2.2.1 Debian 13 — TEST BUILD (not hardware-verified)
+          name: NAVIN XP 3.0 Debian 13 — TEST BUILD (not hardware-verified)
           prerelease: true
           make_latest: false
           body: |
-            NAVIN 2.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
+            NAVIN XP 3.0 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
             Status: [Build Passed] · [VM boot: BIOS ${{ steps.boot.outputs.result_bios_2g }}, UEFI ${{ steps.boot.outputs.result_uefi_4g }}, Secure Boot ${{ steps.boot.outputs.result_uefi_sb }}] · [Install: Secure Boot ${{ steps.boot.outputs.result_install_sb }}/${{ steps.boot.outputs.result_boot_installed_sb }}, BIOS ${{ steps.boot.outputs.result_install_bios }}/${{ steps.boot.outputs.result_boot_installed_bios }}]
-            NOT the final release. Keep using Build 10 (Debian 12) for daily use; it stays available for rollback.
+            NOT the final release. Keep using NAVIN 2.2.1 for daily use; it stays available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-2.2.1-x86_64.iso
-            build-iso/navin-2.2.1-x86_64.iso.sha256
+            build-iso/navin-xp-3.0-x86_64.iso
+            build-iso/navin-xp-3.0-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md

@@ -26,12 +26,15 @@ EOF
 sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable --enable-features=VaapiVideoDecoder,VaapiVideoEncoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy|' /usr/share/applications/google-chrome.desktop 2>/dev/null || true
 apt-get clean
 
-echo "[navin-os] 2/9 OS branding"
-sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN 2.2 (Debian 13 Trixie base)"/' /usr/lib/os-release
-sed -i '/^NAVIN_OS_VERSION=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="2.2.1"' >> /usr/lib/os-release
-printf 'NAVIN 2.2 \\n \\l\n\n' > /etc/issue
-echo "NAVIN 2.2" > /etc/issue.net
-echo "navin-os" > /etc/hostname
+echo "[navin-os] 2/9 OS branding (NAVIN XP)"
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN XP 3.0 (Debian 13 Trixie base)"/' /usr/lib/os-release
+sed -i '/^NAVIN_OS_VERSION=/d; /^NAVIN_PRODUCT=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="3.0"' >> /usr/lib/os-release; echo 'NAVIN_PRODUCT="NAVIN XP"' >> /usr/lib/os-release
+printf 'NAVIN XP 3.0 \\n \\l\n\n' > /etc/issue
+echo "NAVIN XP 3.0" > /etc/issue.net
+echo "navin-xp" > /etc/hostname
+# NAVIN XP: no Debian licence text on the text console; one NAVIN line instead (licences stay in /usr/share/doc).
+printf 'NAVIN XP 3.0 - Your PC. Your OS. Your Freedom.  (Debian 13 base; licences: /usr/share/doc/*/copyright)\n' > /etc/motd
+rm -f /etc/update-motd.d/10-uname
 
 echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
 for g in sudo netdev audio video plugdev bluetooth lpadmin; do getent group $g >/dev/null || groupadd $g || true; done
@@ -65,8 +68,10 @@ systemctl enable lightdm.service || true
 ufw --force default deny incoming || true
 ufw --force default allow outgoing || true
 
-echo "[navin-os] 7/9 Plymouth boot splash"
-if [ -f /usr/share/plymouth/themes/navin/navin.plymouth ]; then
+echo "[navin-os] 7/9 Plymouth boot splash (NAVIN XP)"
+if [ -f /usr/share/plymouth/themes/navin-xp/navin-xp.plymouth ]; then
+  plymouth-set-default-theme navin-xp || true
+elif [ -f /usr/share/plymouth/themes/navin/navin.plymouth ]; then
   plymouth-set-default-theme navin || true
 elif [ -d /usr/share/plymouth/themes/spinner ]; then
   cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
@@ -80,17 +85,17 @@ if [ -d /etc/calamares/branding/debian ]; then
   cp -a /etc/calamares/branding/debian /etc/calamares/branding/navin
   D=/etc/calamares/branding/navin/branding.desc
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
-  sed -i 's/productName:.*/productName:         "NAVIN OS"/' "$D"
-  sed -i 's/shortProductName:.*/shortProductName:    "NAVIN OS"/' "$D"
-  sed -i 's/version:.*/version:             "2.2.1"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "2.2.1"/' "$D"
-  sed -i 's/versionedName:.*/versionedName:       "NAVIN 2.2"/' "$D"
-  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN 2.2"/' "$D"
-  sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN OS"/' "$D"
+  sed -i 's/productName:.*/productName:         "NAVIN XP"/' "$D"
+  sed -i 's/shortProductName:.*/shortProductName:    "NAVIN XP"/' "$D"
+  sed -i 's/version:.*/version:             "3.0"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "3.0"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN XP 3.0"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN XP 3.0"/' "$D"
+  sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN XP"/' "$D"
   sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
   sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
   sed -i 's/welcomeStyleCalamares:.*/welcomeStyleCalamares: true/' "$D"
-  cp /usr/share/pixmaps/navin-os-logo.png /etc/calamares/branding/navin/navin-logo.png
+  cp /usr/share/plymouth/themes/navin-xp/navin-xp-mark.png /etc/calamares/branding/navin/navin-logo.png 2>/dev/null || cp /usr/share/pixmaps/navin-os-logo.png /etc/calamares/branding/navin/navin-logo.png
   sed -i 's/productLogo:.*/productLogo:         "navin-logo.png"/' "$D"
   sed -i 's/productIcon:.*/productIcon:         "navin-logo.png"/' "$D"
   sed -i 's/^branding:.*/branding: navin/' /etc/calamares/settings.conf
@@ -99,8 +104,8 @@ cat > /usr/share/applications/install-navin-os.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Install NAVIN OS
-Comment=Install NAVIN OS to this computer or a USB drive
+Name=Install NAVIN XP
+Comment=Install NAVIN XP to this computer (HDD, SSD) or a USB drive
 Exec=navin-install
 Icon=/usr/share/pixmaps/navin-os-logo.png
 Terminal=false
@@ -247,7 +252,11 @@ systemctl enable navin-chrome-cache.mount
 mkdir -p /var/cache/navin/chrome
 # Scoped tmpfs cap; per-user Chrome cache is created by navin-chrome.
 chmod 1777 /var/cache/navin/chrome
-if [ -d /usr/share/plymouth/themes/spinner ]; then
+# NAVIN XP: this used to force the stock "spinner" theme, so the NAVIN splash never showed. Now the NAVIN XP theme
+# is the default (spinner only when the NAVIN XP theme is missing) and the initramfs is rebuilt with it.
+if [ -f /usr/share/plymouth/themes/navin-xp/navin-xp.plymouth ]; then
+  plymouth-set-default-theme -R navin-xp
+elif [ -d /usr/share/plymouth/themes/spinner ]; then
   cp /usr/share/pixmaps/navin-os-logo.png /usr/share/plymouth/themes/spinner/watermark.png
   plymouth-set-default-theme -R spinner
 fi
@@ -293,7 +302,7 @@ sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEna
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '41\n' > /etc/navin/build
+printf '50\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
@@ -305,18 +314,18 @@ systemctl enable thermald.service 2>/dev/null || true
 systemctl disable smartmontools.service smartd.service 2>/dev/null || true
 systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
 mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
-printf '2.2\n' > /etc/navin/version
+printf '3.0\n' > /etc/navin/version
 # Installed system boot menu (written into the target by Calamares' bootloader module)
 if [ -f /etc/default/grub ]; then
-  sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN OS"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
+  sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN XP"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
 fi
 echo "[navin-os] 1.2 final: installer guide + branding, offline boot loader, dual-boot menu, pinch default"
 if [ -d /etc/calamares ]; then
   B=/etc/calamares/branding/navin
   if [ -f "$B/branding.desc" ]; then
     cp /usr/share/navin/calamares/show.qml "$B/show.qml"
-    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-2.2/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
-    sed -i 's|SidebarBackground:.*|SidebarBackground:    "#eaf1f9"|; s|SidebarText:.*|SidebarText:          "#14202b"|; s|SidebarTextCurrent:.*|SidebarTextCurrent:   "#0b4f8a"|; s|SidebarBackgroundCurrent:.*|SidebarBackgroundCurrent: "#cfe2f6"|' "$B/branding.desc"
+    sed -i 's|knownIssuesUrl:.*|knownIssuesUrl:      "https://github.com/naveenpalecha00-coder/navin-os/blob/navin-xp/build-iso/docs/known-issues.md"|; s|releaseNotesUrl:.*|releaseNotesUrl:     "https://github.com/naveenpalecha00-coder/navin-os/releases"|; s|donateUrl:.*|donateUrl:           "https://navinos1.lovable.app"|; s|productWelcome:.*|productWelcome:      "navin-logo.png"|' "$B/branding.desc"
+    sed -i 's|SidebarBackground:.*|SidebarBackground:    "#0B2A6B"|; s|SidebarText:.*|SidebarText:          "#FFFFFF"|; s|SidebarTextCurrent:.*|SidebarTextCurrent:   "#0B2A6B"|; s|SidebarBackgroundCurrent:.*|SidebarBackgroundCurrent: "#F8FAFF"|' "$B/branding.desc"
   fi
   install -m 0644 /usr/share/navin/calamares/welcome.conf /etc/calamares/modules/welcome.conf
   install -m 0644 /usr/share/navin/calamares/partition.conf /etc/calamares/modules/partition.conf
@@ -339,7 +348,7 @@ update-desktop-database /usr/share/applications || true
 dpkg-query -W -f='${Package}\t${Version}\t${Installed-Size}\n' | sort > /usr/share/navin/reports/package-manifest.tsv
 . /etc/os-release; echo "base=$VERSION_CODENAME debian_version=$(cat /etc/debian_version) kernel=$(ls /boot/vmlinuz-* | xargs -n1 basename | tr '\n' ' ')" > /usr/share/navin/reports/base.txt
 
-echo "[navin-os] 2.2: all 1,100 requested features mapped to real tools (94-tool NAVIN Toolbox), usage history, auto screen lock, 2.1 boot/touchpad fixes kept"
+echo "[navin-os] NAVIN XP 3.0: boot splash, 6-entry boot menu, display guard, Update Center; 2.2: all 1,100 requested features mapped to real tools (94-tool NAVIN Toolbox), usage history, auto screen lock, 2.1 boot/touchpad fixes kept"
 # --- fast boot: no 30 s waits ---
 # RESUME=none: no "waiting for suspend/resume device" stall (NAVIN uses ZRAM, not hibernation).
 # lz4 initramfs: decompresses several times faster than zstd/xz on old CPUs.
@@ -363,6 +372,12 @@ fi
 chmod 0755 /usr/local/lib/navin/navin-touchpad-rescue /usr/local/lib/navin/navin-quirks /usr/local/bin/navin-update-notify /usr/lib/navin-os/navin-touchpad-repair.sh /usr/local/lib/navin/navin_tp.py 2>/dev/null || true
 # NAVIN 2.2.1: touchpad repair engine runs once at every boot (fast no-op when the touchpad is present).
 systemctl enable navin-touchpad-repair.service || true
+# NAVIN XP: display guard (desktop must start - fixes the 2.2.1 stop at the tty1 text screen), real hardware line on
+# the boot splash, Update Center daily check, graphical boot as the default target.
+chmod 0755 /usr/local/lib/navin/navin-display-guard /usr/local/lib/navin/navin-boot-detect /usr/lib/navin-os/navin-update-helper /usr/local/bin/navin-update-center /usr/local/bin/navin-display-guard || true
+systemctl enable navin-display-guard.service navin-display-guard-early.service navin-boot-detect.service navin-update-auto.timer || true
+systemctl set-default graphical.target
+mkdir -p /etc/navin; [ -f /etc/navin/update-mode ] || echo notify > /etc/navin/update-mode
 # --- smaller image: firmware that can never load on an x86 PC (ARM phone/board chips, datacenter cards) ---
 before=$(du -sk /usr/lib/firmware | cut -f1)
 for d in rockchip meson amlogic arm powervr cnm imx ti-keystone qlogic bnx2 cxgb3 cavium inside-secure; do rm -rf "/usr/lib/firmware/$d"; done

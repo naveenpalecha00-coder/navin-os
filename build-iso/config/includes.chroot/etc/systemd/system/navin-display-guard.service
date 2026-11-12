@@ -1,0 +1,13 @@
+[Unit]
+Description=NAVIN XP display guard (falls back to a safer graphics driver if the desktop does not start)
+After=lightdm.service systemd-user-sessions.service
+Wants=lightdm.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=6min
+ExecStart=/usr/local/lib/navin/navin-display-guard
+
+[Install]
+WantedBy=graphical.target

@@ -2303,13 +2303,13 @@
      "n": 895,
      "name": "Live Mode",
      "kind": "file",
-     "ref": "hooks:02-navin-bootmenu.hook.binary::Live Mode - Try NAVIN"
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Live Mode - Start NAVIN XP"
     },
     {
      "n": 896,
      "name": "Full Installation",
      "kind": "file",
-     "ref": "hooks:02-navin-bootmenu.hook.binary::Full Installation - Install NAVIN"
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Install NAVIN XP - HDD, SSD or USB"
     },
     {
      "n": 897,

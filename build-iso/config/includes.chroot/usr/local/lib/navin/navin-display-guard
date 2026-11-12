@@ -1,0 +1,89 @@
+#!/usr/bin/python3
+"""NAVIN XP display guard (root, navin-display-guard.service, once per boot).
+
+NAVIN 2.2.1 could stop at the tty1 text screen when the X server failed with the chosen graphics driver.
+This waits for LightDM; if no X server is running it reads the real Xorg errors, writes the next safer driver
+(navin_hw.display_next_level) and restarts LightDM - until the desktop is up or nothing is left to try.
+`navin-display-guard reset` returns to the normal driver. It only reports success when Xorg is really running."""
+import json, pathlib, subprocess, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_hw as hw
+
+ROOT = pathlib.Path("/")
+CONF = ROOT / hw.DISPLAY_FALLBACK_CONF
+LEVEL = pathlib.Path("/var/lib/navin/display-level")
+LOG = pathlib.Path("/var/log/navin/display-guard.log")
+FAILED = pathlib.Path("/run/navin/display-failed")
+
+
+def log(msg):
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+    print(msg, flush=True)
+
+
+def x_running():
+    return subprocess.run(["pgrep", "-x", "Xorg"], capture_output=True).returncode == 0
+
+
+def wait_for_x(seconds):
+    end = time.time() + seconds
+    while time.time() < end:
+        if x_running():
+            time.sleep(4)          # still alive a few seconds later = really started
+            if x_running():
+                return True
+        time.sleep(2)
+    return False
+
+
+def set_level(level):
+    text = hw.display_fallback_conf(level)
+    if text:
+        CONF.parent.mkdir(parents=True, exist_ok=True); CONF.write_text(text)
+    elif CONF.exists():
+        CONF.unlink()
+    LEVEL.parent.mkdir(parents=True, exist_ok=True); LEVEL.write_text(level + "\n")
+
+
+def main(argv):
+    if argv[:1] == ["reset"]:
+        set_level("default"); log("display guard reset: normal graphics driver"); return 0
+    if argv[:1] == ["status"]:
+        print(json.dumps({"level": LEVEL.read_text().strip() if LEVEL.exists() else "default", "x_running": x_running(),
+                          "failed": FAILED.exists()})); return 0
+    cmdline = pathlib.Path("/proc/cmdline").read_text()
+    uefi = pathlib.Path("/sys/firmware/efi").is_dir()
+    if argv[:1] == ["early"]:  # before LightDM: Safe Graphics / Recovery (nomodeset) cannot use modesetting
+        old = CONF.read_text() if CONF.exists() else ""
+        if "nomodeset" in cmdline.split():
+            if not old:
+                level = "fbdev" if pathlib.Path("/dev/fb0").exists() or uefi else "vesa"
+                CONF.parent.mkdir(parents=True, exist_ok=True)
+                CONF.write_text(hw.display_fallback_conf(level).replace("# NAVIN XP display guard:", "# NAVIN XP display guard (nomodeset-temp):", 1))
+                log(f"nomodeset boot: using '{level}' for this boot only")
+        elif "nomodeset-temp" in old:
+            CONF.unlink(); log("normal boot again: temporary safe-graphics driver removed")
+        return 0
+    level = LEVEL.read_text().strip() if LEVEL.exists() else "default"
+    if wait_for_x(45):
+        log(f"desktop graphics OK (driver level '{level}')"); FAILED.unlink(missing_ok=True); return 0
+    while True:
+        xlog = pathlib.Path("/var/log/Xorg.0.log")
+        errors = hw.xorg_errors(xlog.read_text(errors="replace")) if xlog.exists() else []
+        log(f"no X server running at level '{level}'. Xorg errors: {errors or 'none logged'}")
+        nxt = hw.display_next_level(level, cmdline, errors, uefi)
+        if not nxt:
+            FAILED.parent.mkdir(parents=True, exist_ok=True)
+            FAILED.write_text("\n".join(errors) + "\n")
+            log("display guard: every graphics driver failed - see /var/log/Xorg.0.log"); return 1
+        level = nxt; set_level(level); log(f"trying graphics driver level '{level}'")
+        subprocess.run(["systemctl", "reset-failed", "lightdm.service"])
+        subprocess.run(["systemctl", "restart", "lightdm.service"])
+        if wait_for_x(40):
+            log(f"desktop graphics OK after fallback to '{level}' (kept for next boots)"); FAILED.unlink(missing_ok=True); return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

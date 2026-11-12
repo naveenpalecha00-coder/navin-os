@@ -91,9 +91,10 @@ class OldLaptop(unittest.TestCase):
         self.assertNotIn('options psmouse', conf)
         self.assertNotIn('enable_fbc=1', conf)
 
-    def test_boot_menu_3s_timeout(self):
+    def test_boot_menu_timeouts(self):
+        # NAVIN XP 3.0: live USB menu waits 15 s (user request); the installed system still starts after 3 s.
         hook = (ROOT / 'config/hooks/live/02-navin-bootmenu.hook.binary').read_text()
-        self.assertIn('set timeout=3', hook)
+        self.assertIn('TIMEOUT = 15', hook)
         self.assertIn('GRUB_TIMEOUT=3', (IC / 'etc/default/grub.d/navin.cfg').read_text())
 
 
@@ -156,15 +157,17 @@ class WhatsNew(unittest.TestCase):
         self.assertEqual(data['version'], '2.0')
         self.assertGreaterEqual(len(data['items']), 80)
         for it in data['items']:
+            if it.get('superseded'):
+                continue  # replaced by a later release (shown in What's New with the reason)
             path = REPO / it['path']
             self.assertTrue(path.exists(), it['path'])
             self.assertIn(it['check'], path.read_text(), f"{it['title']} -> {it['path']}")
 
     def test_version_strings(self):
         hook = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
-        self.assertIn('PRETTY_NAME="NAVIN 2.2 (Debian 13 Trixie base)"', hook)
-        self.assertIn("printf '41\\n' > /etc/navin/build", hook)
-        self.assertIn('navin-2.2.1-x86_64.iso', (ROOT / 'build.sh').read_text())
+        self.assertIn('PRETTY_NAME="NAVIN XP 3.0 (Debian 13 Trixie base)"', hook)
+        self.assertIn("printf '50\\n' > /etc/navin/build", hook)
+        self.assertIn('navin-xp-3.0-x86_64.iso', (ROOT / 'build.sh').read_text())
 
 
 if __name__ == '__main__':

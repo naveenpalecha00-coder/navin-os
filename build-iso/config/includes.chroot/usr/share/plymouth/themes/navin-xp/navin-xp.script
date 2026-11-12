@@ -1,0 +1,85 @@
+// NAVIN XP boot splash (Plymouth script plugin). Animation only; every text line below the spinner
+// comes from the real boot: systemd status messages and navin-boot-detect (what the kernel found).
+Window.SetBackgroundTopColor(0.043, 0.165, 0.42);     // #0B2A6B
+Window.SetBackgroundBottomColor(0.086, 0.467, 0.949); // #1677F2
+
+W = Window.GetWidth();
+H = Window.GetHeight();
+cx = Window.GetX() + W / 2;
+cy = Window.GetY() + H / 2;
+
+glow = Image("glow.png");
+glow_s = Sprite(glow);
+glow_s.SetPosition(cx - glow.GetWidth() / 2, cy - glow.GetHeight() / 2 - 70, 1);
+glow_s.SetOpacity(0);
+
+logo = Image("logo.png");
+logo_s = Sprite(logo);
+logo_s.SetPosition(cx - logo.GetWidth() / 2, cy - logo.GetHeight() / 2 - 70, 2);
+logo_s.SetOpacity(0);
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown" || mode == "reboot")
+  status = Image("shutdown.png");
+else
+  status = Image("starting.png");
+status_s = Sprite(status);
+status_s.SetPosition(cx - status.GetWidth() / 2, cy + logo.GetHeight() / 2 + 20, 2);
+
+tag = Image("tagline.png");
+tag_s = Sprite(tag);
+tag_s.SetPosition(cx - tag.GetWidth() / 2, Window.GetY() + H - 50, 2);
+
+for (i = 0; i < 24; i++)
+  spin[i] = Image("spinner-" + i + ".png");
+spin_s = Sprite(spin[0]);
+spin_s.SetPosition(cx - spin[0].GetWidth() / 2, cy + logo.GetHeight() / 2 - 45, 2);
+
+// real boot progress (systemd units started) as a thin line under the status text
+bar = Image("bar.png");
+bar_s = Sprite();
+bar_y = cy + logo.GetHeight() / 2 + 60;
+fun progress_callback(duration, progress) {
+  w = Math.Int(240 * progress);
+  if (w < 2) w = 2;
+  bar_s.SetImage(bar.Scale(w, 3));
+  bar_s.SetPosition(cx - 120, bar_y, 3);
+  bar_s.SetOpacity(0.55);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+frame = 0;
+fun refresh_callback() {
+  frame++;
+  a = frame / 50;                       // ~1 s fade-in at 50 fps
+  if (a > 1) a = 1;
+  logo_s.SetOpacity(a);
+  // blue glow: fades in, then breathes softly
+  glow_s.SetOpacity(a * (0.65 + 0.35 * Math.Sin(frame / 25)));
+  f = Math.Int(frame / 2);
+  f = f - Math.Int(f / 24) * 24;
+  spin_s.SetImage(spin[f]);
+  tag_s.SetOpacity(a * 0.9);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+msg_s = Sprite();
+fun message_callback(text) {
+  img = Image.Text(text, 0.86, 0.92, 1, 1, "Sans 11");
+  msg_s.SetImage(img);
+  msg_s.SetPosition(cx - img.GetWidth() / 2, bar_y + 18, 3);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+// disk unlock / password questions (encrypted installs)
+q_s = Sprite();
+fun password_callback(prompt, bullets) {
+  t = prompt + "  ";
+  for (i = 0; i < bullets; i++) t = t + "*";
+  q = Image.Text(t, 1, 1, 1, 1, "Sans 13");
+  q_s.SetImage(q);
+  q_s.SetPosition(cx - q.GetWidth() / 2, bar_y + 44, 4);
+}
+Plymouth.SetDisplayPasswordFunction(password_callback);
+fun normal_callback() { q_s.SetImage(Image.Text("", 1, 1, 1, 1, "Sans 1")); }
+Plymouth.SetDisplayNormalFunction(normal_callback);

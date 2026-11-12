@@ -166,7 +166,7 @@ class BootMenu(unittest.TestCase):
             self.assertEqual(iso.count('i8042.nopnp=1 i8042.noloop=1'), 2)  # Live Mode + Full Installation
             self.assertEqual(grub.count('$navin_tp'), 2)
             self.assertIn('export navin_tp', grub)
-            self.assertEqual(grub.count('menuentry '), 2)
+            self.assertEqual(grub.count('menuentry '), 4)  # NAVIN XP: Live, Install, Restart, Shutdown (no fail-safe entry in this sample)
 
     def test_quirk_file_from_repair_is_kept(self):
         with tempfile.TemporaryDirectory() as d:
@@ -191,6 +191,8 @@ class Release(unittest.TestCase):
     def test_whatsnew_221_entries_exist(self):
         data = json.loads((IC / 'usr/share/navin/whatsnew-2.2.1.json').read_text())
         for it in data['items']:
+            if it.get('superseded'):
+                continue  # replaced by a later release (shown in What's New with the reason)
             self.assertIn(it['check'], (REPO / it['path']).read_text(), it['title'])
 
 

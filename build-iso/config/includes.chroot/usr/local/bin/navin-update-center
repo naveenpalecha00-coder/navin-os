@@ -1,0 +1,163 @@
+#!/usr/bin/python3
+"""NAVIN XP Update Center (GTK). Lists real updates (APT cache, Flatpak, NAVIN GitHub releases), installs them through
+the root helper (pkexec /usr/lib/navin-os/navin-update-helper) and shows APT's own progress numbers. Logic: navin_update.py."""
+import gi, json, os, pathlib, re, subprocess, sys, threading, time, urllib.request
+sys.path.insert(0, "/usr/local/lib/navin")
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, GLib
+import navin_update as U
+from navin_logic import newer_os_release, VERSION, REPO
+
+HELPER = "/usr/lib/navin-os/navin-update-helper"
+C = {"LC_ALL": "C", "PATH": "/usr/sbin:/usr/bin:/sbin:/bin"}
+
+
+class Center(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="NAVIN XP Update Center"); self.set_default_size(820, 600); self.proc = None
+        self.rows, self.total_dl, self.t0, self.last_pct = [], 0, 0, 0
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin=14); self.add(root)
+        head = Gtk.Label(xalign=0); head.set_markup("<span size='x-large' weight='bold'>Windows-style updates for NAVIN XP</span>"); root.pack_start(head, False, False, 0)
+        self.banner = Gtk.Label(xalign=0, wrap=True); root.pack_start(self.banner, False, False, 0)
+        bar = Gtk.Box(spacing=6); root.pack_start(bar, False, False, 0)
+        self.btns = {}
+        for key, label, cb in (("check", "Check for updates", lambda *_: self.helper(["refresh"], then=self.reload)),
+                               ("all", "Install all", self.install_all), ("sec", "Security only", lambda *_: self.helper(["security"], then=self.reload)),
+                               ("dl", "Download only", lambda *_: self.helper(["download"] + self.bw())),
+                               ("stop", "Pause download", lambda *_: subprocess.Popen(["pkexec", HELPER, "stop"])),
+                               ("fp", "Update Flatpak apps", lambda *_: self.helper(["flatpak"], then=self.reload))):
+            b = Gtk.Button(label=label); b.connect("clicked", cb); bar.pack_start(b, False, False, 0); self.btns[key] = b
+        opts = Gtk.Box(spacing=12); root.pack_start(opts, False, False, 0)
+        self.low = Gtk.CheckButton(label=f"Low bandwidth (max {U.LOW_BANDWIDTH_KBPS} kB/s)"); opts.pack_start(self.low, False, False, 0)
+        opts.pack_start(Gtk.Label(label="Automatic:"), False, False, 0)
+        self.mode = Gtk.ComboBoxText()
+        for m, t in (("manual", "Manual - never check"), ("notify", "Notify me (daily check)"), ("security-auto", "Install security updates daily")):
+            self.mode.append(m, t)
+        cur = pathlib.Path("/etc/navin/update-mode"); self.mode.set_active_id(cur.read_text().strip() if cur.exists() else "notify")
+        self.mode.connect("changed", lambda c: self.helper(["set-mode", c.get_active_id()])); opts.pack_start(self.mode, False, False, 0)
+        self.progress = Gtk.ProgressBar(show_text=True); self.progress.set_text("Idle"); root.pack_start(self.progress, False, False, 0)
+        self.speed = Gtk.Label(xalign=0); root.pack_start(self.speed, False, False, 0)
+        nb = Gtk.Notebook(); root.pack_start(nb, True, True, 0)
+        self.store = Gtk.ListStore(str, str, str, str, str)
+        tv = Gtk.TreeView(model=self.store)
+        for i, t in enumerate(("Package", "Installed", "New version", "Type", "Source")):
+            tv.append_column(Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i))
+        tv.connect("row-activated", self.changelog)
+        nb.append_page(self.scroll(tv), Gtk.Label(label="Available updates"))
+        self.hist = Gtk.ListStore(str, str, str, str); hv = Gtk.TreeView(model=self.hist)
+        for i, t in enumerate(("Date", "Upgraded / installed / removed", "Command", "Error")):
+            hv.append_column(Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i))
+        nb.append_page(self.scroll(hv), Gtk.Label(label="Update history"))
+        self.logv = Gtk.TextView(editable=False, monospace=True); nb.append_page(self.scroll(self.logv), Gtk.Label(label="Log"))
+        self.connect("destroy", Gtk.main_quit); self.show_all(); self.reload(); self.check_navin()
+
+    def scroll(self, w):
+        s = Gtk.ScrolledWindow(); s.add(w); return s
+
+    def bw(self):
+        return ["--low-bandwidth"] if self.low.get_active() else []
+
+    def reload(self, *_):
+        out = subprocess.run(["apt", "list", "--upgradable"], capture_output=True, text=True, env=C).stdout
+        self.rows = U.parse_upgradable(out); self.store.clear()
+        for r in self.rows:
+            self.store.append([r["name"], r["old"], r["new"], "security" if r["security"] else r["kind"], ",".join(r["suites"])])
+        s = U.summary(self.rows)
+        kernels = [d.name for d in pathlib.Path("/lib/modules").iterdir()] if pathlib.Path("/lib/modules").is_dir() else []
+        reboot = U.reboot_needed(pathlib.Path("/run/reboot-required").exists(), os.uname().release, kernels)
+        free = os.statvfs("/"); free_b = free.f_bavail * free.f_frsize
+        txt = (f"{s['total']} updates ({s['security']} security, {s['kernel']} kernel, {s['driver']} driver) from the last check. "
+               f"Free space: {free_b // 1024 ** 2} MB.")
+        if reboot:
+            txt += "  Restart needed to finish installed updates."
+        self.banner.set_text(txt); self.load_history()
+
+    def load_history(self):
+        self.hist.clear(); p = pathlib.Path("/var/log/apt/history.log")
+        if p.exists():
+            for e in U.parse_history(p.read_text(errors="replace")):
+                self.hist.append([e["date"], f"{e['upgraded']} / {e['installed']} / {e['removed']}", e["command"][:80], e["error"]])
+
+    def check_navin(self):
+        def task():
+            try:
+                req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/releases", headers={"User-Agent": "NAVIN-XP-Update-Center"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    rel = newer_os_release(json.load(r))
+                msg = (f"New NAVIN release {rel['tag_name']} is available (new ISO): {rel['html_url']}" if rel
+                       else f"NAVIN {VERSION} is the newest NAVIN release (checked GitHub just now).")
+            except Exception as e:
+                msg = f"Could not check NAVIN releases: {e}"
+            GLib.idle_add(self.append, msg + "\n")
+        threading.Thread(target=task, daemon=True).start()
+
+    def changelog(self, tv, path, col):
+        name = self.store[path][0]
+        threading.Thread(target=lambda: GLib.idle_add(self.append, subprocess.run(["apt-get", "changelog", name], capture_output=True, text=True, env=C).stdout[:6000] or "No changelog available offline.\n"), daemon=True).start()
+
+    def append(self, text):
+        buf = self.logv.get_buffer(); buf.insert(buf.get_end_iter(), text); return False
+
+    def install_all(self, *_):
+        online = subprocess.run(["nm-online", "-q", "-t", "5"]).returncode == 0
+        free = os.statvfs("/"); free_b = free.f_bavail * free.f_frsize
+        busy = subprocess.run(["pgrep", "-x", "dpkg|apt-get|apt|unattended-upgr"], capture_output=True).returncode == 0
+        problems = U.preflight(free_b, 0, online, busy)
+        if problems:
+            self.message("\n".join(problems)); return
+        args = ["upgrade"] + self.bw()
+        if U.is_major(self.rows):
+            if not self.ask(f"This is a major update ({len(self.rows)} packages, kernel or core desktop parts). A Timeshift snapshot is made first when Timeshift is set up. Continue?"):
+                return
+            args.append("--confirmed-major")
+        self.helper(args, then=self.reload)
+
+    def ask(self, text):
+        d = Gtk.MessageDialog(transient_for=self, modal=True, buttons=Gtk.ButtonsType.OK_CANCEL, text=text); r = d.run(); d.destroy()
+        return r == Gtk.ResponseType.OK
+
+    def message(self, text):
+        d = Gtk.MessageDialog(transient_for=self, modal=True, buttons=Gtk.ButtonsType.OK, text=text); d.run(); d.destroy()
+
+    def helper(self, args, then=None):
+        if self.proc:
+            return
+        for k, b in self.btns.items():
+            b.set_sensitive(k == "stop")
+        self.t0, self.last_pct = time.time(), 0; self.progress.set_fraction(0); self.progress.set_text("Starting...")
+        def task():
+            self.proc = subprocess.Popen(["pkexec", HELPER] + args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            result = ""
+            for line in self.proc.stdout:
+                st = U.parse_apt_status(line)
+                if st:
+                    GLib.idle_add(self.show_status, st)
+                else:
+                    GLib.idle_add(self.append, line)
+                if line.startswith("NAVIN_UPDATE_RESULT"):
+                    result = line.strip()
+            rc = self.proc.wait(); self.proc = None
+            GLib.idle_add(self.done, rc, result, then)
+        threading.Thread(target=task, daemon=True).start()
+
+    def show_status(self, st):
+        pct = U.overall_percent(st)
+        if pct is not None:
+            self.progress.set_fraction(pct / 100)
+        self.progress.set_text(f"{st['kind']}: {st['message'][:70]}" + (f" ({pct:.0f} %)" if pct is not None else ""))
+        if st["kind"] == "error":
+            self.append("ERROR " + st["package"] + ": " + st["message"] + "\n")
+
+    def done(self, rc, result, then):
+        for b in self.btns.values():
+            b.set_sensitive(True)
+        ok = result.startswith("NAVIN_UPDATE_RESULT ok")
+        self.progress.set_text(("Done - checked again: " if ok else "Not finished: ") + (result.replace("NAVIN_UPDATE_RESULT ", "") or f"helper exit {rc} (cancelled?)"))
+        if ok:
+            self.progress.set_fraction(1)
+        if then:
+            then()
+
+
+if __name__ == "__main__":
+    Center(); Gtk.main()

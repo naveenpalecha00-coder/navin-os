@@ -11,7 +11,8 @@
    "category": "Boot",
    "title": "Safe Graphics (black-screen fix) moved into the Tools submenu",
    "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
-   "check": "Tools (memory test, safe graphics)"
+   "check": "Tools (memory test, safe graphics)",
+   "superseded": "NAVIN XP 3.0: Safe Graphics is back on the main boot menu"
   },
   {
    "category": "Boot",

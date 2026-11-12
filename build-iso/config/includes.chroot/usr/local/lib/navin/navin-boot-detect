@@ -1,0 +1,29 @@
+#!/usr/bin/python3
+"""NAVIN XP boot splash line: shows what the kernel really detected (CPU, RAM, graphics, Wi-Fi, Bluetooth, audio,
+touchpad) on the Plymouth screen via `plymouth display-message`. Read-only, no guessing: missing = 'not found'."""
+import pathlib, subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_hw as hw
+
+
+def read(p):
+    try:
+        return pathlib.Path(p).read_text(errors="replace")
+    except OSError:
+        return ""
+
+
+cpu = next((l.split(":", 1)[1] for l in read("/proc/cpuinfo").splitlines() if l.startswith("model name")), "")
+mem = int(next((l.split()[1] for l in read("/proc/meminfo").splitlines() if l.startswith("MemTotal:")), "0"))
+gpus = []
+for d in pathlib.Path("/sys/bus/pci/devices").glob("*"):
+    if read(d / "class").startswith("0x03"):
+        gpus.append({"vendor": read(d / "vendor").strip()[2:], "device": read(d / "device").strip()[2:]})
+net = pathlib.Path("/sys/class/net")
+wifi = any((n / "wireless").exists() or (n / "phy80211").exists() for n in net.glob("*"))
+bt = any(pathlib.Path("/sys/class/bluetooth").glob("hci*"))
+audio = any(pathlib.Path("/sys/class/sound").glob("card*"))
+touch = any(hw.is_touchpad(d) for d in hw.parse_input_devices(read("/proc/bus/input/devices")))
+line = hw.boot_hw_summary(cpu, mem, gpus, wifi, bt, audio, touch)
+print(line)
+subprocess.run(["plymouth", "display-message", "--text=" + line], capture_output=True)

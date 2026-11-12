@@ -57,4 +57,15 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/navin/navin-fan</annotate>
   </action>
+  <action id="org.navin.update">
+    <description>Install NAVIN XP updates</description>
+    <message>NAVIN XP Update Center needs your password to check for and install updates</message>
+    <icon_name>system-software-update</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/navin-os/navin-update-helper</annotate>
+  </action>
 </policyconfig>

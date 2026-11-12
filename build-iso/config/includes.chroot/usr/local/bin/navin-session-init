@@ -27,6 +27,11 @@ if [ "$PROFILE" != lite ]; then
   /usr/local/lib/navin/navin-preload >/dev/null 2>&1 &
 fi
 [ "$(cat "$HOME/.config/navin/theme" 2>/dev/null || echo light)" = auto ] && nice -n 19 navin-theme auto >/dev/null 2>&1 &
+# NAVIN XP boot menu "Recovery Mode" (navin.recovery=1): open the NAVIN Recovery page (repair, snapshots, logs).
+if grep -qw 'navin.recovery=1' /proc/cmdline && [ ! -f /run/user/$(id -u)/navin-recovery-started ]; then
+  touch /run/user/$(id -u)/navin-recovery-started
+  (sleep 3; navin-center recovery) &
+fi
 # Boot menu "Full Installation" (navin.install=1): open the install guide, then the real Calamares installer.
 if [ "$LIVE" = 1 ] && grep -qw 'navin.install=1' /proc/cmdline && [ ! -f /run/user/$(id -u)/navin-installer-started ]; then
   touch /run/user/$(id -u)/navin-installer-started

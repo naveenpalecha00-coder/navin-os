@@ -1,14 +1,14 @@
 #!/bin/sh
-# NAVIN 2.2 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
-# Exactly two choices on the main menu:
-#   Live Mode — Try NAVIN 2.2          (default, the full desktop with every feature, nothing installed)
-#   Full Installation — Install ...    (same live system + navin.install=1 -> Calamares opens)
-# Both carry the touchpad controller fix (i8042.nomux=1 i8042.reset=1, from auto/config --bootappend-live;
-# legacy BIOS adds i8042.nopnp=1 i8042.noloop=1, UEFI adds them on Samsung laptops through SMBIOS),
-# so old-laptop touchpads work without a separate "Old Laptop Mode". Old laptops get light effects automatically.
-# Safe Graphics (nomodeset, black-screen fix) is kept out of the main list: GRUB puts it inside the Tools
-# submenu, ISOLINUX keeps it as a hidden entry (Tab, type "safe").
-# Arrow keys move, Enter starts, timeout 3 s. Light NAVIN theme with pale-blue selection.
+# NAVIN XP 3.0 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
+# Main menu (arrow keys move, Enter starts, Esc/c = GRUB command line, 15 s countdown, default = Live Mode):
+#   Live Mode - Start NAVIN XP from USB      (full desktop, nothing installed)            [default]
+#   Install NAVIN XP - HDD, SSD or USB      (same live system + navin.install=1 -> Calamares installer)
+#   Safe Graphics - NAVIN XP                (nomodeset, black-screen fix)
+#   Recovery Mode - NAVIN XP                (navin.recovery=1 nomodeset: light desktop + NAVIN Recovery page)
+#   Restart / Shutdown                      (GRUB reboot/halt, ISOLINUX reboot.c32/poweroff.c32)
+# Every Linux entry carries the touchpad controller fix (i8042.nomux=1 i8042.reset=1, from auto/config
+# --bootappend-live; legacy BIOS adds i8042.nopnp=1 i8042.noloop=1, UEFI adds them on Samsung laptops via SMBIOS).
+# The countdown is set once here (TIMEOUT); the installed system's menu uses /etc/default/grub GRUB_TIMEOUT.
 set -e
 python3 - <<'PY'
 import pathlib, re, struct, zlib
@@ -18,7 +18,9 @@ def png(path, w, h, rgb):
     def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
-LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN 2.2", "Full Installation - Install NAVIN 2.2", "Safe Graphics - NAVIN 2.2 (black screen fix)"
+LIVE, INSTALL, SAFE = "Live Mode - Start NAVIN XP from USB", "Install NAVIN XP - HDD, SSD or USB", "Safe Graphics - NAVIN XP (black screen fix)"
+RECOVERY, RESTART, SHUTDOWN = "Recovery Mode - NAVIN XP", "Restart", "Shutdown"
+TIMEOUT = 15
 TOUCH = " i8042.nomux=1 i8042.reset=1"
 # NAVIN 2.2.1: legacy BIOS (ISOLINUX) entries also probe the touchpad port directly (Samsung RV411 class BIOS
 # leaves it out of ACPI). UEFI GRUB adds the same only on Samsung laptops, read from SMBIOS ($navin_tp).
@@ -54,7 +56,9 @@ def fix_grub(text):
         if "fail-safe" in title.lower() or "safe graphics" in title.lower():
             # Not on the main list (user rule: only Live + Full Installation); moved into the Tools submenu below.
             sb = linux(lambda l: grub_touch(l if "nomodeset" in l else l + " nomodeset"))
-            safe = "".join("\t" + l + "\n" for l in f'menuentry "{SAFE}"{rest}{{{sb}\n}}'.splitlines())
+            safe = f'menuentry "{SAFE}" --hotkey=s {{{sb}\n}}'
+            rb = linux(lambda l: grub_touch((l if "nomodeset" in l else l + " nomodeset") + " navin.recovery=1"))
+            safe += f'\nmenuentry "{RECOVERY}" --hotkey=r {{{rb}\n}}' 
         elif "live" in title.lower() or "navin" in title.lower() or "install" in title.lower():
             if done or "linux" not in body:
                 continue  # any other live/installer entry from live-build is dropped: two choices only
@@ -67,12 +71,17 @@ def fix_grub(text):
     text = "".join(out)
     if done and "navin_vendor" not in text:
         text = GRUB_SMBIOS + text
-    if safe:
-        text, n = SUBMENU.subn(lambda x: x.group(1) + safe, text, count=1)
-    text = re.sub(r"^set timeout=.*$", "set timeout=3", text, flags=re.M)
+    if done:
+        power = f'menuentry "{RESTART}" --hotkey=b {{\n\techo "Restarting..."\n\treboot\n}}\nmenuentry "{SHUTDOWN}" --hotkey=h {{\n\techo "Shutting down..."\n\thalt\n}}\n'
+        cut = SUBMENU.search(text)
+        extra = (safe + "\n" if safe else "") + power
+        text = text[:cut.start()] + extra + text[cut.start():] if cut else text.rstrip("\n") + "\n" + extra
+    text = re.sub(r"^set timeout=.*$", f"set timeout={TIMEOUT}", text, flags=re.M)
     if "set timeout=" not in text:
-        text = "set default=0\nset timeout=3\n" + text
-    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.2").replace("Utilities...", "Tools (memory test, safe graphics)")
+        text = f"set default=0\nset timeout={TIMEOUT}\n" + text
+    if "timeout_style" not in text:
+        text = "set timeout_style=menu\n" + text
+    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN XP").replace("Utilities...", "Tools (memory test)")
 
 changed = 0
 for f in ("boot/grub/grub.cfg", "boot/grub/config.cfg", "boot/grub/install_start.cfg"):
@@ -84,19 +93,19 @@ theme = pathlib.Path("boot/grub/live-theme")
 if theme.is_dir():
     for part in ("c", "n", "s", "e", "w", "ne", "nw", "se", "sw"):
         png(theme / f"select_{part}.png", 8, 8, (22, 119, 242))
-    (theme / "theme.txt").write_text('''desktop-color: "#F4F7FB"
-title-text: "NAVIN 2.2"
-title-color: "#111111"
-message-color: "#333333"
+    (theme / "theme.txt").write_text('''desktop-color: "#0B2A6B"
+title-text: "NAVIN XP"
+title-color: "#FFFFFF"
+message-color: "#DCE9FF"
 + boot_menu {
   left = 22%
   top = 28%
   width = 56%
   height = 44%
-  item_color = "#111111"
+  item_color = "#FFFFFF"
   selected_item_color = "#FFFFFF"
-  item_height = 34
-  item_padding = 10
+  item_height = 44
+  item_padding = 14
   item_spacing = 6
   selected_item_pixmap_style = "select_*.png"
 }
@@ -107,16 +116,16 @@ message-color: "#333333"
   width = 56%
   height = 6
   fg_color = "#1677F2"
-  bg_color = "#DCE6F5"
-  border_color = "#DCE6F5"
+  bg_color = "#24438A"
+  border_color = "#24438A"
 }
 + label {
   left = 0
   top = 82%
   width = 100%
   align = "center"
-  color = "#555555"
-  text = "Up/Down: choose    Enter: start    NAVIN OS 2.2 - Your PC. Your OS. Your Freedom."
+  color = "#DCE9FF"
+  text = "Up/Down: choose    Enter: start    Esc/c: command line    NAVIN XP - Your PC. Your OS. Your Freedom."
 }
 ''')
 else:
@@ -134,30 +143,42 @@ if live.exists():
         if "fail-safe" in b.lower():
             # Hidden from the menu (two visible choices only); still bootable: press Tab and type "safe".
             b = re.sub(r"^label \S+", "label safe", b, count=1, flags=re.M)
-            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN 2.2 (black screen fix)\n\tmenu hide", b)
+            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN XP (black screen fix)", b)
             b = re.sub(r"^(\s*append .*)$", lambda x: bios_touch(x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset"), b, flags=re.M)
             out.append(b)
+            rec = re.sub(r"^label \S+", "label recovery", b, count=1, flags=re.M)
+            rec = re.sub(r"menu label .*", "menu label ^Recovery Mode - NAVIN XP", rec)
+            out.append(re.sub(r"^(\s*append .*)$", r"\1 navin.recovery=1", rec, count=1, flags=re.M))
         elif b.startswith("label") and "append" in b:
             if done:
                 continue  # other live entries are dropped: two choices only
             done = True
             live_b = re.sub(r"^(\s*append .*)$", lambda x: bios_touch(x.group(1)), b, count=1, flags=re.M)
-            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN 2.2", live_b))
+            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Start NAVIN XP from USB", live_b))
             inst = re.sub(r"^label (\S+)", r"label \1-install", live_b, flags=re.M)
-            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN 2.2", inst)
+            inst = re.sub(r"menu label .*", "menu label ^Install NAVIN XP - HDD, SSD or USB", inst)
             inst = re.sub(r"^\s*menu default\s*\n", "", inst, flags=re.M)
             inst = re.sub(r"^(\s*append .*)$", r"\1 navin.install=1", inst, count=1, flags=re.M)
             out.append(inst)
         else:
             out.append(b)
+    # Restart / Shutdown: syslinux COM32 modules (copied from the build host when live-build did not)
+    mods = pathlib.Path("/usr/lib/syslinux/modules/bios")
+    for m in ("reboot.c32", "poweroff.c32", "libcom32.c32", "libutil.c32"):
+        if not (live.parent / m).exists() and (mods / m).exists():
+            (live.parent / m).write_bytes((mods / m).read_bytes())
+    if (live.parent / "reboot.c32").exists():
+        out.append("label reboot\n\tmenu label ^Restart\n\tcom32 reboot.c32\n")
+    if (live.parent / "poweroff.c32").exists():
+        out.append("label poweroff\n\tmenu label Shut^down\n\tcom32 poweroff.c32\n")
     live.write_text("\n".join(out)); changed += 1
 for f in pathlib.Path("isolinux").glob("*.cfg"):
     t = f.read_text()
-    t = re.sub(r"^timeout .*$", "timeout 30", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.2")
+    t = re.sub(r"^timeout .*$", f"timeout {TIMEOUT * 10}", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN XP")
     f.write_text(t)
 std = pathlib.Path("isolinux/stdmenu.cfg")
 if std.exists():
-    png(pathlib.Path("isolinux/splash.png"), 640, 480, (244, 247, 251))
-    std.write_text(std.read_text() + "\nmenu color title * #ff111111 #00000000 none\nmenu color sel * #ffffffff #ff1677f2 none\nmenu color unsel * #ff111111 #00000000 none\nmenu color hotsel * #ffffffff #ff1677f2 none\nmenu color hotkey * #ff1677f2 #00000000 none\nmenu color tabmsg * #ff555555 #00000000 none\nmenu color timeout_msg * #ff555555 #00000000 none\nmenu color timeout * #ff1677f2 #00000000 none\nmenu color border * #00000000 #00000000 none\n")
-print(f"[navin-os] boot menu: Live Mode / Full Installation (touchpad fix on both) written ({changed} files)")
+    png(pathlib.Path("isolinux/splash.png"), 640, 480, (11, 42, 107))
+    std.write_text(std.read_text() + "\nmenu title NAVIN XP - Your PC. Your OS. Your Freedom.\nmenu color title * #ffffffff #00000000 none\nmenu color sel * #ffffffff #ff1677f2 none\nmenu color unsel * #ffffffff #00000000 none\nmenu color hotsel * #ffffffff #ff1677f2 none\nmenu color hotkey * #ff1677f2 #00000000 none\nmenu color tabmsg * #ff555555 #00000000 none\nmenu color timeout_msg * #ff555555 #00000000 none\nmenu color timeout * #ff1677f2 #00000000 none\nmenu color border * #00000000 #00000000 none\n")
+print(f"[navin-os] NAVIN XP boot menu: Live / Install / Safe Graphics / Recovery / Restart / Shutdown, {TIMEOUT} s ({changed} files)")
 PY

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN XP Update Center
+Comment=System, security, driver, kernel, Flatpak and NAVIN release updates
+Exec=navin-update-center
+Icon=system-software-update
+Categories=System;Settings;
+Keywords=update;upgrade;security;apt;flatpak;kernel;driver;

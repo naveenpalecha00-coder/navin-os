@@ -23,7 +23,8 @@
    "category": "Touchpad",
    "title": "\"Old Laptop Mode\" entry in the live USB boot menu (UEFI and BIOS)",
    "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
-   "check": "Old Laptop Mode"
+   "check": "Old Laptop Mode",
+   "superseded": "NAVIN XP 3.0: old laptops get light settings automatically; no separate boot entry"
   },
   {
    "category": "Touchpad",
@@ -263,7 +264,8 @@
    "category": "Fast boot",
    "title": "Live USB boot menu waits 3 s",
    "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
-   "check": "set timeout=3"
+   "check": "set timeout=3",
+   "superseded": "NAVIN XP 3.0: boot menu countdown is 15 s (TIMEOUT = 15)"
   },
   {
    "category": "Fast boot",

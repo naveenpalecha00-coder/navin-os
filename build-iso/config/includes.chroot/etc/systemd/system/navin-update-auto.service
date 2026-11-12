@@ -1,0 +1,11 @@
+[Unit]
+Description=NAVIN XP Update Center daily check (security-only auto install when chosen)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/run/live
+
+[Service]
+Type=oneshot
+Nice=15
+IOSchedulingClass=idle
+ExecStart=/usr/lib/navin-os/navin-update-helper auto

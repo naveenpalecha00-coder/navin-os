@@ -209,11 +209,11 @@ class Center(Gtk.Window):
 
     # ---- NAVIN 2.0: What's New (real list shipped with the image, every entry names its file)
     def p_whatsnew(self):
-        b = page("What's New in NAVIN 2.2", "Every change below is in this system; the file that does it is shown in grey. 2.1 and 2.0 changes are kept and listed after the 2.2 ones.")
+        b = page("What's New in NAVIN XP 3.0", "Every change below is in this system; the file that does it is shown in grey. 2.2.1, 2.2, 2.1 and 2.0 changes are kept and listed after the NAVIN XP ones.")
         items = []
-        for ver in ("2.2.1", "2.2", "2.1", "2.0"):
+        for ver in ("3.0", "2.2.1", "2.2", "2.1", "2.0"):
             try:
-                items += [dict(it, category=f"{ver} · {it['category']}") for it in json.loads(pathlib.Path(f"/usr/share/navin/whatsnew-{ver}.json").read_text())["items"]]
+                items += [dict(it, category=f"{ver} · {it['category']}") for it in json.loads(pathlib.Path(f"/usr/share/navin/whatsnew-{ver}.json").read_text())["items"] if not it.get("superseded")]
             except (OSError, ValueError, KeyError):
                 pass
         groups = {}
@@ -454,7 +454,8 @@ class Center(Gtk.Window):
         insecure = [str(p) for p in [pathlib.Path("/etc/apt/sources.list"), *pathlib.Path("/etc/apt/sources.list.d").glob("*")] if p.is_file() and re.search(r"trusted=yes|allow-insecure", p.read_text(errors="replace"))]
         b.pack_start(Gtk.Label(label=("⚠ Unsigned repository found: " + ", ".join(insecure)) if insecure else "✔ All configured repositories require valid signatures.", xalign=0), False, False, 0)
         b.pack_start(row(btn("Check for updates", check), btn("Install all updates", lambda: confirm(self, "Install all updates now?", "Keep the computer plugged in.") and log.stream(REPAIR + ["upgrade"])),
-                         btn("Update Flatpak apps", lambda: log.stream(REPAIR + ["flatpak-update"])), btn("NAVIN releases", lambda: subprocess.Popen(["navin-updater"]))), False, False, 0)
+                         btn("Update Flatpak apps", lambda: log.stream(REPAIR + ["flatpak-update"])), btn("NAVIN releases", lambda: subprocess.Popen(["navin-updater"])),
+                         btn("Open NAVIN XP Update Center", lambda: subprocess.Popen(["navin-update-center"]))), False, False, 0)
         b.pack_start(log, True, True, 0); return b
 
     # ---- Hardware Diagnostics

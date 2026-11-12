@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=NAVIN XP
+Description=NAVIN XP boot splash - blue background, logo fade-in with blue glow, circular loading indicator
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/navin-xp
+ScriptFile=/usr/share/plymouth/themes/navin-xp/navin-xp.script

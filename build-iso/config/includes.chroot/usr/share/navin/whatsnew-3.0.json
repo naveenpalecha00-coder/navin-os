@@ -1,0 +1,204 @@
+{
+ "version": "3.0",
+ "title": "What's new in NAVIN XP 3.0",
+ "items": [
+  {
+   "category": "Boot",
+   "title": "NAVIN XP name everywhere: system name, text console, installer, boot menu (NAVIN XP 3.0)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "PRETTY_NAME=\"NAVIN XP 3.0 (Debian 13 Trixie base)\""
+  },
+  {
+   "category": "Boot",
+   "title": "No Debian licence text on the text console - one NAVIN XP line instead",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "NAVIN XP 3.0 - Your PC. Your OS. Your Freedom."
+  },
+  {
+   "category": "Boot",
+   "title": "New NAVIN XP boot splash: logo fades in with a breathing blue glow on a blue background",
+   "path": "build-iso/config/includes.chroot/usr/share/plymouth/themes/navin-xp/navin-xp.script",
+   "check": "glow_s.SetOpacity(a * (0.65 + 0.35 * Math.Sin(frame / 25)));"
+  },
+  {
+   "category": "Boot",
+   "title": "Circular loading indicator (24 frames) and 'Starting NAVIN XP...' text",
+   "path": "build-iso/config/includes.chroot/usr/share/plymouth/themes/navin-xp/navin-xp.script",
+   "check": "spin[i] = Image(\"spinner-\" + i + \".png\");"
+  },
+  {
+   "category": "Boot",
+   "title": "Fixed: the NAVIN splash was always replaced by Debian's spinner - NAVIN XP theme is now the default",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "plymouth-set-default-theme -R navin-xp"
+  },
+  {
+   "category": "Boot",
+   "title": "Boot splash shows what the kernel really found: CPU, RAM, graphics, Wi-Fi, Bluetooth, audio, touchpad",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-boot-detect",
+   "check": "subprocess.run([\"plymouth\", \"display-message\", \"--text=\" + line]"
+  },
+  {
+   "category": "Boot",
+   "title": "Real boot progress line (systemd) and messages under the spinner, disk-unlock password prompt",
+   "path": "build-iso/config/includes.chroot/usr/share/plymouth/themes/navin-xp/navin-xp.script",
+   "check": "Plymouth.SetDisplayPasswordFunction(password_callback);"
+  },
+  {
+   "category": "Boot",
+   "title": "Boot menu: Live Mode (default), Install NAVIN XP, Safe Graphics, Recovery Mode, Restart, Shutdown",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "RECOVERY, RESTART, SHUTDOWN = \"Recovery Mode - NAVIN XP\", \"Restart\", \"Shutdown\""
+  },
+  {
+   "category": "Boot",
+   "title": "15-second countdown (UEFI and legacy BIOS), arrow keys + Enter, Esc/c opens the GRUB command line",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "TIMEOUT = 15"
+  },
+  {
+   "category": "Boot",
+   "title": "Dark-blue NAVIN XP boot menu theme with large rows",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "desktop-color: \"#0B2A6B\""
+  },
+  {
+   "category": "Boot",
+   "title": "Recovery Mode opens the NAVIN Recovery page with safe graphics",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-session-init",
+   "check": "(sleep 3; navin-center recovery) &"
+  },
+  {
+   "category": "Desktop start",
+   "title": "Fixed 2.2.1 stop at the tty1 text screen: display guard tries safer graphics drivers until the desktop starts",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-display-guard",
+   "check": "subprocess.run([\"systemctl\", \"restart\", \"lightdm.service\"])"
+  },
+  {
+   "category": "Desktop start",
+   "title": "Driver order: Intel SNA -> modesetting -> modesetting without acceleration -> fbdev -> VESA (BIOS)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_hw.py",
+   "check": "DISPLAY_LEVELS = (\"default\", \"modesetting\", \"noaccel\", \"fbdev\", \"vesa\")"
+  },
+  {
+   "category": "Desktop start",
+   "title": "Safe Graphics / Recovery boots use a safe driver from the start (only for that boot)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-display-guard",
+   "check": "nomodeset boot: using"
+  },
+  {
+   "category": "Desktop start",
+   "title": "Graphical desktop is the default boot target",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "systemctl set-default graphical.target"
+  },
+  {
+   "category": "Desktop start",
+   "title": "Text screen explains what happened and how to fix it when the desktop cannot start",
+   "path": "build-iso/config/includes.chroot/etc/profile.d/navin-tty-help.sh",
+   "check": "the desktop could not start with any graphics driver"
+  },
+  {
+   "category": "Installer",
+   "title": "Installer named NAVIN XP 3.0 with the NAVIN XP logo and dark-blue sidebar",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "versionedName:       \"NAVIN XP 3.0\""
+  },
+  {
+   "category": "Update Center",
+   "title": "NAVIN XP Update Center: system, security, kernel, driver, Flatpak and NAVIN release updates",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-update-center",
+   "check": "title=\"NAVIN XP Update Center\""
+  },
+  {
+   "category": "Update Center",
+   "title": "Real progress from APT's own status numbers (download + install), no invented percentages",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "opts = [\"-o\", \"APT::Status-Fd=1\""
+  },
+  {
+   "category": "Update Center",
+   "title": "Security-only updates (packages from Debian's -security suite)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "s.endswith(\"-security\") for s in suites"
+  },
+  {
+   "category": "Update Center",
+   "title": "Never removes packages: uses 'upgrade --with-new-pkgs', never dist-upgrade",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "[\"--with-new-pkgs\", \"upgrade\"]"
+  },
+  {
+   "category": "Update Center",
+   "title": "Asks first before major updates (kernel, desktop core, 40+ packages) and makes a Timeshift snapshot when set up",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-update-helper",
+   "check": "--confirmed-major"
+  },
+  {
+   "category": "Update Center",
+   "title": "Shutdown and sleep are blocked while packages install",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-update-helper",
+   "check": "\"--why=Installing updates - please do not switch off\""
+  },
+  {
+   "category": "Update Center",
+   "title": "Checks free disk space, internet, a running installation and battery before installing",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "def preflight("
+  },
+  {
+   "category": "Update Center",
+   "title": "Signature, checksum, dependency, lock and space errors explained in plain words",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "REPO_ERRORS = ("
+  },
+  {
+   "category": "Update Center",
+   "title": "Update history from the APT log, plus a full log file",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "def parse_history("
+  },
+  {
+   "category": "Update Center",
+   "title": "Pending restart detection (Debian flag or a newer kernel)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "def reboot_needed("
+  },
+  {
+   "category": "Update Center",
+   "title": "Download only + pause; resume continues APT's partial downloads",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-update-helper",
+   "check": "if action == \"stop\":"
+  },
+  {
+   "category": "Update Center",
+   "title": "Low bandwidth mode (APT download speed limit)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_update.py",
+   "check": "Acquire::http::Dl-Limit="
+  },
+  {
+   "category": "Update Center",
+   "title": "Automatic mode: manual, notify daily, or install security updates daily (only on the charger)",
+   "path": "build-iso/config/includes.chroot/etc/systemd/system/navin-update-auto.timer",
+   "check": "OnUnitActiveSec=1d"
+  },
+  {
+   "category": "Update Center",
+   "title": "Success shown only after a fresh check of what is still upgradable",
+   "path": "build-iso/config/includes.chroot/usr/lib/navin-os/navin-update-helper",
+   "check": "after = upgradable()"
+  },
+  {
+   "category": "Update Center",
+   "title": "Changelog of a package (double-click a row)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-update-center",
+   "check": "[\"apt-get\", \"changelog\", name]"
+  },
+  {
+   "category": "Update Center",
+   "title": "Password asked through the system (polkit action org.navin.update)",
+   "path": "build-iso/config/includes.chroot/usr/share/polkit-1/actions/org.navin.repair.policy",
+   "check": "<action id=\"org.navin.update\">"
+  }
+ ]
+}

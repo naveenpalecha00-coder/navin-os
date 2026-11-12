@@ -689,3 +689,59 @@ def apply_quirks(q, log, root="/"):
 
 if __name__ == "__main__":
     print(json.dumps(collect(), indent=1))
+
+
+# ---------------- NAVIN XP: display guard (desktop must start; NAVIN 2.2.1 stopped at the tty1 text screen) ----------------
+DISPLAY_LEVELS = ("default", "modesetting", "noaccel", "fbdev", "vesa")
+DISPLAY_FALLBACK_CONF = "etc/X11/xorg.conf.d/05-navin-display-fallback.conf"
+
+
+def xorg_errors(text):
+    """Meaningful (EE) lines of /var/log/Xorg.0.log (backtrace noise removed)."""
+    out = []
+    for line in text.splitlines():
+        if "(EE)" not in line:
+            continue
+        msg = line.split("(EE)", 1)[1].strip()
+        if msg and not re.match(r"^\d+:|^Backtrace|^Please consult|^Fatal server error:$|^$", msg) and msg not in out:
+            out.append(msg)
+    return out[:12]
+
+
+def display_next_level(level, cmdline="", errors=(), uefi=True):
+    """Next fallback after the X server did not start at `level` (pure). None = nothing left to try.
+
+    default -> modesetting (drops the Intel SNA driver) -> noaccel (modesetting without glamor) -> fbdev -> vesa (BIOS only).
+    With nomodeset (Safe Graphics) there is no kernel modesetting, so it goes straight to fbdev/vesa."""
+    i = DISPLAY_LEVELS.index(level) if level in DISPLAY_LEVELS else 0
+    text = " ".join(errors).lower()
+    nxt = i + 1
+    if "nomodeset" in cmdline.split():
+        nxt = max(nxt, DISPLAY_LEVELS.index("fbdev"))
+    elif nxt == 1 and "glamor" in text:
+        nxt = 2
+    if nxt < len(DISPLAY_LEVELS) and DISPLAY_LEVELS[nxt] == "vesa" and uefi:
+        return None  # the VESA BIOS driver cannot work on UEFI firmware
+    return DISPLAY_LEVELS[nxt] if nxt < len(DISPLAY_LEVELS) else None
+
+
+def display_fallback_conf(level):
+    """Text of 05-navin-display-fallback.conf for a level ('' = remove the file). 05- sorts first, so its
+    Device section wins over 10-navin-oldintel.conf / 20-navin-gpu.conf."""
+    if level not in DISPLAY_LEVELS or level == "default":
+        return ""
+    body = {"modesetting": '  Driver "modesetting"\n  Option "AccelMethod" "glamor"\n',
+            "noaccel": '  Driver "modesetting"\n  Option "AccelMethod" "none"\n  Option "PageFlip" "off"\n',
+            "fbdev": '  Driver "fbdev"\n', "vesa": '  Driver "vesa"\n'}[level]
+    return (f"# NAVIN XP display guard: the desktop did not start with the previous driver, using '{level}'.\n"
+            f"# Reset: sudo navin-display-guard reset\nSection \"Device\"\n  Identifier \"NAVIN display fallback\"\n{body}EndSection\n")
+
+
+def boot_hw_summary(cpu_model, mem_kb, gpus, wifi, bluetooth, audio, touchpad):
+    """One honest line for the boot splash, built from what the kernel actually found (missing = 'not found')."""
+    cpu = re.sub(r"\s+", " ", re.sub(r"\((R|TM)\)|CPU|@.*$", "", cpu_model or "")).strip() or "CPU"
+    parts = [cpu, f"{round(mem_kb / 1048576, 1):g} GB RAM" if mem_kb else "RAM ?",
+             (GPU_VENDORS.get(gpus[0].get("vendor"), "GPU") + " graphics") if gpus else "graphics not found",
+             "Wi-Fi" if wifi else "no Wi-Fi", "Bluetooth" if bluetooth else "no Bluetooth",
+             "audio" if audio else "no audio", "touchpad" if touchpad else "no touchpad yet"]
+    return " · ".join(parts)

@@ -456,7 +456,8 @@
    "category": "Boot",
    "title": "Boot menu and system now say NAVIN 2.2 (all 2.1 touchpad and two-choice boot fixes kept)",
    "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
-   "check": "Live Mode - Try NAVIN 2.2"
+   "check": "Live Mode - Try NAVIN 2.2",
+   "superseded": "NAVIN XP 3.0: boot menu says 'Live Mode - Start NAVIN XP from USB'"
   }
  ]
 }

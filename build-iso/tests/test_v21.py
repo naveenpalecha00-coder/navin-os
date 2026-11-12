@@ -55,9 +55,11 @@ class BootMenu(unittest.TestCase):
     def top_level_entries(self):
         return [l for l in self.grub.splitlines() if l.startswith('menuentry ')]
 
-    def test_grub_main_menu_has_exactly_live_and_install(self):
+    def test_grub_main_menu_navin_xp(self):
+        # NAVIN XP 3.0 (user request): Live, Install, Safe Graphics, Recovery, Restart, Shutdown - Live stays first/default.
         self.assertEqual([l.split('"')[1] for l in self.top_level_entries()],
-                         ['Live Mode - Try NAVIN 2.2', 'Full Installation - Install NAVIN 2.2'])
+                         ['Live Mode - Start NAVIN XP from USB', 'Install NAVIN XP - HDD, SSD or USB', 'Safe Graphics - NAVIN XP (black screen fix)',
+                          'Recovery Mode - NAVIN XP', 'Restart', 'Shutdown'])
         self.assertNotIn('Old Laptop', self.grub)
 
     def test_both_grub_choices_have_touchpad_fix_once(self):
@@ -67,19 +69,17 @@ class BootMenu(unittest.TestCase):
                 self.assertIn('i8042.reset=1', l)
         self.assertIn('navin.install=1', self.grub)
 
-    def test_safe_graphics_lives_in_tools_submenu(self):
-        sub = self.grub[self.grub.index('submenu'):]
-        self.assertIn('Safe Graphics - NAVIN 2.2', sub)
-        self.assertIn('nomodeset', sub)
+    def test_safe_graphics_on_main_menu_with_nomodeset(self):
+        safe = self.grub[self.grub.index('Safe Graphics - NAVIN XP'):]
+        self.assertIn('nomodeset', safe.split('}')[0])
+        self.assertIn('Memory Diagnostic Tool', self.grub[self.grub.index('submenu'):])
 
-    def test_isolinux_two_visible_choices(self):
+    def test_isolinux_entries(self):
         labels = [l.strip() for l in self.iso.splitlines() if 'menu label' in l]
-        self.assertEqual(len(labels), 3)
-        safe = self.iso[self.iso.index('label safe'):]
-        self.assertIn('menu hide', safe)
-        visible = self.iso[:self.iso.index('label safe')]
-        self.assertEqual(visible.count('menu label'), 2)
-        self.assertEqual(visible.count('i8042.nomux=1'), 2)
+        self.assertEqual(labels[:4], ['menu label ^Live Mode - Start NAVIN XP from USB', 'menu label ^Install NAVIN XP - HDD, SSD or USB',
+                                      'menu label ^Safe Graphics - NAVIN XP (black screen fix)', 'menu label ^Recovery Mode - NAVIN XP'])
+        self.assertEqual(self.iso.count('i8042.nomux=1'), 4)
+        self.assertIn('navin.recovery=1', self.iso)
 
     def test_live_and_installed_boot_lines_have_touchpad_fix(self):
         self.assertIn('persistence i8042.nomux=1 i8042.reset=1', (ROOT / 'auto/config').read_text())
@@ -216,6 +216,8 @@ class WhatsNew21(unittest.TestCase):
         data = json.loads((IC / 'usr/share/navin/whatsnew-2.1.json').read_text())
         self.assertEqual(data['version'], '2.1')
         for it in data['items']:
+            if it.get('superseded'):
+                continue  # replaced by a later release (shown in What's New with the reason)
             path = REPO / it['path']
             self.assertTrue(path.exists(), it['path'])
             self.assertIn(it['check'], path.read_text(), f"{it['title']} -> {it['path']}")

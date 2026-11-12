@@ -28,5 +28,5 @@ lb config noauto \
   --iso-application "NAVIN 2.2" \
   --iso-publisher "Navin Palecha" \
   --iso-volume "NAVIN_2_2" \
-  --bootappend-live "boot=live components persistence i8042.nomux=1 i8042.reset=1 quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 username=navin user-fullname=Navin hostname=navin-os locales=en_US.UTF-8 keyboard-layouts=us" \
+  --bootappend-live "boot=live components persistence i8042.nomux=1 i8042.reset=1 quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 username=navin user-fullname=Navin hostname=navin-xp locales=en_US.UTF-8 keyboard-layouts=us" \
   "${@}"
