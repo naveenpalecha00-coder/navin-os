@@ -27,13 +27,13 @@ sed -i 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable
 apt-get clean
 
 echo "[navin-os] 2/9 OS branding (NAVIN XP)"
-sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN XP 3.0 (Debian 13 Trixie base)"/' /usr/lib/os-release
-sed -i '/^NAVIN_OS_VERSION=/d; /^NAVIN_PRODUCT=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="3.0"' >> /usr/lib/os-release; echo 'NAVIN_PRODUCT="NAVIN XP"' >> /usr/lib/os-release
-printf 'NAVIN XP 3.0 \\n \\l\n\n' > /etc/issue
-echo "NAVIN XP 3.0" > /etc/issue.net
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NAVIN XP 3.1 (Debian 13 Trixie base)"/' /usr/lib/os-release
+sed -i '/^NAVIN_OS_VERSION=/d; /^NAVIN_PRODUCT=/d' /usr/lib/os-release; echo 'NAVIN_OS_VERSION="3.1"' >> /usr/lib/os-release; echo 'NAVIN_PRODUCT="NAVIN XP"' >> /usr/lib/os-release
+printf 'NAVIN XP 3.1 \\n \\l\n\n' > /etc/issue
+echo "NAVIN XP 3.1" > /etc/issue.net
 echo "navin-xp" > /etc/hostname
 # NAVIN XP: no Debian licence text on the text console; one NAVIN line instead (licences stay in /usr/share/doc).
-printf 'NAVIN XP 3.0 - Your PC. Your OS. Your Freedom.  (Debian 13 base; licences: /usr/share/doc/*/copyright)\n' > /etc/motd
+printf 'NAVIN XP 3.1 - Your PC. Your OS. Your Freedom.  (Debian 13 base; licences: /usr/share/doc/*/copyright)\n' > /etc/motd
 rm -f /etc/update-motd.d/10-uname
 
 echo "[navin-os] 3/9 Default user group setup (live user 'navin' gets sudo via live-config)"
@@ -87,10 +87,10 @@ if [ -d /etc/calamares/branding/debian ]; then
   sed -i 's/^componentName:.*/componentName:  navin/' "$D"
   sed -i 's/productName:.*/productName:         "NAVIN XP"/' "$D"
   sed -i 's/shortProductName:.*/shortProductName:    "NAVIN XP"/' "$D"
-  sed -i 's/version:.*/version:             "3.0"/' "$D"
-  sed -i 's/shortVersion:.*/shortVersion:        "3.0"/' "$D"
-  sed -i 's/versionedName:.*/versionedName:       "NAVIN XP 3.0"/' "$D"
-  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN XP 3.0"/' "$D"
+  sed -i 's/version:.*/version:             "3.1"/' "$D"
+  sed -i 's/shortVersion:.*/shortVersion:        "3.1"/' "$D"
+  sed -i 's/versionedName:.*/versionedName:       "NAVIN XP 3.1"/' "$D"
+  sed -i 's/shortVersionedName:.*/shortVersionedName:  "NAVIN XP 3.1"/' "$D"
   sed -i 's/bootloaderEntryName:.*/bootloaderEntryName: "NAVIN XP"/' "$D"
   sed -i 's/productUrl:.*/productUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os"/' "$D"
   sed -i 's/supportUrl:.*/supportUrl:          "https:\/\/github.com\/naveenpalecha00-coder\/navin-os\/issues"/' "$D"
@@ -302,7 +302,7 @@ sed -i 's/^#\?\s*FastConnectable\s*=.*/FastConnectable = true/; s/^#\?\s*AutoEna
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf 2>/dev/null || true
 systemctl enable ufw.service 2>/dev/null || true
 chmod 0755 /usr/local/bin/navin-* /usr/local/lib/navin/navin-focus-boost /usr/local/lib/navin/navin-preload || true
-printf '50\n' > /etc/navin/build
+printf '51\n' > /etc/navin/build
 update-desktop-database /usr/share/applications || true
 
 echo "[navin-os] 1.2: hardware detection, gestures, thermal guard, power & memory profiles, boot test marker"
@@ -314,7 +314,7 @@ systemctl enable thermald.service 2>/dev/null || true
 systemctl disable smartmontools.service smartd.service 2>/dev/null || true
 systemctl disable fancontrol.service 2>/dev/null || true   # needs per-machine pwmconfig; NAVIN uses firmware control
 mkdir -p /etc/navin /var/lib/navin; echo auto > /etc/navin/memprofile; echo auto > /var/lib/navin/power-profile
-printf '3.0\n' > /etc/navin/version
+printf '3.1\n' > /etc/navin/version
 # Installed system boot menu (written into the target by Calamares' bootloader module)
 if [ -f /etc/default/grub ]; then
   sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="NAVIN XP"/; s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/; s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3"/' /etc/default/grub
@@ -348,7 +348,7 @@ update-desktop-database /usr/share/applications || true
 dpkg-query -W -f='${Package}\t${Version}\t${Installed-Size}\n' | sort > /usr/share/navin/reports/package-manifest.tsv
 . /etc/os-release; echo "base=$VERSION_CODENAME debian_version=$(cat /etc/debian_version) kernel=$(ls /boot/vmlinuz-* | xargs -n1 basename | tr '\n' ' ')" > /usr/share/navin/reports/base.txt
 
-echo "[navin-os] NAVIN XP 3.0: boot splash, 6-entry boot menu, display guard, Update Center; 2.2: all 1,100 requested features mapped to real tools (94-tool NAVIN Toolbox), usage history, auto screen lock, 2.1 boot/touchpad fixes kept"
+echo "[navin-os] NAVIN XP 3.1: boot splash, 6-entry boot menu, display guard, Update Center; 2.2: all 1,100 requested features mapped to real tools (94-tool NAVIN Toolbox), usage history, auto screen lock, 2.1 boot/touchpad fixes kept"
 # --- fast boot: no 30 s waits ---
 # RESUME=none: no "waiting for suspend/resume device" stall (NAVIN uses ZRAM, not hibernation).
 # lz4 initramfs: decompresses several times faster than zstd/xz on old CPUs.
@@ -378,6 +378,10 @@ chmod 0755 /usr/local/lib/navin/navin-display-guard /usr/local/lib/navin/navin-b
 systemctl enable navin-display-guard.service navin-display-guard-early.service navin-boot-detect.service navin-update-auto.timer || true
 systemctl set-default graphical.target
 mkdir -p /etc/navin; [ -f /etc/navin/update-mode ] || echo notify > /etc/navin/update-mode
+# NAVIN XP 3.1: Task Manager, Defender, Battery & Thermal, Backup & Restore, adaptive glass, English/Hindi switch.
+chmod 0755 /usr/lib/navin-os/navin-xp-helper /usr/local/bin/navin-task-manager /usr/local/bin/navin-defender /usr/local/bin/navin-battery /usr/local/bin/navin-backup-restore /usr/local/bin/navin-glass /usr/local/bin/navin-lang || true
+# The freshclam daemon would download ~200 MB and use RAM on every boot; NAVIN Defender runs freshclam only when asked.
+systemctl disable clamav-freshclam.service 2>/dev/null || true
 # --- smaller image: firmware that can never load on an x86 PC (ARM phone/board chips, datacenter cards) ---
 before=$(du -sk /usr/lib/firmware | cut -f1)
 for d in rockchip meson amlogic arm powervr cnm imx ti-keystone qlogic bnx2 cxgb3 cavium inside-secure; do rm -rf "/usr/lib/firmware/$d"; done

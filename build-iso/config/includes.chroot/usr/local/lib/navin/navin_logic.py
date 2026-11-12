@@ -1,6 +1,6 @@
 import re
-BUILD = 50
-VERSION = "3.0"
+BUILD = 51
+VERSION = "3.1"
 VOICES = ("Kore", "Puck", "Charon", "Aoede", "Fenrir", "Leda")
 IMAGE_SIZES = ("1024x1024", "1536x1024")
 HOLD_SECONDS = 5

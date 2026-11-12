@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Battery & Thermal
+Name[hi]=NAVIN बैटरी और तापमान
+Comment=Battery health, wear and cycle count, temperatures, fan speed and fan profiles
+Exec=navin-battery
+Icon=battery
+Categories=System;Monitor;
+Keywords=battery;health;fan;temperature;thermal;

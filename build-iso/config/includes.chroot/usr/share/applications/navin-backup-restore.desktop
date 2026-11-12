@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Backup & Restore
+Name[hi]=NAVIN बैकअप और रिस्टोर
+Comment=Timeshift restore points on this disk or a USB drive
+Exec=navin-backup-restore
+Icon=document-save
+Categories=System;
+Keywords=backup;restore;snapshot;timeshift;usb;

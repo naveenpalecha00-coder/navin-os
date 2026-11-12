@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Language (English / हिन्दी)
+Name[hi]=NAVIN भाषा
+Comment=Choose English or Hindi for NAVIN apps
+Exec=navin-lang
+Icon=preferences-desktop-locale
+Categories=Settings;
+Keywords=language;hindi;bhasha;

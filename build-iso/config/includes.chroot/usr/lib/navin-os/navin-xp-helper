@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+"""NAVIN XP 3.1 root helper (pkexec, polkit action org.navin.xp). Runs ONLY the whitelisted
+commands from navin_xp.defender_plan() / navin_xp.backup_plan() and streams their real output.
+  navin-xp-helper fw-status | fw-enable | fw-disable | sig-update
+  navin-xp-helper backup list|devices|create [/dev/partition] [comment]"""
+import shutil, subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+
+
+def run(cmds):
+    rc = 0
+    for cmd in cmds:
+        if not shutil.which(cmd[0]):
+            print("NAVIN: %s is not installed" % cmd[0], flush=True); return 127
+        print("$ " + " ".join(cmd), flush=True)
+        rc = subprocess.call(cmd)
+        if rc:
+            print("NAVIN: command failed with exit code %d" % rc, flush=True); return rc
+    return rc
+
+
+def main(a):
+    if not a:
+        print(__doc__); return 2
+    if a[0] == "backup":
+        if len(a) < 2:
+            return 2
+        if "boot=live" in open("/proc/cmdline").read().split():
+            print("NAVIN: backups need NAVIN XP installed to a disk (this is the Live USB)"); return 3
+        dev = a[2] if len(a) > 2 and a[2] != "-" else None
+        try:
+            return run([X.backup_plan(a[1], dev, a[3] if len(a) > 3 else None)])
+        except ValueError as e:
+            print("NAVIN: " + str(e)); return 2
+    try:
+        return run(X.defender_plan(a[0]))
+    except ValueError as e:
+        print("NAVIN: " + str(e)); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,119 @@
+{
+ "version": "3.1",
+ "title": "What's new in NAVIN XP 3.1",
+ "items": [
+  {
+   "category": "Task Manager",
+   "title": "NAVIN Task Manager: live CPU, memory, disk and network graphs read from /proc every second",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-task-manager",
+   "check": "X.cpu_percent(self.prev_cpu, cpu)"
+  },
+  {
+   "category": "Task Manager",
+   "title": "End task (SIGTERM) and Force end (SIGKILL); system, other-user and desktop-critical processes are refused with the reason",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "def kill_allowed(proc, my_uid, proc_uid, my_pid=None):"
+  },
+  {
+   "category": "Task Manager",
+   "title": "Startup apps on/off with the XDG autostart rules (~/.config/autostart overrides /etc/xdg/autostart)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "def autostart_override(system_text, enabled):"
+  },
+  {
+   "category": "Task Manager",
+   "title": "Ctrl+Shift+Esc opens NAVIN Task Manager",
+   "path": "build-iso/config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml",
+   "check": "value=\"navin-task-manager\""
+  },
+  {
+   "category": "Security",
+   "title": "NAVIN Defender: real ufw firewall status, Turn on (deny incoming, allow outgoing) and Turn off",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "\"fw-enable\": [[\"ufw\", \"default\", \"deny\", \"incoming\"]"
+  },
+  {
+   "category": "Security",
+   "title": "ClamAV virus scan of Downloads, the home folder or a mounted USB drive (runs as the user, nothing deleted)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-defender",
+   "check": "X.clamscan_command(paths)"
+  },
+  {
+   "category": "Security",
+   "title": "Virus definitions are downloaded only when you press Update (no 200 MB download on every boot)",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "systemctl disable clamav-freshclam.service"
+  },
+  {
+   "category": "Security",
+   "title": "Root actions go through one whitelisted helper and the polkit action org.navin.xp",
+   "path": "build-iso/config/includes.chroot/usr/share/polkit-1/actions/org.navin.repair.policy",
+   "check": "<action id=\"org.navin.xp\">"
+  },
+  {
+   "category": "Battery",
+   "title": "NAVIN Battery & Thermal: health, wear and cycle count from /sys/class/power_supply ('not reported' when the battery does not say)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "def battery_health(props):"
+  },
+  {
+   "category": "Battery",
+   "title": "Temperatures from thermal zones and hwmon, fan RPM from hwmon fan*_input",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-battery",
+   "check": "fan*_input"
+  },
+  {
+   "category": "Battery",
+   "title": "Fan profiles Silent / Balanced / Cooling / Auto through the existing navin-fan control",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "FAN_PROFILES = (\"silent\", \"balanced\", \"cooling\", \"auto\")"
+  },
+  {
+   "category": "Backup",
+   "title": "NAVIN Backup & Restore: Timeshift restore points on the system disk or a chosen USB partition",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "cmd += [\"--snapshot-device\", device]"
+  },
+  {
+   "category": "Backup",
+   "title": "Restore opens Timeshift's own restore wizard; nothing is restored silently",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-backup-restore",
+   "check": "\"timeshift-launcher\""
+  },
+  {
+   "category": "Look",
+   "title": "Adaptive glass: real picom background blur, level chosen from RAM - Ultra Light, Balanced, Premium Glass",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "blur-method = \\\"dual_kawase\\\";"
+  },
+  {
+   "category": "Look",
+   "title": "Window effects have a new 'glass' mode (navin-compositor glass)",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-compositor",
+   "check": "run_glass()"
+  },
+  {
+   "category": "Look",
+   "title": "New original blue 3D wave wallpaper - no text, no logo",
+   "path": "build-iso/config/includes.chroot/usr/share/backgrounds/navin-os/wallpaper.jpg"
+  },
+  {
+   "category": "Language",
+   "title": "English / हिन्दी for Task Manager, Defender, Battery and Backup (navin-lang)",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin_xp.py",
+   "check": "\"tm_title\": \"NAVIN टास्क मैनेजर\""
+  },
+  {
+   "category": "Language",
+   "title": "Hindi names for the new apps in the app menu",
+   "path": "build-iso/config/includes.chroot/usr/share/applications/navin-task-manager.desktop",
+   "check": "Name[hi]=NAVIN टास्क मैनेजर"
+  },
+  {
+   "category": "Boot",
+   "title": "Version NAVIN XP 3.1 (build 51) everywhere",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "PRETTY_NAME=\"NAVIN XP 3.1 (Debian 13 Trixie base)\""
+  }
+ ]
+}

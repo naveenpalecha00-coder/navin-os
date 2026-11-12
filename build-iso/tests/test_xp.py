@@ -191,14 +191,14 @@ class Release(unittest.TestCase):
     def test_version_and_newer_release(self):
         spec = importlib.util.spec_from_file_location('navin_logic', IC / 'usr/local/lib/navin/navin_logic.py')
         L = importlib.util.module_from_spec(spec); spec.loader.exec_module(L)
-        self.assertEqual((L.VERSION, L.BUILD), ('3.0', 50))
+        self.assertEqual((L.VERSION, L.BUILD), ('3.1', 51))
         self.assertEqual(L.newer_os_release([{'tag_name': 'v3.0'}], '2.2.1')['tag_name'], 'v3.0')  # 2.2.1 users are told about NAVIN XP
         self.assertIsNone(L.newer_os_release([{'tag_name': 'v3.0-test', 'prerelease': True}], '2.2.1'))
 
     def test_iso_name_and_workflow(self):
-        self.assertIn('navin-xp-3.0-x86_64.iso', (ROOT / 'build.sh').read_text())
+        self.assertIn('navin-xp-3.1-x86_64.iso', (ROOT / 'build.sh').read_text())
         wf = (REPO / '.github/workflows/build-iso.yml').read_text()
-        self.assertIn('FINAL_TAG: v3.0', wf); self.assertIn('branches: [navin-xp]', wf); self.assertIn('ISO: navin-xp-3.0-x86_64.iso', wf)
+        self.assertIn('FINAL_TAG: v3.1', wf); self.assertIn('branches: [navin-xp]', wf); self.assertIn('ISO: navin-xp-3.1-x86_64.iso', wf)
 
     def test_whatsnew_xp_entries_exist(self):
         data = json.loads((IC / 'usr/share/navin/whatsnew-3.0.json').read_text())

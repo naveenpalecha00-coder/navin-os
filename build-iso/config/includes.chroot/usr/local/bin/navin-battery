@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+"""NAVIN Battery & Thermal (NAVIN XP 3.1): real battery health from /sys/class/power_supply
+(design vs full capacity, wear, cycle count when the battery reports it), temperatures from
+thermal zones / hwmon, fan RPM from hwmon fan*_input, and fan profiles through navin-fan.
+Values the hardware does not report are shown as 'not reported', never invented."""
+import glob, os, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+import navin_xp_gtk as G
+from gi.repository import Gtk, GLib
+
+L = G.language(); T = lambda k: X.t(k, L)
+
+
+def batteries():
+    out = []
+    for d in sorted(glob.glob("/sys/class/power_supply/*")):
+        if G.read(d + "/type").strip() != "Battery":
+            continue
+        props = {os.path.basename(f): G.read(f) for f in glob.glob(d + "/*") if os.path.isfile(f)}
+        out.append((os.path.basename(d), props.get("model_name", "").strip(), X.battery_health(props)))
+    return out
+
+
+def sensors():
+    zones = [(G.read(z + "/type").strip() or os.path.basename(z), G.read(z + "/temp")) for z in sorted(glob.glob("/sys/class/thermal/thermal_zone*"))]
+    for t in sorted(glob.glob("/sys/class/hwmon/hwmon*/temp*_input")):
+        d = os.path.dirname(t); lab = G.read(t.replace("_input", "_label")).strip()
+        zones.append(("%s %s" % (G.read(d + "/name").strip(), lab or os.path.basename(t)[:-6]), G.read(t)))
+    fans = [("%s %s" % (G.read(os.path.dirname(f) + "/name").strip(), os.path.basename(f)[:-6]), G.read(f)) for f in sorted(glob.glob("/sys/class/hwmon/hwmon*/fan*_input"))]
+    return X.temperatures(zones), X.fan_rpms(fans)
+
+
+class App:
+    def __init__(self):
+        self.win = G.setup(T("bat_title"), 760, 640)
+        sw = Gtk.ScrolledWindow(); self.win.add(sw)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=14); sw.add(self.box)
+        self.bat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.box.pack_start(self.bat, False, False, 0)
+        self.temps = G.label("", None); self.fans = G.label("", None)
+        self.box.pack_start(G.card(G.label(T("temps"), "navin-title"), self.temps), False, False, 0)
+        row = Gtk.Box(spacing=8); self.fan_msg = G.label("", "navin-muted")
+        for p in X.FAN_PROFILES:
+            b = Gtk.Button(label=p.title()); b.connect("clicked", self.profile, p); row.pack_start(b, False, False, 0)
+        self.box.pack_start(G.card(G.label(T("fans"), "navin-title"), self.fans, G.label(T("fan_profile"), "navin-muted"), row, self.fan_msg), False, False, 0)
+        self.refresh(); GLib.timeout_add_seconds(3, self.refresh); self.win.show_all()
+
+    def profile(self, _b, p):
+        rc = os.system(" ".join(X.fan_profile_command(p)) + " >/tmp/navin-fan-ui.log 2>&1")
+        out = G.read("/tmp/navin-fan-ui.log").strip().splitlines()
+        self.fan_msg.set_text(("%s: %s" % (T("done"), out[-1] if out else p)) if rc == 0 else "%s: %s" % (T("failed"), out[-1] if out else rc))
+
+    def refresh(self):
+        for c in self.bat.get_children():
+            self.bat.remove(c)
+        bats = batteries()
+        if not bats:
+            self.bat.pack_start(G.card(G.label(T("battery"), "navin-title"), G.label(T("no_battery"), "navin-muted")), False, False, 0)
+        for name, model, h in bats:
+            nr = T("not_reported")
+            health = ("%.1f %%  (%s)" % (h["health"], h["label"])) if h["health"] is not None else nr
+            lines = ["%s: %s" % (T("health"), health),
+                     "%s: %s" % (T("wear"), ("%.1f %%" % h["wear"]) if h["wear"] is not None else nr),
+                     "%s: %s" % (T("cycles"), h["cycles"] if h["cycles"] is not None else nr),
+                     "Design / Full / Now: %s / %s / %s %s" % (h["design"] or "-", h["full"] or "-", h["now"] or "-", h["unit"]),
+                     "Status: %s   Charge: %s %%" % (h["status"] or "-", h["capacity"] if h["capacity"] is not None else "-")]
+            self.bat.pack_start(G.card(G.label("%s %s %s" % (T("battery"), name, model), "navin-title"), G.label("\n".join(lines))), False, False, 0)
+        t, f = sensors()
+        self.temps.set_text("\n".join("%s: %.1f °C" % x for x in t) or "No temperature sensor found")
+        self.fans.set_text("\n".join("%s: %d RPM" % x for x in f) or "This laptop does not report fan speed (RPM) to Linux")
+        self.bat.show_all(); return True
+
+
+if __name__ == "__main__":
+    App(); Gtk.main()

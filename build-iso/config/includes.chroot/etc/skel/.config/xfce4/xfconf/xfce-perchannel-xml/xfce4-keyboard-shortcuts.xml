@@ -22,7 +22,7 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="xfce4-terminal"/>
       <property name="Print" type="string" value="xfce4-screenshooter"/>
       <property name="&lt;Shift&gt;Print" type="string" value="xfce4-screenshooter -r"/>
-      <property name="&lt;Primary&gt;&lt;Shift&gt;Escape" type="string" value="xfce4-taskmanager"/>
+      <property name="&lt;Primary&gt;&lt;Shift&gt;Escape" type="string" value="navin-task-manager"/>
       <property name="XF86TouchpadToggle" type="string" value="navin-touchpad toggle"/>
       <property name="XF86TouchpadOn" type="string" value="navin-touchpad on"/>
       <property name="XF86TouchpadOff" type="string" value="navin-touchpad off"/>

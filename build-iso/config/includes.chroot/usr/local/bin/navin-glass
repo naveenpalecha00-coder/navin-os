@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+"""NAVIN XP 3.1 adaptive glass: picks the blur level from real RAM (/proc/meminfo) and writes
+~/.config/navin/picom-glass.conf (= /etc/xdg/picom.conf + dual_kawase blur). Used by
+'navin-compositor glass'.   navin-glass tier | write [Ultra Light|Balanced|Premium Glass] | set <tier>"""
+import os, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+
+CONF = os.path.expanduser("~/.config/navin"); FORCED = os.path.join(CONF, "glass-tier")
+
+
+def tier():
+    forced = open(FORCED).read().strip() if os.path.exists(FORCED) else None
+    ram = X.parse_meminfo(open("/proc/meminfo").read())["total"]
+    return X.glass_tier(ram, forced), ram
+
+
+def main(a):
+    os.makedirs(CONF, exist_ok=True)
+    cmd = a[0] if a else "tier"
+    if cmd == "set" and len(a) > 1:
+        name = " ".join(a[1:])
+        if name == "auto":
+            os.path.exists(FORCED) and os.remove(FORCED)
+        elif name not in [n for _, n, _ in X.GLASS_TIERS]:
+            print("unknown tier"); return 2
+        else:
+            open(FORCED, "w").write(name)
+        cmd = "write"
+    (name, strength), ram = tier()
+    if cmd == "write":
+        base = open("/etc/xdg/picom.conf").read()
+        with open(os.path.join(CONF, "picom-glass.conf"), "w") as f:
+            f.write(X.glass_picom_conf(base, (name, strength)))
+    print("%s (blur strength %d, RAM %d MB)" % (name, strength, ram))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

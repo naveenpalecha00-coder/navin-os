@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Task Manager
+Name[hi]=NAVIN टास्क मैनेजर
+Comment=Live CPU, memory, disk and network use, end tasks, startup apps
+Exec=navin-task-manager
+Icon=utilities-system-monitor
+Categories=System;Monitor;
+Keywords=task;process;cpu;ram;startup;kill;

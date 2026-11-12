@@ -1,0 +1,12 @@
+#!/bin/bash
+# NAVIN XP 3.1: language of NAVIN apps (Task Manager, Defender, Battery, Backup) - English or हिन्दी.
+#   navin-lang            choose in a window
+#   navin-lang en|hi      set directly
+# Saved in ~/.config/navin/lang; apps read it when they start. The rest of the desktop follows the system locale.
+mkdir -p "$HOME/.config/navin"
+c="$1"
+if [ -z "$c" ]; then
+  c=$(zenity --list --radiolist --title "NAVIN XP Language / भाषा" --column "" --column Code --column Language \
+      TRUE en English FALSE hi "हिन्दी (Hindi)" --print-column=2 --height 220) || exit 0
+fi
+case "$c" in en|hi) echo "$c" > "$HOME/.config/navin/lang"; notify-send "NAVIN XP" "Language: $c" 2>/dev/null; echo "$c";; *) echo "usage: navin-lang en|hi" >&2; exit 2;; esac

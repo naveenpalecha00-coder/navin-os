@@ -68,4 +68,15 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/navin-os/navin-update-helper</annotate>
   </action>
+  <action id="org.navin.xp">
+    <description>NAVIN Defender firewall/virus definitions and Backup &amp; Restore</description>
+    <message>NAVIN XP needs your password to change the firewall, update virus definitions or create a restore point</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/navin-os/navin-xp-helper</annotate>
+  </action>
 </policyconfig>

@@ -165,9 +165,9 @@ class WhatsNew(unittest.TestCase):
 
     def test_version_strings(self):
         hook = (ROOT / 'config/hooks/live/01-navin-os-customization.hook.chroot').read_text()
-        self.assertIn('PRETTY_NAME="NAVIN XP 3.0 (Debian 13 Trixie base)"', hook)
-        self.assertIn("printf '50\\n' > /etc/navin/build", hook)
-        self.assertIn('navin-xp-3.0-x86_64.iso', (ROOT / 'build.sh').read_text())
+        self.assertIn('PRETTY_NAME="NAVIN XP 3.1 (Debian 13 Trixie base)"', hook)
+        self.assertIn("printf '51\\n' > /etc/navin/build", hook)
+        self.assertIn('navin-xp-3.1-x86_64.iso', (ROOT / 'build.sh').read_text())
 
 
 if __name__ == '__main__':

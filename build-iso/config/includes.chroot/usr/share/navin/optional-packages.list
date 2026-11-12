@@ -9,3 +9,6 @@ firmware-nvidia-graphics
 
 # NAVIN 2.2: offline voice search (Toolbox) and screenshot editor
 pocketsphinx pocketsphinx-en-us drawing
+
+# NAVIN XP 3.1: NAVIN Defender virus scan (definitions are downloaded on demand, not shipped in the ISO)
+clamav

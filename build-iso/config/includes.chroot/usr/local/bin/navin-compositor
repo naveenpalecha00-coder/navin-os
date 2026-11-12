@@ -4,31 +4,33 @@
 #   lite  xfwm4 compositor without shadows or previews: keeps the light glass look on old/2 GB laptops
 #         (default on 1st-gen Intel graphics and 2 GB RAM, chosen by navin-hwdetect)
 #   picom picom compositor: rounded corners and fades, Alt+Tab shows icons only
+#   glass picom with real background blur (NAVIN XP 3.1); blur level follows RAM: Ultra Light / Balanced / Premium Glass (navin-glass)
 #   off   no compositor (fastest; glass surfaces become solid white)
-# Usage: navin-compositor status | xfwm | lite | picom | off | toggle | apply | suspend
+# Usage: navin-compositor status | xfwm | lite | picom | glass | off | toggle | apply | suspend
 CONF="$HOME/.config/navin/compositor"; mkdir -p "${CONF%/*}"
 PROFILE=$(cat /run/navin/memprofile 2>/dev/null || echo standard)
 default(){ local d; d=$(cat /run/navin/compositor-default 2>/dev/null); case "$d" in xfwm|lite) echo "$d";; *) [ "$PROFILE" = lite ] && echo lite || echo xfwm;; esac; }
-mode(){ local m; m=$(cat "$CONF" 2>/dev/null); case "$m" in xfwm|lite|picom|off) echo "$m";; *) default;; esac; }
+mode(){ local m; m=$(cat "$CONF" 2>/dev/null); case "$m" in xfwm|lite|picom|glass|off) echo "$m";; *) default;; esac; }
 xf(){ xfconf-query -c xfwm4 -p "/general/$1" -n -t "$2" -s "$3" 2>/dev/null; }
 run_xfwm(){ pkill -x picom 2>/dev/null; xf use_compositing bool true; xf cycle_preview bool true; xf cycle_tabwin_mode int 0; xf vblank_mode string auto; xf show_frame_shadow bool true; }
 run_lite(){ pkill -x picom 2>/dev/null; xf use_compositing bool true; xf cycle_preview bool false; xf show_frame_shadow bool false; xf show_popup_shadow bool false; xf vblank_mode string auto; xf move_opacity int 100; xf resize_opacity int 100; }
 run_picom(){ xf use_compositing bool false; xf cycle_preview bool false; sleep 0.5; pgrep -x picom >/dev/null || (setsid picom --config /etc/xdg/picom.conf >/dev/null 2>&1 &); }
+run_glass(){ xf use_compositing bool false; xf cycle_preview bool false; navin-glass write >/dev/null 2>&1 || { run_lite; return; }; pkill -x picom 2>/dev/null; sleep 0.5; (setsid picom --config "$HOME/.config/navin/picom-glass.conf" >/dev/null 2>&1 &); }
 run_off(){ pkill -x picom 2>/dev/null; xf use_compositing bool false; xf cycle_preview bool false; }
 apply(){
   local m; m=$(mode)
   # 2 GB RAM: picom/full previews cost too much memory; the light xfwm mode keeps the glass look.
   [ "$PROFILE" = lite ] && [ "$m" = xfwm -o "$m" = picom ] && m=lite
-  case "$m" in xfwm) run_xfwm;; lite) run_lite;; picom) run_picom;; off) run_off;; esac
+  case "$m" in xfwm) run_xfwm;; lite) run_lite;; picom) run_picom;; glass) run_glass;; off) run_off;; esac
 }
 case "${1:-status}" in
   status) echo "mode=$(mode) default=$(default) profile=$PROFILE active=$(pgrep -x picom >/dev/null && echo picom || { [ "$(xfconf-query -c xfwm4 -p /general/use_compositing 2>/dev/null)" = true ] && echo xfwm || echo none; })";;
-  xfwm|lite|picom|off) echo "$1" > "$CONF"; apply
-    case "$1" in xfwm) t="Window previews on (Alt+Tab shows pictures)";; lite) t="Light glass effects (fast mode for older laptops)";; picom) t="Rounded corners on (Alt+Tab shows icons)";; off) t="Window effects off (fastest)";; esac
-    [ "$PROFILE" = lite ] && [ "$1" != off ] && t="2 GB mode: light glass effects keep the system fast"
+  xfwm|lite|picom|glass|off) echo "$1" > "$CONF"; apply
+    case "$1" in xfwm) t="Window previews on (Alt+Tab shows pictures)";; lite) t="Light glass effects (fast mode for older laptops)";; picom) t="Rounded corners on (Alt+Tab shows icons)";; glass) t="Glass blur on: $(navin-glass tier 2>/dev/null)";; off) t="Window effects off (fastest)";; esac
+    [ "$PROFILE" = lite ] && [ "$1" != off ] && [ "$1" != glass ] && t="2 GB mode: light glass effects keep the system fast"
     notify-send -i preferences-desktop-theme "Window effects" "$t" 2>/dev/null;;
   toggle) case "$(mode)" in xfwm) "$0" lite;; lite) "$0" picom;; picom) "$0" off;; *) "$0" xfwm;; esac;;
   apply) apply;;
   suspend) run_off;;   # Turbo mode: full GPU for the app; "apply" restores the chosen mode
-  *) echo "usage: navin-compositor status|xfwm|lite|picom|off|toggle|apply|suspend" >&2; exit 2;;
+  *) echo "usage: navin-compositor status|xfwm|lite|picom|glass|off|toggle|apply|suspend" >&2; exit 2;;
 esac

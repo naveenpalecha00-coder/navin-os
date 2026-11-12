@@ -1,0 +1,140 @@
+#!/usr/bin/python3
+"""NAVIN Task Manager (NAVIN XP 3.1): live CPU / memory / disk / network graphs from /proc,
+real process list with End task (SIGTERM, then Force end = SIGKILL) and XDG startup-app toggles.
+Logic: navin_xp.py (tested). Shortcut: Ctrl+Shift+Esc."""
+import glob, os, signal, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+import navin_xp_gtk as G
+from gi.repository import Gtk, GLib
+
+L = G.language(); T = lambda k: X.t(k, L)
+UID, ME = os.getuid(), os.getpid()
+SYS_AUTOSTART = "/etc/xdg/autostart"; USER_AUTOSTART = os.path.expanduser("~/.config/autostart")
+
+
+def sample_procs():
+    out, uids = {}, {}
+    for d in glob.glob("/proc/[0-9]*"):
+        try:
+            st = X.parse_pid_stat(open(d + "/stat").read()); out[st["pid"]] = st; uids[st["pid"]] = os.stat(d).st_uid
+        except (OSError, ValueError, IndexError):
+            pass
+    return out, uids
+
+
+class App:
+    def __init__(self):
+        self.win = G.setup(T("tm_title"), 900, 640)
+        nb = Gtk.Notebook(); self.win.add(nb)
+        nb.append_page(self.perf_page(), Gtk.Label(label=T("performance")))
+        nb.append_page(self.proc_page(), Gtk.Label(label=T("processes")))
+        nb.append_page(self.startup_page(), Gtk.Label(label=T("startup")))
+        self.prev_cpu = X.cpu_times(G.read("/proc/stat")); self.prev_t = time.time()
+        self.prev_net = X.net_bytes(G.read("/proc/net/dev")); self.prev_disk = X.disk_bytes(G.read("/proc/diskstats"))
+        self.prev_procs, _ = sample_procs()
+        self.tick(); GLib.timeout_add_seconds(1, self.tick)
+        self.win.show_all()
+
+    def perf_page(self):
+        grid = Gtk.Grid(column_spacing=12, row_spacing=12, margin=14, column_homogeneous=True)
+        self.graphs, self.values = {}, {}
+        for i, key in enumerate(("cpu", "memory", "disk", "network")):
+            g = G.Graph(100.0 if key in ("cpu", "memory") else 1024.0 * 1024); v = G.label("-", "navin-big")
+            self.graphs[key], self.values[key] = g, v
+            grid.attach(G.card(G.label(T(key), "navin-title"), v, g), i % 2, i // 2, 1, 1)
+        self.info = G.label("", "navin-muted"); grid.attach(self.info, 0, 2, 2, 1)
+        return grid
+
+    def proc_page(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin=10)
+        self.store = Gtk.ListStore(int, str, float, float)
+        tv = Gtk.TreeView(model=self.store); self.tv = tv
+        for i, (title, fmt) in enumerate((("PID", None), ("Name", None), (T("cpu") + " %", "%.1f"), (T("memory") + " MB", "%.1f"))):
+            r = Gtk.CellRendererText(); col = Gtk.TreeViewColumn(title, r, text=i); col.set_sort_column_id(i); col.set_resizable(True)
+            tv.append_column(col)
+        sw = Gtk.ScrolledWindow(); sw.add(tv); box.pack_start(sw, True, True, 0)
+        row = Gtk.Box(spacing=8); self.msg = G.label("", "navin-muted")
+        b1 = Gtk.Button(label=T("end_task")); b1.get_style_context().add_class("suggested-action"); b1.connect("clicked", self.end, signal.SIGTERM)
+        b2 = Gtk.Button(label=T("force_end")); b2.connect("clicked", self.end, signal.SIGKILL)
+        row.pack_start(self.msg, True, True, 0); row.pack_end(b2, False, False, 0); row.pack_end(b1, False, False, 0)
+        box.pack_start(row, False, False, 0)
+        return box
+
+    def end(self, _b, sig):
+        model, it = self.tv.get_selection().get_selected()
+        if not it:
+            return
+        pid = model[it][0]
+        procs, uids = sample_procs()
+        if pid not in procs:
+            self.msg.set_text("PID %d already ended" % pid); return
+        ok, why = X.kill_allowed(procs[pid], UID, uids[pid], ME)
+        if not ok:
+            self.msg.set_text("%s: %s (%s)" % (T("refused"), procs[pid]["name"], why)); return
+        try:
+            os.kill(pid, sig)
+        except OSError as e:
+            self.msg.set_text(str(e)); return
+        GLib.timeout_add(1500, self.check_gone, pid, procs[pid]["name"])
+
+    def check_gone(self, pid, name):
+        alive = os.path.exists("/proc/%d" % pid) and "Z" not in G.read("/proc/%d/stat" % pid).rpartition(")")[2][:3]
+        self.msg.set_text(("%s (PID %d) is still running - use %s" % (name, pid, T("force_end"))) if alive else ("%s (PID %d) ended" % (name, pid)))
+        return False
+
+    def startup_page(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin=12)
+        box.pack_start(G.label("XDG autostart (~/.config/autostart overrides /etc/xdg/autostart)", "navin-muted"), False, False, 0)
+        self.startup_list = Gtk.ListBox(); sw = Gtk.ScrolledWindow(); sw.add(self.startup_list)
+        box.pack_start(sw, True, True, 0); self.fill_startup(); return box
+
+    def entries(self, d):
+        out = {}
+        for p in glob.glob(d + "/*.desktop"):
+            out[os.path.basename(p)] = X.parse_desktop_entry(G.read(p))
+        return out
+
+    def fill_startup(self):
+        for c in self.startup_list.get_children():
+            self.startup_list.remove(c)
+        for r in X.startup_apps(self.entries(SYS_AUTOSTART), self.entries(USER_AUTOSTART)):
+            row = Gtk.Box(spacing=10, margin=6); sw = Gtk.Switch(active=r["enabled"]); sw.connect("notify::active", self.toggle, r["file"])
+            row.pack_start(G.label("%s\n%s" % (r["name"], r["command"])), True, True, 0); row.pack_end(sw, False, False, 0)
+            self.startup_list.add(row)
+        self.startup_list.show_all()
+
+    def toggle(self, sw, _p, fn):
+        os.makedirs(USER_AUTOSTART, exist_ok=True)
+        src = os.path.join(USER_AUTOSTART, fn) if os.path.exists(os.path.join(USER_AUTOSTART, fn)) else os.path.join(SYS_AUTOSTART, fn)
+        text = X.autostart_override(G.read(src), sw.get_active())
+        with open(os.path.join(USER_AUTOSTART, fn), "w") as f:
+            f.write(text)
+
+    def tick(self):
+        now = time.time(); dt = now - self.prev_t
+        cpu = X.cpu_times(G.read("/proc/stat")); pct = X.cpu_percent(self.prev_cpu, cpu)
+        mem = X.parse_meminfo(G.read("/proc/meminfo"))
+        net = X.net_bytes(G.read("/proc/net/dev")); disk = X.disk_bytes(G.read("/proc/diskstats"))
+        nr = X.rate(self.prev_net[0], net[0], dt) + X.rate(self.prev_net[1], net[1], dt)
+        dr = X.rate(self.prev_disk[0], disk[0], dt) + X.rate(self.prev_disk[1], disk[1], dt)
+        for k, v, txt in (("cpu", pct, "%.0f %%" % pct), ("memory", mem["percent"], "%d / %d MB" % (mem["used"], mem["total"])),
+                          ("disk", dr, X.human_bytes(dr) + "/s"), ("network", nr, X.human_bytes(nr) + "/s")):
+            self.graphs[k].push(v); self.values[k].set_text(txt)
+        self.info.set_text("Swap: %d / %d MB   Uptime: %s" % (mem["swap_used"], mem["swap_total"], G.read("/proc/uptime").split(".")[0] + " s"))
+        procs, _ = sample_procs()
+        rows = X.process_rows(self.prev_procs, procs, cpu[1] - self.prev_cpu[1], os.sysconf("SC_PAGE_SIZE") // 1024)
+        sel = None; m, it = self.tv.get_selection().get_selected()
+        if it:
+            sel = m[it][0]
+        self.store.clear()
+        for r in rows[:200]:
+            it = self.store.append([r["pid"], r["name"], r["cpu"], r["ram_mb"]])
+            if r["pid"] == sel:
+                self.tv.get_selection().select_iter(it)
+        self.prev_cpu, self.prev_t, self.prev_net, self.prev_disk, self.prev_procs = cpu, now, net, disk, procs
+        return True
+
+
+if __name__ == "__main__":
+    App(); Gtk.main()

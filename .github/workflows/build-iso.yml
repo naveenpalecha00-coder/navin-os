@@ -1,4 +1,4 @@
-name: Build NAVIN XP 3.0 ISO (Debian 13 Trixie)
+name: Build NAVIN XP 3.1 ISO (Debian 13 Trixie)
 
 # NAVIN XP 3.0 is developed on its own branch (navin-xp, started from navin-2.2 = v2.2.1).
 # navin-2.2 keeps v2.2 and v2.2.1.
@@ -19,9 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ISO: navin-xp-3.0-x86_64.iso
-  TAG: v3.0-test
-  FINAL_TAG: v3.0
+  ISO: navin-xp-3.1-x86_64.iso
+  TAG: v3.1-test
+  FINAL_TAG: v3.1
 
 jobs:
   build:
@@ -58,6 +58,11 @@ jobs:
             done
             rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-update-center > /tmp/out 2>&1 || rc=$?
             if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-update-center (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   navin-update-center"; fi
+            # NAVIN XP 3.1 apps (real /proc and /sys reads in the CI runner; must open without a Traceback)
+            for x in navin-task-manager navin-defender navin-battery navin-backup-restore; do
+              rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/$x > /tmp/out 2>&1 || rc=$?
+              if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL $x (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   $x"; fi
+            done
             rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-shortcuts > /tmp/out 2>&1 || rc=$?
             if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-shortcuts"; cat /tmp/out; fail=1; else echo "ok   navin-shortcuts"; fi
             # NAVIN 2.2 Toolbox: one tool page per input type + the new 2.2 categories (Desktop, Laptop, Security, NAVIN)
@@ -110,7 +115,7 @@ jobs:
           B=build-iso; R=$B/reports; mkdir -p $R
           cp $B/docs/hardware-compatibility.md $B/docs/known-issues.md $R/
           {
-            echo "# NAVIN XP 3.0 — Debian 13 Trixie build report"
+            echo "# NAVIN XP 3.1 — Debian 13 Trixie build report"
             echo
             echo "- Commit: $GITHUB_SHA · Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- ISO: $ISO · $(( ${{ steps.verify.outputs.size }} / 1048576 )) MB · SHA256 ${{ steps.verify.outputs.sha }}"
@@ -167,8 +172,8 @@ jobs:
         with:
           name: navin-xp-iso
           path: |
-            build-iso/navin-xp-3.0-x86_64.iso
-            build-iso/navin-xp-3.0-x86_64.iso.sha256
+            build-iso/navin-xp-3.1-x86_64.iso
+            build-iso/navin-xp-3.1-x86_64.iso.sha256
           retention-days: 7
           compression-level: 0
 
@@ -183,17 +188,23 @@ jobs:
           done
           echo "final=$final" >> "$GITHUB_OUTPUT"
 
-      - name: Publish NAVIN XP 3.0 release (only when every live, install and reboot VM test passes)
+      - name: Publish NAVIN XP 3.1 release (only when every live, install and reboot VM test passes)
         if: steps.gate.outputs.final == 'yes'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.FINAL_TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN XP 3.0 (Debian 13)
+          name: NAVIN XP 3.1 (Debian 13)
           prerelease: false
           make_latest: false
           body: |
-            NAVIN XP 3.0 — the next NAVIN release after 2.2.1 (v2.2.1, v2.2, v2.1 and v2.0 stay available for rollback).
+            NAVIN XP 3.1 — next update after NAVIN XP 3.0 (v3.0, v2.2.1, v2.2, v2.1 and v2.0 stay available for rollback).
+            New in 3.1: NAVIN Task Manager (Ctrl+Shift+Esc: live CPU/RAM/disk/network graphs, End task, startup apps),
+            NAVIN Defender (ufw firewall on/off, ClamAV scan of Downloads/home/USB, virus-definition update),
+            NAVIN Battery & Thermal (battery health/wear/cycles, temperatures, fan RPM, fan profiles),
+            NAVIN Backup & Restore (Timeshift restore points on the disk or a USB drive), adaptive glass blur
+            (Ultra Light / Balanced / Premium Glass by RAM) and English/Hindi text in these apps.
+            Included from 3.0:
             Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
             New: NAVIN XP boot splash (logo fade-in, blue glow, loading circle, real hardware line), boot menu with
             Live Mode / Install / Safe Graphics / Recovery / Restart / Shutdown (15 s), display guard that falls back to safer
@@ -213,8 +224,8 @@ jobs:
             Please report problems on GitHub Issues. NAVIN 2.0, 1.2 and Build 10 (Debian 12) stay available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-xp-3.0-x86_64.iso
-            build-iso/navin-xp-3.0-x86_64.iso.sha256
+            build-iso/navin-xp-3.1-x86_64.iso
+            build-iso/navin-xp-3.1-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md
@@ -226,11 +237,11 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN XP 3.0 Debian 13 — TEST BUILD (not hardware-verified)
+          name: NAVIN XP 3.1 Debian 13 — TEST BUILD (not hardware-verified)
           prerelease: true
           make_latest: false
           body: |
-            NAVIN XP 3.0 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
+            NAVIN XP 3.1 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -238,8 +249,8 @@ jobs:
             NOT the final release. Keep using NAVIN 2.2.1 for daily use; it stays available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-xp-3.0-x86_64.iso
-            build-iso/navin-xp-3.0-x86_64.iso.sha256
+            build-iso/navin-xp-3.1-x86_64.iso
+            build-iso/navin-xp-3.1-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md

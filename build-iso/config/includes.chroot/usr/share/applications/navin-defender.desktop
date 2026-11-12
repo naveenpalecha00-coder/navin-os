@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NAVIN Defender
+Name[hi]=NAVIN डिफ़ेंडर
+Comment=Firewall on/off and ClamAV virus scan of Downloads, home and USB drives
+Exec=navin-defender
+Icon=security-high
+Categories=System;Security;
+Keywords=virus;firewall;ufw;clamav;usb;security;

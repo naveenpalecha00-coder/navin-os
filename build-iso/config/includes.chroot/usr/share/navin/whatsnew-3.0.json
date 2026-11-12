@@ -6,13 +6,13 @@
    "category": "Boot",
    "title": "NAVIN XP name everywhere: system name, text console, installer, boot menu (NAVIN XP 3.0)",
    "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
-   "check": "PRETTY_NAME=\"NAVIN XP 3.0 (Debian 13 Trixie base)\""
+   "check": "PRETTY_NAME=\"NAVIN XP 3."
   },
   {
    "category": "Boot",
    "title": "No Debian licence text on the text console - one NAVIN XP line instead",
    "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
-   "check": "NAVIN XP 3.0 - Your PC. Your OS. Your Freedom."
+   "check": " - Your PC. Your OS. Your Freedom."
   },
   {
    "category": "Boot",
@@ -102,7 +102,7 @@
    "category": "Installer",
    "title": "Installer named NAVIN XP 3.0 with the NAVIN XP logo and dark-blue sidebar",
    "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
-   "check": "versionedName:       \"NAVIN XP 3.0\""
+   "check": "versionedName:       \"NAVIN XP 3."
   },
   {
    "category": "Update Center",

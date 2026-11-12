@@ -1,0 +1,67 @@
+#!/usr/bin/python3
+"""NAVIN Backup & Restore (NAVIN XP 3.1): Timeshift restore points on the system disk or a USB
+drive, listed from 'timeshift --list'; create through pkexec navin-xp-helper; restoring opens
+Timeshift's own restore wizard (needs a reboot, never done silently). Logic: navin_xp.py."""
+import shutil, subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+import navin_xp_gtk as G
+from gi.repository import Gtk
+
+L = G.language(); T = lambda k: X.t(k, L)
+HELPER = "/usr/lib/navin-os/navin-xp-helper"
+LIVE = "boot=live" in G.read("/proc/cmdline").split()
+
+
+class App:
+    def __init__(self):
+        self.win = G.setup(T("bk_title"), 780, 600)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=14); self.win.add(box)
+        box.pack_start(G.label(T("bk_title"), "navin-title"), False, False, 0)
+        self.state = G.label("", "navin-muted"); box.pack_start(self.state, False, False, 0)
+        row = Gtk.Box(spacing=8)
+        self.dev = Gtk.ComboBoxText(); self.dev.append("-", "System disk (Timeshift setting)"); self.dev.set_active(0)
+        b_dev = Gtk.Button(label="USB / disks"); b_dev.connect("clicked", lambda *_: self.call(["backup", "devices"], self.got_devices))
+        b_new = Gtk.Button(label=T("create")); b_new.get_style_context().add_class("suggested-action"); b_new.connect("clicked", self.create)
+        b_list = Gtk.Button(label=T("snapshots")); b_list.connect("clicked", lambda *_: self.call(["backup", "list", self.dev.get_active_id() or "-"], self.got_list))
+        b_res = Gtk.Button(label=T("restore")); b_res.connect("clicked", lambda *_: subprocess.Popen(["pkexec", "timeshift-launcher"]))
+        row.pack_start(G.label(T("target")), False, False, 0); row.pack_start(self.dev, False, False, 0); row.pack_start(b_dev, False, False, 0)
+        row.pack_end(b_res, False, False, 0); row.pack_end(b_list, False, False, 0); row.pack_end(b_new, False, False, 0)
+        box.pack_start(row, False, False, 0)
+        self.store = Gtk.ListStore(str, str, str); tv = Gtk.TreeView(model=self.store)
+        for i, h in enumerate(("Restore point", "Tags", "Comment")):
+            tv.append_column(Gtk.TreeViewColumn(h, Gtk.CellRendererText(), text=i))
+        box.pack_start(tv, True, True, 0)
+        out, sw = G.output_view(); self.run = G.Runner(out); box.pack_start(sw, False, True, 0)
+        self.win.show_all()
+        if LIVE:
+            self.state.set_text(T("live_only"))
+        elif not shutil.which("timeshift"):
+            self.state.set_text(T("no_timeshift"))
+
+    def call(self, args, done):
+        if LIVE or not shutil.which("timeshift"):
+            return
+        self.state.set_text(T("working")); self.run.start(["pkexec", HELPER] + args, done)
+
+    def create(self, _b):
+        self.call(["backup", "create", self.dev.get_active_id() or "-", "NAVIN XP Backup & Restore"],
+                  lambda rc, text: (self.state.set_text(T("done") if rc == 0 else "%s (exit %d)" % (T("failed"), rc)), rc == 0 and self.call(["backup", "list", self.dev.get_active_id() or "-"], self.got_list)))
+
+    def got_devices(self, rc, text):
+        devs = X.parse_timeshift_devices(text)
+        self.dev.remove_all(); self.dev.append("-", "System disk (Timeshift setting)")
+        for d in devs:
+            self.dev.append(d["device"], "%s  %s %s %s" % (d["device"], d["size"], d["type"], d["label"]))
+        self.dev.set_active(0); self.state.set_text("%d disks/partitions" % len(devs) if rc == 0 else "%s (exit %d)" % (T("failed"), rc))
+
+    def got_list(self, rc, text):
+        self.store.clear()
+        rows = X.parse_timeshift_list(text)
+        for r in rows:
+            self.store.append([r["name"], r["tags"], r["comment"]])
+        self.state.set_text("%d %s" % (len(rows), T("snapshots")) if rc == 0 else "%s (exit %d)" % (T("failed"), rc))
+
+
+if __name__ == "__main__":
+    App(); Gtk.main()

@@ -117,7 +117,7 @@ class Shortcuts(unittest.TestCase):
                     'Super+A': 'navin-control-center', 'Super+W': 'rofi -show window -show-icons', 'Super+Left': 'tile_left_key',
                     'Super+Right': 'tile_right_key', 'Super+Up': 'maximize_window_key', 'Super+Down': 'hide_window_key',
                     'Ctrl+Alt+T': 'xfce4-terminal', 'Print': 'xfce4-screenshooter', 'Shift+Print': 'xfce4-screenshooter -r',
-                    'Ctrl+Shift+Escape': 'xfce4-taskmanager'}
+                    'Ctrl+Shift+Escape': 'navin-task-manager'}  # NAVIN XP 3.1
         for k, v in expected.items():
             self.assertEqual(s.get(k), v, k)
 

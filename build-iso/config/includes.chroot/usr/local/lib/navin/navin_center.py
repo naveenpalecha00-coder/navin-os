@@ -144,7 +144,7 @@ class Center(Gtk.Window):
         b = page("System Monitor", "Live CPU, memory, pressure and process data. Memory-leak watch flags processes whose memory only grows.")
         self.mon = Gtk.Label(xalign=0, selectable=True); self.mon.set_line_wrap(True); b.pack_start(self.mon, False, False, 0)
         self.procs = Log(220); self.leaks = Gtk.Label(xalign=0); b.pack_start(self.procs, True, True, 0); b.pack_start(self.leaks, False, False, 0)
-        b.pack_start(row(btn("Open Task Manager", lambda: subprocess.Popen(["xfce4-taskmanager"]))), False, False, 0)
+        b.pack_start(row(btn("Open Task Manager", lambda: subprocess.Popen(["navin-task-manager"]))), False, False, 0)
         psutil.cpu_percent(percpu=True); GLib.timeout_add_seconds(2, self.tick); GLib.timeout_add_seconds(5, self.leak_tick); return b
 
     def tick(self):
@@ -209,9 +209,9 @@ class Center(Gtk.Window):
 
     # ---- NAVIN 2.0: What's New (real list shipped with the image, every entry names its file)
     def p_whatsnew(self):
-        b = page("What's New in NAVIN XP 3.0", "Every change below is in this system; the file that does it is shown in grey. 2.2.1, 2.2, 2.1 and 2.0 changes are kept and listed after the NAVIN XP ones.")
+        b = page("What's New in NAVIN XP 3.1", "Every change below is in this system; the file that does it is shown in grey. 3.0, 2.2.1, 2.2, 2.1 and 2.0 changes are kept and listed after the NAVIN XP ones.")
         items = []
-        for ver in ("3.0", "2.2.1", "2.2", "2.1", "2.0"):
+        for ver in ("3.1", "3.0", "2.2.1", "2.2", "2.1", "2.0"):
             try:
                 items += [dict(it, category=f"{ver} · {it['category']}") for it in json.loads(pathlib.Path(f"/usr/share/navin/whatsnew-{ver}.json").read_text())["items"] if not it.get("superseded")]
             except (OSError, ValueError, KeyError):

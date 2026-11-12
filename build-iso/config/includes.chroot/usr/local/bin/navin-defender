@@ -1,0 +1,81 @@
+#!/usr/bin/python3
+"""NAVIN Defender (NAVIN XP 3.1): real ufw firewall status/on/off and ClamAV virus scans of
+Downloads, home or a mounted USB drive. Firewall + virus-definition updates go through
+pkexec /usr/lib/navin-os/navin-xp-helper; scans run as the user. Logic: navin_xp.py."""
+import glob, os, shutil, subprocess, sys
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_xp as X
+import navin_xp_gtk as G
+from gi.repository import Gtk
+
+L = G.language(); T = lambda k: X.t(k, L)
+HELPER = "/usr/lib/navin-os/navin-xp-helper"
+
+
+class App:
+    def __init__(self):
+        self.win = G.setup(T("def_title"), 820, 620)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=14); self.win.add(box)
+        box.pack_start(G.label(T("def_title"), "navin-title"), False, False, 0)
+        self.fw = G.label("-", "navin-big"); self.fw_detail = G.label("", "navin-muted")
+        b_on = Gtk.Button(label=T("turn_on")); b_on.get_style_context().add_class("suggested-action"); b_on.connect("clicked", lambda *_: self.helper("fw-enable"))
+        b_off = Gtk.Button(label=T("turn_off")); b_off.connect("clicked", lambda *_: self.helper("fw-disable"))
+        row = Gtk.Box(spacing=8); row.pack_start(b_on, False, False, 0); row.pack_start(b_off, False, False, 0)
+        box.pack_start(G.card(G.label(T("firewall"), "navin-title"), self.fw, self.fw_detail, row), False, False, 0)
+        self.scan_state = G.label("", "navin-muted")
+        srow = Gtk.Box(spacing=8)
+        for key, fn in (("quick_scan", lambda: [os.path.expanduser("~/Downloads")]), ("home_scan", lambda: [os.path.expanduser("~")]), ("usb_scan", self.usb_paths)):
+            b = Gtk.Button(label=T(key)); b.connect("clicked", self.scan, fn); srow.pack_start(b, False, False, 0)
+        b = Gtk.Button(label=T("update_sigs")); b.connect("clicked", lambda *_: self.helper("sig-update")); srow.pack_end(b, False, False, 0)
+        box.pack_start(G.card(G.label(T("scan"), "navin-title"), srow, self.scan_state), False, False, 0)
+        tv, sw = G.output_view(); self.run = G.Runner(tv); box.pack_start(sw, True, True, 0)
+        self.win.show_all(); self.refresh_fw_unprivileged()
+
+    def refresh_fw_unprivileged(self):
+        # ufw status needs root; /etc/ufw/ufw.conf ENABLED= is readable and is what ufw.service applies at boot.
+        conf = G.read("/etc/ufw/ufw.conf")
+        if not shutil.which("ufw") and not conf:
+            self.fw.set_text("ufw is not installed"); return
+        enabled = "ENABLED=yes" in conf.replace(" ", "")
+        self.fw.set_text(T("fw_on") if enabled else T("fw_off"))
+        self.fw_detail.set_text("/etc/ufw/ufw.conf: ENABLED=%s" % ("yes" if enabled else "no"))
+
+    def helper(self, action):
+        def done(rc, text):
+            if action.startswith("fw"):
+                st = X.parse_ufw_status(text)
+                if "Status:" in text:
+                    self.fw.set_text(T("fw_on") if st["active"] else T("fw_off"))
+                    self.fw_detail.set_text("incoming: %s, outgoing: %s, rules: %d" % (st["incoming"], st["outgoing"], len(st["rules"])))
+                else:
+                    self.refresh_fw_unprivileged()
+            else:
+                self.scan_state.set_text(T("done") if rc == 0 else "%s (exit %d)" % (T("failed"), rc))
+        self.run.start(["pkexec", HELPER, action], done)
+
+    def usb_paths(self):
+        return X.removable_mounts(G.read("/proc/mounts"))
+
+    def scan(self, _b, fn):
+        if not shutil.which("clamscan"):
+            self.scan_state.set_text(T("no_clam")); return
+        if not glob.glob("/var/lib/clamav/*.c[lv]d"):
+            self.scan_state.set_text(T("no_sigs")); return
+        paths = [p for p in fn() if os.path.isdir(p)]
+        if not paths:
+            self.scan_state.set_text(T("no_usb")); return
+        self.scan_state.set_text(T("working"))
+        def done(rc, text):
+            r = X.parse_clamscan(text)
+            if not r["finished"]:
+                self.scan_state.set_text("%s (exit %d)" % (T("failed"), rc))
+            elif r["infected_count"]:
+                self.scan_state.set_text("%s: %d  (%s)" % (T("threats"), r["infected_count"], ", ".join(p for p, _ in r["infected"][:3])))
+                self.scan_state.get_style_context().add_class("navin-bad")
+            else:
+                self.scan_state.set_text("%s - %s files" % (T("no_threats"), r["scanned"]))
+        self.run.start(X.clamscan_command(paths), done)
+
+
+if __name__ == "__main__":
+    App(); Gtk.main()
