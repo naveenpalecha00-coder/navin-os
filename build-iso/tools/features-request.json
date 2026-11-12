@@ -1,0 +1,919 @@
+{
+"sections": [
+[
+"DESKTOP & UI",
+1,
+100,
+[
+"Modern Windows 11-inspired desktop",
+"bottom taskbar",
+"Start menu",
+"search",
+"widgets",
+"desktop icons",
+"drag-and-drop",
+"smooth animations",
+"rounded windows",
+"light theme",
+"white/gray/black/pale-blue colors",
+"wallpapers",
+"live wallpapers",
+"virtual desktops",
+"multiple monitors",
+"desktop customization",
+"icon resizing",
+"auto-hide taskbar",
+"notification center",
+"quick settings",
+"system tray",
+"clock",
+"calendar",
+"battery",
+"Wi-Fi",
+"Bluetooth",
+"volume",
+"brightness",
+"desktop right-click menu",
+"refresh",
+"personalize",
+"new folder",
+"shortcuts",
+"window snapping",
+"minimize",
+"maximize",
+"restore",
+"task switching",
+"Alt+Tab",
+"overview",
+"lock screen",
+"login screen",
+"user avatars",
+"themes",
+"transparency",
+"accessibility scaling",
+"advanced desktop customization"
+]
+],
+[
+"START MENU & TASKBAR",
+101,
+180,
+[
+"Windows-style Start menu",
+"pinned apps",
+"recommended apps",
+"all apps",
+"app search",
+"power menu",
+"restart",
+"shutdown",
+"sleep",
+"hibernate",
+"taskbar pinning",
+"one-click app launch",
+"running app indicators",
+"grouped windows",
+"Wi-Fi panel",
+"Bluetooth panel",
+"volume mixer",
+"battery percentage",
+"network status",
+"calendar popup",
+"notification badges",
+"taskbar position",
+"multiple taskbars",
+"system tray customization",
+"taskbar search",
+"app previews",
+"jump lists",
+"customizable shortcuts"
+]
+],
+[
+"FILE MANAGER",
+181,
+260,
+[
+"Advanced file explorer",
+"tabs",
+"dual-pane view",
+"thumbnails",
+"preview panel",
+"quick access",
+"recent files",
+"favorites",
+"bookmarks",
+"file search",
+"advanced filters",
+"file sorting",
+"copy",
+"cut",
+"paste",
+"rename",
+"delete",
+"restore",
+"permanent delete",
+"drag-and-drop",
+"ZIP",
+"RAR",
+"7Z",
+"TAR support",
+"extraction",
+"compression",
+"hidden files",
+"permissions",
+"storage analysis",
+"duplicate finder",
+"batch rename",
+"file encryption",
+"file sharing",
+"network folders",
+"USB management",
+"disk management",
+"recycle bin"
+]
+],
+[
+"SETTINGS & CONTROL PANEL",
+261,
+340,
+[
+"Complete Settings application with system",
+"display",
+"sound",
+"Wi-Fi",
+"Bluetooth",
+"keyboard",
+"mouse",
+"touchpad",
+"printer",
+"power",
+"battery",
+"storage",
+"users",
+"accounts",
+"security",
+"privacy",
+"updates",
+"recovery",
+"backup",
+"language",
+"region",
+"date",
+"time",
+"accessibility",
+"themes",
+"personalization",
+"applications",
+"default apps",
+"startup apps",
+"notifications",
+"firewall",
+"network diagnostics",
+"device information",
+"advanced settings"
+]
+],
+[
+"LAPTOP & HARDWARE SUPPORT",
+341,
+430,
+[
+"Samsung RV411 compatibility",
+"touchpad auto-detection",
+"Synaptics support",
+"libinput support",
+"I2C HID support",
+"touchpad enable/disable",
+"Fn+F10",
+"F10 touchpad shortcuts where supported",
+"touchpad gestures",
+"sensitivity",
+"acceleration",
+"tap-to-click",
+"two-finger scrolling",
+"palm rejection",
+"keyboard backlight where supported",
+"brightness keys",
+"volume keys",
+"Wi-Fi keys",
+"Bluetooth keys",
+"battery detection",
+"AC adapter detection",
+"CPU monitoring",
+"RAM monitoring",
+"GPU detection",
+"thermal monitoring",
+"fan monitoring where supported",
+"USB devices",
+"webcam",
+"microphone",
+"speakers",
+"headphones",
+"printer",
+"Bluetooth devices",
+"driver detection",
+"missing-driver alerts",
+"hardware diagnostics",
+"automatic compatible driver configuration"
+]
+],
+[
+"WINDOWS KEYBOARD SHORTCUTS",
+431,
+510,
+[
+"Win+R Run",
+"Win+E File Explorer",
+"Win+D Desktop",
+"Win+L Lock",
+"Win+I Settings",
+"Win+S Search",
+"Win+A Quick Settings",
+"Win+Tab Task View",
+"Win+X Power Menu",
+"Win+V Clipboard",
+"Win+Shift+S Screenshot",
+"Win+P Display",
+"Win+Ctrl+D New Desktop",
+"Win+Ctrl+Left/Right Switch Desktop",
+"Alt+Tab",
+"Alt+F4",
+"Ctrl+Shift+Esc Task Manager",
+"Ctrl+C",
+"Ctrl+V",
+"Ctrl+X",
+"Ctrl+Z",
+"Ctrl+Y",
+"Ctrl+A",
+"Ctrl+F",
+"Ctrl+N",
+"Ctrl+W",
+"Ctrl+T",
+"Ctrl+Shift+T",
+"F2 Rename",
+"F5 Refresh",
+"F10 Menu",
+"F11 Fullscreen",
+"Delete",
+"Shift+Delete",
+"PrtSc Screenshot",
+"Ctrl+Alt+Delete security options",
+"brightness",
+"volume",
+"Wi-Fi",
+"Fn keys. Add customizable shortcut management",
+"complete shortcut documentation"
+]
+],
+[
+"APPLICATIONS & SOFTWARE",
+511,
+590,
+[
+"NAVIN App Store",
+"real application installation",
+"removal",
+"updates",
+"package manager integration",
+"Debian repositories",
+"Flatpak support",
+"AppImage support",
+".deb installation",
+"Synaptic",
+"GDebi",
+"Firefox",
+"Chromium",
+"office suite",
+"PDF reader",
+"image viewer",
+"media player",
+"music player",
+"video player",
+"calculator",
+"calendar",
+"notes",
+"text editor",
+"archive manager",
+"terminal",
+"screenshot tool",
+"screen recorder",
+"webcam app",
+"Bluetooth manager",
+"system monitor",
+"task manager",
+"software updater",
+"startup manager",
+"application permissions"
+]
+],
+[
+"NETWORK & INTERNET",
+591,
+650,
+[
+"Wi-Fi scanning",
+"connection",
+"disconnection",
+"saved networks",
+"password management",
+"Ethernet",
+"hotspot where supported",
+"Bluetooth networking",
+"VPN",
+"proxy",
+"DNS settings",
+"network speed test",
+"download manager",
+"connection diagnostics",
+"network reset",
+"firewall integration",
+"internet status",
+"captive portal support",
+"IPv4",
+"IPv6",
+"network sharing",
+"LAN discovery",
+"secure connection management"
+]
+],
+[
+"SECURITY & PRIVACY",
+651,
+710,
+[
+"UFW firewall",
+"GUFW interface",
+"automatic security updates",
+"malware scanning integration",
+"application permissions",
+"user accounts",
+"administrator protection",
+"password management",
+"screen lock",
+"disk encryption option",
+"secure boot detection",
+"privacy controls",
+"camera permissions",
+"microphone permissions",
+"browser security",
+"network protection",
+"login history",
+"security alerts",
+"file permissions",
+"recovery protection"
+]
+],
+[
+"PERFORMANCE & BATTERY",
+711,
+770,
+[
+"Low-RAM optimization",
+"ZRAM",
+"zstd compression",
+"smart memory management",
+"CPU optimization",
+"startup optimization",
+"faster boot",
+"background process management",
+"power-saving mode",
+"balanced mode",
+"performance mode",
+"battery monitoring",
+"battery health reporting where supported",
+"disk cleanup",
+"cache cleanup",
+"memory monitoring",
+"swap management",
+"lightweight animations",
+"reduced resource usage",
+"thermal monitoring",
+"application performance monitoring"
+]
+],
+[
+"SYSTEM TOOLS & RECOVERY",
+771,
+830,
+[
+"Task Manager",
+"terminal",
+"system information",
+"hardware information",
+"disk utility",
+"partition manager",
+"USB formatter",
+"boot repair",
+"GRUB repair",
+"filesystem check",
+"package repair",
+"system logs",
+"crash reports",
+"recovery mode",
+"restore points",
+"backup",
+"restore",
+"system reset",
+"update rollback",
+"driver manager",
+"diagnostics",
+"startup repair",
+"safe mode"
+]
+],
+[
+"UPDATES & NAVIN OS ECOSYSTEM",
+831,
+890,
+[
+"NAVIN OS Update Center",
+"real version checking",
+"secure update downloads",
+"package updates",
+"system updates",
+"desktop UI updates",
+"changelog",
+"update progress",
+"update verification",
+"rollback",
+"automatic update settings",
+"GitHub release integration",
+"signed update metadata",
+"release notifications",
+"update history",
+"OS version information",
+"update backup",
+"recovery after failed updates. Connect to the official NAVIN OS update infrastructure. Never pretend that Lovable changes automatically reach an installed OS without a real signed update pipeline"
+]
+],
+[
+"INSTALLER, LIVE MODE & BOOT",
+891,
+950,
+[
+"NAVIN branded boot screen",
+"corrected logo alignment",
+"fast boot",
+"keyboard-controlled boot menu",
+"Live Mode",
+"Full Installation",
+"language selection",
+"keyboard selection",
+"Wi-Fi setup",
+"disk detection",
+"partition selection",
+"installation progress",
+"user creation",
+"password setup",
+"timezone",
+"bootloader setup",
+"installation verification",
+"restart option",
+"USB live session",
+"persistent USB support",
+"hardware detection",
+"Calamares integration",
+"installer error handling",
+"first-boot setup. Live Mode must work without installing to the internal disk"
+]
+],
+[
+"ADVANCED FEATURES & ACCESSIBILITY",
+951,
+1000,
+[
+"Voice control",
+"screen reader",
+"magnifier",
+"high contrast",
+"color filters",
+"on-screen keyboard",
+"clipboard history",
+"universal search",
+"multi-user sessions",
+"parental controls",
+"remote desktop",
+"file sharing",
+"cloud integration",
+"backup scheduling",
+"automation",
+"custom scripts",
+"developer tools",
+"API integration",
+"localization",
+"Hindi",
+"English language support",
+"help center",
+"tutorials",
+"keyboard shortcut guide",
+"system diagnostics dashboard",
+"accessibility profiles",
+"customization profiles",
+"advanced system administration tools"
+]
+]
+],
+"named": [
+[
+"1001",
+"Desktop AI Assistant"
+],
+[
+"1002",
+"Smart App Suggestions"
+],
+[
+"1003",
+"Desktop Voice Search"
+],
+[
+"1004",
+"Smart Window Arrangement"
+],
+[
+"1005",
+"Desktop Activity History"
+],
+[
+"1006",
+"Custom Desktop Profiles"
+],
+[
+"1007",
+"Interactive Widgets"
+],
+[
+"1008",
+"Smart Clipboard"
+],
+[
+"1009",
+"Desktop Quick Actions"
+],
+[
+"1010",
+"Custom Gesture Controls"
+],
+[
+"1011",
+"File Content Search"
+],
+[
+"1012",
+"Duplicate File Detection"
+],
+[
+"1013",
+"Large File Finder"
+],
+[
+"1014",
+"Secure File Shredder"
+],
+[
+"1015",
+"File Recovery"
+],
+[
+"1016",
+"Folder Size Visualization"
+],
+[
+"1017",
+"File Checksum Generator"
+],
+[
+"1018",
+"Batch File Converter"
+],
+[
+"1019",
+"Advanced File Permissions"
+],
+[
+"1020",
+"Automatic Folder Organization"
+],
+[
+"1021",
+"Smart Battery Saver"
+],
+[
+"1022",
+"Battery Usage History"
+],
+[
+"1023",
+"Touchpad Gesture Customizer"
+],
+[
+"1024",
+"Keyboard Key Tester"
+],
+[
+"1025",
+"Fn Key Detection"
+],
+[
+"1026",
+"Hardware Compatibility Checker"
+],
+[
+"1027",
+"USB Device Health Checker"
+],
+[
+"1028",
+"Audio Device Auto Detection"
+],
+[
+"1029",
+"Display Health Information"
+],
+[
+"1030",
+"Laptop Performance Dashboard"
+],
+[
+"1031",
+"Multiple Clipboard Slots"
+],
+[
+"1032",
+"Built-in Notes Sync"
+],
+[
+"1033",
+"Focus Mode"
+],
+[
+"1034",
+"Pomodoro Timer"
+],
+[
+"1035",
+"Screen Annotation"
+],
+[
+"1036",
+"Quick Screenshot Editor"
+],
+[
+"1037",
+"Window Always-on-Top"
+],
+[
+"1038",
+"Custom Hotkey Creator"
+],
+[
+"1039",
+"Workspace Saver"
+],
+[
+"1040",
+"Automatic Session Restore"
+],
+[
+"1041",
+"Wi-Fi Signal History"
+],
+[
+"1042",
+"Network Usage Monitor"
+],
+[
+"1043",
+"DNS Performance Checker"
+],
+[
+"1044",
+"Internet Troubleshooter"
+],
+[
+"1045",
+"Wi-Fi Auto Reconnect"
+],
+[
+"1046",
+"Network Device Discovery"
+],
+[
+"1047",
+"Local File Sharing"
+],
+[
+"1048",
+"Secure QR Wi-Fi Sharing"
+],
+[
+"1049",
+"Download Resume Manager"
+],
+[
+"1050",
+"Connection Priority Manager"
+],
+[
+"1051",
+"USB Security Scanner"
+],
+[
+"1052",
+"Login Attempt Alerts"
+],
+[
+"1053",
+"Application Integrity Checker"
+],
+[
+"1054",
+"Permission Change History"
+],
+[
+"1055",
+"Secure Guest Account"
+],
+[
+"1056",
+"Automatic Screen Lock"
+],
+[
+"1057",
+"Suspicious Startup Detection"
+],
+[
+"1058",
+"Firewall Activity Dashboard"
+],
+[
+"1059",
+"Security Audit Tool"
+],
+[
+"1060",
+"Encrypted Personal Vault"
+],
+[
+"1061",
+"Startup Time Analyzer"
+],
+[
+"1062",
+"RAM Usage History"
+],
+[
+"1063",
+"CPU Usage History"
+],
+[
+"1064",
+"Disk Health Monitoring"
+],
+[
+"1065",
+"Background App Analyzer"
+],
+[
+"1066",
+"Lightweight Gaming Mode"
+],
+[
+"1067",
+"Low-RAM Emergency Mode"
+],
+[
+"1068",
+"Smart ZRAM Controller"
+],
+[
+"1069",
+"Boot Performance Analyzer"
+],
+[
+"1070",
+"Automatic Cache Management"
+],
+[
+"1071",
+"Built-in Audio Recorder"
+],
+[
+"1072",
+"Video Trimmer"
+],
+[
+"1073",
+"Image Resizer"
+],
+[
+"1074",
+"Image Format Converter"
+],
+[
+"1075",
+"PDF Merger"
+],
+[
+"1076",
+"PDF Splitter"
+],
+[
+"1077",
+"PDF Compressor"
+],
+[
+"1078",
+"Screen Recording Editor"
+],
+[
+"1079",
+"Webcam Preview"
+],
+[
+"1080",
+"Media Library Manager"
+],
+[
+"1081",
+"Service Manager"
+],
+[
+"1082",
+"Process Priority Manager"
+],
+[
+"1083",
+"Kernel Information Viewer"
+],
+[
+"1084",
+"Driver Status Dashboard"
+],
+[
+"1085",
+"Repository Manager"
+],
+[
+"1086",
+"Package Dependency Checker"
+],
+[
+"1087",
+"System Log Viewer"
+],
+[
+"1088",
+"Bootloader Configuration Tool"
+],
+[
+"1089",
+"Restore Point Manager"
+],
+[
+"1090",
+"System Health Report Generator"
+],
+[
+"1091",
+"NAVIN Welcome Center"
+],
+[
+"1092",
+"NAVIN Control Hub"
+],
+[
+"1093",
+"NAVIN Theme Studio"
+],
+[
+"1094",
+"NAVIN Shortcut Center"
+],
+[
+"1095",
+"NAVIN Hardware Assistant"
+],
+[
+"1096",
+"NAVIN Update Dashboard"
+],
+[
+"1097",
+"NAVIN Recovery Assistant"
+],
+[
+"1098",
+"NAVIN App Compatibility Checker"
+],
+[
+"1099",
+"NAVIN System Benchmark"
+],
+[
+"1100",
+"NAVIN OS Smart Maintenance Center"
+]
+]
+}

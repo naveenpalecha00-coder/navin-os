@@ -1,0 +1,462 @@
+{
+ "version": "2.2",
+ "title": "What's new in NAVIN 2.2",
+ "items": [
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Smart App Suggestions — Your most used apps, learned from the files you open.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"suggest\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Voice Search — Say what to search for (5 s, English, offline).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"voice\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Smart Window Arrangement — Puts every window on this desktop side by side.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"arrange\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Activity History — Files you opened recently, newest first.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"activity\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Desktop Profiles — Save/load wallpaper, panel, theme, window and shortcut settings.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"profiles\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Clipboard Slots — 9 saved clipboard slots (Clipboard history: Win+V).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"clipslots\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Desktop Widgets — CPU/RAM/battery pill on the panel; add more: right-click panel > Add New Items.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"widgets\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Gesture Settings — 3-finger swipes and pinch (touchpad settings).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"gestures\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Files: File Recovery — Trash first, then deep recovery with PhotoRec.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"recover\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Files: Batch File Converter — Converts every picture/song/video in a folder.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"convert\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Files: File Permissions — See who may read/change/run a file; set a mode like 644 or 755.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"perms\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › PDF & Media: Join Videos (Recording Editor) — Joins screen recordings/clips without re-encoding.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"join\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › PDF & Media: Media Library — How many pictures, songs, videos and documents you have.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"library\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › PDF & Media: Screen Annotation — Draw on the screen (presentations, teaching).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"annotate\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › PDF & Media: Screenshot Editor — Select an area, then edit the picture.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"shotedit\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Laptop: Battery History — Battery level over time and how fast it drains.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"bathist\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Laptop: USB Health Check — USB devices and connection errors this start-up.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"usbhealth\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Laptop: Audio Devices — Speakers, headphones and microphones that were found.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"audio\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Laptop: Display Information — Screens, resolution and graphics driver.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"display\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Laptop: Hardware Assistant — Detects hardware and applies the right fixes.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"hwassist\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Productivity: Notes & Notes Sync — New note, or sync Documents/Notes with a USB/folder.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"notes\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Productivity: Workspace Saver — Save the open apps; restore them later (also after restart).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"workspace\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Productivity: Custom Hotkeys — Create your own keyboard shortcuts.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"hotkeys\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Wi-Fi Signal History — Signal strength over time.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"wifihist\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Wi-Fi Auto Reconnect — Saved networks reconnect by themselves, forever.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"reconnect\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Network Devices — Phones, PCs and printers on your Wi-Fi.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"discover\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Download Resume Manager — Downloads that continue after a broken connection.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"download\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Connection Priority — Which saved network is used first (higher = first).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"priority\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Local File Sharing — Send files to a phone/PC on the same Wi-Fi.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"share\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: USB Security Scanner — Finds autorun files, hidden and disguised programs on a USB drive.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"usbscan\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Login Attempt Alerts — Wrong password attempts (also notified at login).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"logins\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: App Integrity Checker — Checks every program file against its package.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"integrity\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Permission Change History — Notices when private folders become readable by others.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"permhist\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Guest Account — A guest login without admin rights.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"guest\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Automatic Screen Lock — Lock after some idle minutes and on sleep.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"autolock\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Suspicious Startup Check — Start-up entries from temp/hidden folders or unknown programs.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"startup\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Firewall Dashboard — Firewall state and blocked connection attempts.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"firewall\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Security Audit — A score with what to fix.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"audit\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Encrypted Vault — AES-256 encrypted private folder.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"vault\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: RAM & CPU History — Memory and processor load over time.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"ramcpu\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Background App Analyzer — Programs running without a window.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"background\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Low-RAM Emergency — Closes the biggest apps when memory is almost full.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"emergency\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Smart ZRAM Controller — Compressed memory: auto by RAM, or choose a profile.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"zram\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Cache Cleaner — Old cache (weekly by itself) or everything.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"cache\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Process Priority — Give a program more or less CPU time.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"nice\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Driver Status — Every device and the driver it uses.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"drivers\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Repository Manager — Where apps and updates come from.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"repos\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Package Dependency Checker — What a package needs and what needs it.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"deps\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Boot Menu Settings — Boot menu time and logo/text start-up (installed NAVIN).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"grub\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › System: Restore Points — System snapshots and rollback.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"restore\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: App Compatibility Checker — Will this .exe/.deb/AppImage run on NAVIN?",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"compat\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Smart Maintenance Center — Checks disk, services, updates and cache; fixes on request.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"maintain\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: System Benchmark — Repeatable speed test.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"benchmark\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Welcome Center — First steps and What's New.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"welcome\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Control Hub — Quick toggles and settings.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"control\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Theme Studio — Light/dark/auto theme.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"themes\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Update Dashboard — NAVIN updates and history.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"updates\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › NAVIN: Recovery Assistant — Repairs, boot repair and recovery.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"recovery\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Desktop: Account Picture — Your picture on the login and lock screen.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"avatar\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Internet Speed Test — Real download speed and response time.",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"speedtest\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Network: Network Reset — Restart Wi-Fi/cable networking (passwords kept).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"netreset\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Security: Parental Controls — Block websites for every user (example: youtube.com, games.com).",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"parental\", "
+  },
+  {
+   "category": "Toolbox",
+   "title": "Toolbox › Productivity: Backup Schedule & Automation — Run a backup or your own command at a set time. Time: daily, weekly, *-*-* 20:00, Mon 09:00",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "(\"schedule\", "
+  },
+  {
+   "category": "Features",
+   "title": "Every feature named in the 1,100-feature request is matched to a real app, tool, shortcut or setting (checked by tests)",
+   "path": "build-iso/config/includes.chroot/usr/share/navin/features-2.2.json",
+   "check": "\"version\": \"2.2\""
+  },
+  {
+   "category": "Features",
+   "title": "Honest notes for the few features XFCE cannot do fully (hibernate, jump lists, animated wallpapers ...)",
+   "path": "build-iso/config/includes.chroot/usr/share/navin/features-2.2.json",
+   "check": "\"kind\": \"none\""
+  },
+  {
+   "category": "History",
+   "title": "Battery, RAM, CPU and Wi-Fi history: one tiny sample every 5 minutes, no background program",
+   "path": "build-iso/config/includes.chroot/usr/local/lib/navin/navin-history",
+   "check": "one sample"
+  },
+  {
+   "category": "History",
+   "title": "History timers switched on for every user",
+   "path": "build-iso/config/hooks/live/01-navin-os-customization.hook.chroot",
+   "check": "navin-history.timer"
+  },
+  {
+   "category": "Speed",
+   "title": "Automatic cache management once a week (thumbnails and app caches unused for 30 days)",
+   "path": "build-iso/config/includes.chroot/etc/systemd/user/navin-cache-clean.timer",
+   "check": "OnCalendar=weekly"
+  },
+  {
+   "category": "Security",
+   "title": "Notification at login when someone typed a wrong password",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-session-init",
+   "check": "--logins"
+  },
+  {
+   "category": "Security",
+   "title": "Win+L really locks the screen now (light-locker); the Live user is never locked out",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-session-init",
+   "check": "pkill -x light-locker"
+  },
+  {
+   "category": "Network",
+   "title": "Wi-Fi login pages (hotels, stations) are detected",
+   "path": "build-iso/config/includes.chroot/etc/NetworkManager/conf.d/navin-connectivity.conf",
+   "check": "[connectivity]"
+  },
+  {
+   "category": "Network",
+   "title": "Internet Troubleshooter opens the Wi-Fi login page when one is needed",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "Wi-Fi login page"
+  },
+  {
+   "category": "Apps",
+   "title": "PDF reader (Atril), 7z/RAR archives, PhotoRec file recovery, screen drawing, screen reader (Orca)",
+   "path": "build-iso/config/package-lists/navin-os.list.chroot",
+   "check": "7zip testdisk gromit-mpx light-locker orca atril"
+  },
+  {
+   "category": "Apps",
+   "title": "Offline voice search and screenshot editor packages (installed when Debian has them)",
+   "path": "build-iso/config/includes.chroot/usr/share/navin/optional-packages.list",
+   "check": "pocketsphinx"
+  },
+  {
+   "category": "Desktop",
+   "title": "Toolbox sidebar grouped: Desktop, Files, PDF & Media, Laptop, Network, Security, System, Productivity, NAVIN",
+   "path": "build-iso/config/includes.chroot/usr/local/bin/navin-toolbox",
+   "check": "CAT_ORDER"
+  },
+  {
+   "category": "Boot",
+   "title": "Boot menu and system now say NAVIN 2.2 (all 2.1 touchpad and two-choice boot fixes kept)",
+   "path": "build-iso/config/hooks/live/02-navin-bootmenu.hook.binary",
+   "check": "Live Mode - Try NAVIN 2.2"
+  }
+ ]
+}

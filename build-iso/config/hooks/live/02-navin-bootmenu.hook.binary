@@ -1,7 +1,7 @@
 #!/bin/sh
-# NAVIN 2.1 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
+# NAVIN 2.2 boot menu (GRUB for UEFI, ISOLINUX for legacy BIOS). Runs in the binary tree.
 # Exactly two choices on the main menu:
-#   Live Mode — Try NAVIN 2.1          (default, the full desktop with every feature, nothing installed)
+#   Live Mode — Try NAVIN 2.2          (default, the full desktop with every feature, nothing installed)
 #   Full Installation — Install ...    (same live system + navin.install=1 -> Calamares opens)
 # Both carry the touchpad controller fix (i8042.nomux=1 i8042.reset=1, from auto/config --bootappend-live),
 # so old-laptop touchpads work without a separate "Old Laptop Mode". Old laptops get light effects automatically.
@@ -17,7 +17,7 @@ def png(path, w, h, rgb):
     def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
-LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN 2.1", "Full Installation - Install NAVIN 2.1", "Safe Graphics - NAVIN 2.1 (black screen fix)"
+LIVE, INSTALL, SAFE = "Live Mode - Try NAVIN 2.2", "Full Installation - Install NAVIN 2.2", "Safe Graphics - NAVIN 2.2 (black screen fix)"
 TOUCH = " i8042.nomux=1 i8042.reset=1"
 
 def touch_fix(line):
@@ -53,7 +53,7 @@ def fix_grub(text):
     text = re.sub(r"^set timeout=.*$", "set timeout=3", text, flags=re.M)
     if "set timeout=" not in text:
         text = "set default=0\nset timeout=3\n" + text
-    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.1").replace("Utilities...", "Tools (memory test, safe graphics)")
+    return text.replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.2").replace("Utilities...", "Tools (memory test, safe graphics)")
 
 changed = 0
 for f in ("boot/grub/grub.cfg", "boot/grub/config.cfg", "boot/grub/install_start.cfg"):
@@ -66,7 +66,7 @@ if theme.is_dir():
     for part in ("c", "n", "s", "e", "w", "ne", "nw", "se", "sw"):
         png(theme / f"select_{part}.png", 8, 8, (22, 119, 242))
     (theme / "theme.txt").write_text('''desktop-color: "#F4F7FB"
-title-text: "NAVIN 2.1"
+title-text: "NAVIN 2.2"
 title-color: "#111111"
 message-color: "#333333"
 + boot_menu {
@@ -97,7 +97,7 @@ message-color: "#333333"
   width = 100%
   align = "center"
   color = "#555555"
-  text = "Up/Down: choose    Enter: start    NAVIN OS 2.1 - Your PC. Your OS. Your Freedom."
+  text = "Up/Down: choose    Enter: start    NAVIN OS 2.2 - Your PC. Your OS. Your Freedom."
 }
 ''')
 else:
@@ -115,7 +115,7 @@ if live.exists():
         if "fail-safe" in b.lower():
             # Hidden from the menu (two visible choices only); still bootable: press Tab and type "safe".
             b = re.sub(r"^label \S+", "label safe", b, count=1, flags=re.M)
-            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN 2.1 (black screen fix)\n\tmenu hide", b)
+            b = re.sub(r"menu label .*", "menu label ^Safe Graphics - NAVIN 2.2 (black screen fix)\n\tmenu hide", b)
             b = re.sub(r"^(\s*append .*)$", lambda x: touch_fix(x.group(1) if "nomodeset" in x.group(1) else x.group(1) + " nomodeset"), b, flags=re.M)
             out.append(b)
         elif b.startswith("label") and "append" in b:
@@ -123,9 +123,9 @@ if live.exists():
                 continue  # other live entries are dropped: two choices only
             done = True
             live_b = re.sub(r"^(\s*append .*)$", lambda x: touch_fix(x.group(1)), b, count=1, flags=re.M)
-            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN 2.1", live_b))
+            out.append(re.sub(r"menu label .*", "menu label ^Live Mode - Try NAVIN 2.2", live_b))
             inst = re.sub(r"^label (\S+)", r"label \1-install", live_b, flags=re.M)
-            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN 2.1", inst)
+            inst = re.sub(r"menu label .*", "menu label ^Full Installation - Install NAVIN 2.2", inst)
             inst = re.sub(r"^\s*menu default\s*\n", "", inst, flags=re.M)
             inst = re.sub(r"^(\s*append .*)$", r"\1 navin.install=1", inst, count=1, flags=re.M)
             out.append(inst)
@@ -134,7 +134,7 @@ if live.exists():
     live.write_text("\n".join(out)); changed += 1
 for f in pathlib.Path("isolinux").glob("*.cfg"):
     t = f.read_text()
-    t = re.sub(r"^timeout .*$", "timeout 30", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.1")
+    t = re.sub(r"^timeout .*$", "timeout 30", t, flags=re.M).replace("Debian GNU/Linux 13 (trixie)", "NAVIN 2.2")
     f.write_text(t)
 std = pathlib.Path("isolinux/stdmenu.cfg")
 if std.exists():

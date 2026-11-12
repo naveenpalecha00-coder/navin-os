@@ -1,0 +1,8 @@
+[Unit]
+Description=NAVIN usage history sample (battery, RAM, CPU, Wi-Fi)
+
+[Service]
+Type=oneshot
+Nice=15
+IOSchedulingClass=idle
+ExecStart=/usr/local/lib/navin/navin-history

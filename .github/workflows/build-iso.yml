@@ -1,11 +1,12 @@
-name: Build NAVIN 2.1 ISO (Debian 13 Trixie)
+name: Build NAVIN 2.2 ISO (Debian 13 Trixie)
 
-# NAVIN 2.1 is developed on its own branch (navin-2.1, started from navin-2.0).
+# NAVIN 2.2 is developed on its own branch (navin-2.2, started from navin-2.1).
+# navin-2.1 keeps v2.1.
 # navin-2.0 keeps v2.0, navin-1.2-trixie keeps v1.2 and main keeps Build 10 for rollback.
 # main keeps the Debian 12 Build 10 pipeline/release and navin-1.2-trixie keeps v1.2 for rollback.
 on:
   push:
-    branches: [navin-2.1]
+    branches: [navin-2.2]
     paths: ["build-iso/**", ".github/workflows/build-iso.yml"]
   workflow_dispatch:
 
@@ -13,13 +14,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-iso-2.1
+  group: build-iso-2.2
   cancel-in-progress: true
 
 env:
-  ISO: navin-2.1-x86_64.iso
-  TAG: v2.1-test
-  FINAL_TAG: v2.1
+  ISO: navin-2.2-x86_64.iso
+  TAG: v2.2-test
+  FINAL_TAG: v2.2
 
 jobs:
   build:
@@ -56,8 +57,8 @@ jobs:
             done
             rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-shortcuts > /tmp/out 2>&1 || rc=$?
             if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-shortcuts"; cat /tmp/out; fail=1; else echo "ok   navin-shortcuts"; fi
-            # NAVIN 2.1 Toolbox: one tool page per input type (folder+text, multi-file+save, file+choice, no inputs)
-            for t in large pdfmerge pdfsmall report; do
+            # NAVIN 2.2 Toolbox: one tool page per input type + the new 2.2 categories (Desktop, Laptop, Security, NAVIN)
+            for t in large pdfmerge pdfsmall report profiles clipslots bathist parental schedule guest compat maintain; do
               rc=0; timeout 12 xvfb-run -a dbus-launch python3 /usr/local/bin/navin-toolbox $t > /tmp/out 2>&1 || rc=$?
               if [ $rc -ne 124 ] || grep -q Traceback /tmp/out; then echo "FAIL navin-toolbox $t (exit $rc)"; cat /tmp/out; fail=1; else echo "ok   navin-toolbox $t"; fi
             done
@@ -105,7 +106,7 @@ jobs:
           B=build-iso; R=$B/reports; mkdir -p $R
           cp $B/docs/hardware-compatibility.md $B/docs/known-issues.md $R/
           {
-            echo "# NAVIN 2.1 — Debian 13 Trixie build report"
+            echo "# NAVIN 2.2 — Debian 13 Trixie build report"
             echo
             echo "- Commit: $GITHUB_SHA · Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- ISO: $ISO · $(( ${{ steps.verify.outputs.size }} / 1048576 )) MB · SHA256 ${{ steps.verify.outputs.sha }}"
@@ -149,7 +150,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: navin-2.1-build-evidence
+          name: navin-2.2-build-evidence
           path: |
             build-iso/build.log
             build-iso/reports/
@@ -160,10 +161,10 @@ jobs:
         if: always() && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: navin-2.1-iso
+          name: navin-2.2-iso
           path: |
-            build-iso/navin-2.1-x86_64.iso
-            build-iso/navin-2.1-x86_64.iso.sha256
+            build-iso/navin-2.2-x86_64.iso
+            build-iso/navin-2.2-x86_64.iso.sha256
           retention-days: 7
           compression-level: 0
 
@@ -178,21 +179,22 @@ jobs:
           done
           echo "final=$final" >> "$GITHUB_OUTPUT"
 
-      - name: Publish NAVIN 2.1 release (only when every live, install and reboot VM test passes)
+      - name: Publish NAVIN 2.2 release (only when every live, install and reboot VM test passes)
         if: steps.gate.outputs.final == 'yes'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.FINAL_TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN 2.1 (Debian 13)
+          name: NAVIN 2.2 (Debian 13)
           prerelease: false
           make_latest: false
           body: |
-            NAVIN 2.1 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
-            Boot menu with two choices: Live Mode and Full Installation. Both include the touchpad controller fix,
-            so old-laptop touchpads (Samsung RV411 class) work without typing commands. Lighter background service,
-            NAVIN Toolbox (files, PDF, images, video, audio, network, system tools), Ctrl+Alt+Del screen, Windows-style
-            desktop shortcuts. Everything from 2.0 is kept. Full list: System Center → What's New.
+            NAVIN 2.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + Secure Boot + legacy BIOS).
+            Every feature of the 1,100-feature request is matched to a real app, tool, shortcut or setting
+            (/usr/share/navin/features-2.2.json, checked by tests). NAVIN Toolbox now has 94 tools (Desktop, Files,
+            PDF & Media, Laptop, Network, Security, System, Productivity, NAVIN). Battery/RAM/CPU/Wi-Fi history,
+            automatic screen lock (installed system), parental controls, scheduled backups, PDF reader, 7z, file recovery.
+            All 2.1 fixes kept: two-choice boot menu, touchpad controller fix on every boot. Full list: System Center → What's New.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -205,8 +207,8 @@ jobs:
             Please report problems on GitHub Issues. NAVIN 2.0, 1.2 and Build 10 (Debian 12) stay available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-2.1-x86_64.iso
-            build-iso/navin-2.1-x86_64.iso.sha256
+            build-iso/navin-2.2-x86_64.iso
+            build-iso/navin-2.2-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md
@@ -218,11 +220,11 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: NAVIN 2.1 Debian 13 — TEST BUILD (not hardware-verified)
+          name: NAVIN 2.2 Debian 13 — TEST BUILD (not hardware-verified)
           prerelease: true
           make_latest: false
           body: |
-            NAVIN 2.1 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
+            NAVIN 2.2 — Debian 13 Trixie base, x86_64 hybrid ISO (UEFI + legacy BIOS). Development build.
 
             SHA256: ${{ steps.verify.outputs.sha }}
 
@@ -230,8 +232,8 @@ jobs:
             NOT the final release. Keep using Build 10 (Debian 12) for daily use; it stays available for rollback.
             See build-report.md, known-issues.md and hardware-compatibility.md.
           files: |
-            build-iso/navin-2.1-x86_64.iso
-            build-iso/navin-2.1-x86_64.iso.sha256
+            build-iso/navin-2.2-x86_64.iso
+            build-iso/navin-2.2-x86_64.iso.sha256
             build-iso/reports/build-report.md
             build-iso/reports/package-manifest.tsv
             build-iso/reports/hardware-compatibility.md

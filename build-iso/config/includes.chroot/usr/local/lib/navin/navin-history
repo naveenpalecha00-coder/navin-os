@@ -1,0 +1,88 @@
+#!/usr/bin/python3
+"""NAVIN 2.2 usage history (battery, RAM, CPU, Wi-Fi signal) for the Toolbox history pages.
+Run every 5 minutes by the user timer navin-history.timer: reads a few /proc and /sys files, appends ONE
+line to ~/.local/share/navin/history.csv and exits (no background process). Keeps 14 days.
+  navin-history            take one sample
+  navin-history --logins   notify about failed password attempts since the last check (run at login)
+  navin-history --clean    automatic cache management: delete thumbnails/app cache unused for 30 days"""
+import os, pathlib, subprocess, sys, time
+sys.path.insert(0, "/usr/local/lib/navin")
+import navin_tools as T
+
+DATA = pathlib.Path(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))) / "navin"
+FILE = DATA / "history.csv"
+
+
+def read(path):
+    try:
+        return pathlib.Path(path).read_text().strip()
+    except OSError:
+        return None
+
+
+def sample():
+    bat = next(iter(sorted(pathlib.Path("/sys/class/power_supply").glob("BAT*"))), None)
+    cap = read(bat / "capacity") if bat else None
+    status = read(bat / "status") if bat else None
+    mem = dict(l.split(":", 1) for l in (read("/proc/meminfo") or "").splitlines() if ":" in l)
+    tot = int(mem.get("MemTotal", "0 kB").split()[0]); avail = int(mem.get("MemAvailable", "0 kB").split()[0])
+    ram = round((tot - avail) * 100 / tot, 1) if tot else None
+    load = float((read("/proc/loadavg") or "0").split()[0])
+    cpu = round(min(100.0, load * 100 / (os.cpu_count() or 1)), 1)
+    wifi = T.wifi_signal(read("/proc/net/wireless") or "")
+    DATA.mkdir(parents=True, exist_ok=True)
+    with open(FILE, "a") as f:
+        f.write(T.history_line(time.time(), cap, status, ram, cpu, wifi))
+    if FILE.stat().st_size > 400_000:
+        keep = T.trim_history(FILE.read_text().splitlines(True), 14, time.time())
+        FILE.write_text("".join(keep))
+
+
+def logins():
+    stamp = DATA / "login-check"
+    since = read(stamp) or "-1d"
+    p = subprocess.run(["journalctl", "--no-pager", "-q", "-o", "short-iso", "--since", since,
+                        "SYSLOG_FACILITY=10", "SYSLOG_FACILITY=4"], capture_output=True, text=True)
+    DATA.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(time.strftime("%Y-%m-%d %H:%M:%S"))
+    bad = T.failed_logins(p.stdout)
+    if bad:
+        subprocess.run(["notify-send", "-u", "critical", "-i", "security-medium", "NAVIN security",
+                        f"{len(bad)} wrong password attempt(s) since your last login (last: {bad[-1][0]}). "
+                        "Details: Toolbox > Login Attempt Alerts."])
+
+
+CACHE_KEEP = ("fontconfig", "mesa_shader_cache", "flatpak", "pip")  # rebuilt slowly or needed offline
+
+
+def clean(days=30):
+    root = pathlib.Path(os.path.expanduser("~/.cache"))
+    entries = []
+    for d, dirs, files in os.walk(root):
+        rel = os.path.relpath(d, root)
+        if rel.split(os.sep)[0] in CACHE_KEEP:
+            dirs[:] = []; continue
+        for f in files:
+            p = os.path.join(d, f)
+            try:
+                st = os.lstat(p)
+            except OSError:
+                continue
+            entries.append((p, st.st_size, max(st.st_atime, st.st_mtime)))
+    freed = 0
+    for p, s in T.old_cache_files(entries, time.time(), days):
+        try:
+            os.remove(p); freed += s
+        except OSError:
+            pass
+    print(f"cache: removed {T.human_size(freed)}")
+    return freed
+
+
+if __name__ == "__main__":
+    if "--logins" in sys.argv:
+        logins()
+    elif "--clean" in sys.argv:
+        clean()
+    else:
+        sample()

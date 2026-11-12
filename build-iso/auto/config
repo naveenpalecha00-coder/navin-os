@@ -1,5 +1,5 @@
 #!/bin/sh
-# NAVIN 2.1 — live-build configuration (Debian 13 Trixie, amd64, hybrid ISO, UEFI Secure Boot + legacy BIOS)
+# NAVIN 2.2 — live-build configuration (Debian 13 Trixie, amd64, hybrid ISO, UEFI Secure Boot + legacy BIOS)
 set -e
 
 lb config noauto \
@@ -25,8 +25,8 @@ lb config noauto \
   --memtest memtest86+ \
   --chroot-squashfs-compression-type xz \
   --image-name navin-os \
-  --iso-application "NAVIN 2.1" \
+  --iso-application "NAVIN 2.2" \
   --iso-publisher "Navin Palecha" \
-  --iso-volume "NAVIN_2_1" \
+  --iso-volume "NAVIN_2_2" \
   --bootappend-live "boot=live components persistence i8042.nomux=1 i8042.reset=1 quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 username=navin user-fullname=Navin hostname=navin-os locales=en_US.UTF-8 keyboard-layouts=us" \
   "${@}"

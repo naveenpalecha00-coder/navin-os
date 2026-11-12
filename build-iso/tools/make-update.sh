@@ -5,7 +5,7 @@
 # Kernel, package or boot changes are NOT patchable: they need APT or a new ISO.
 set -euo pipefail
 N=${1:?patch number (greater than 20)}
-[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -gt 30 ] || { echo "patch number must be > 30 (NAVIN 2.1 ISO is build 30)" >&2; exit 2; }
+[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -gt 40 ] || { echo "patch number must be > 40 (NAVIN 2.2 ISO is build 40)" >&2; exit 2; }
 cd "$(dirname "$0")/../.."
 python3 - "$N" <<'PY'
 import importlib.util, io, pathlib, sys, tarfile

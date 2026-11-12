@@ -1,0 +1,10 @@
+[Unit]
+Description=NAVIN automatic cache management once a week
+
+[Timer]
+OnStartupSec=20min
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -222,3 +222,7 @@ xserver-xorg-video-intel
 lz4
 # ---- NAVIN 2.1: NAVIN Toolbox (PDF merge/split/compress, Wi-Fi QR, disk health) ----
 qpdf ghostscript qrencode smartmontools
+
+# ---- NAVIN 2.2 (1001-1100 tools) ----
+# 7z archives, file recovery (PhotoRec), screen drawing, auto screen lock, screen reader, PDF reader
+7zip testdisk gromit-mpx light-locker orca atril accountsservice

@@ -1,9 +1,9 @@
 #!/usr/bin/python3
-"""NAVIN Toolbox (NAVIN 2.1): real everyday tools in one light window.
-Files · PDF & Media · Network · System · Productivity. Logic and command lines come from navin_tools.py
+"""NAVIN Toolbox (NAVIN 2.2): real everyday tools in one light window.
+Desktop · Files · PDF & Media · Laptop · Network · Security · System · Productivity · NAVIN. Logic and command lines come from navin_tools.py
 (unit-tested); this window only collects the inputs, runs the real program and shows its real output.
 Usage: navin-toolbox [tool-id]"""
-import gi, os, pathlib, shutil, subprocess, sys, threading, time
+import gi, json, os, pathlib, shutil, subprocess, sys, tempfile, threading, time
 sys.path.insert(0, "/usr/local/lib/navin")
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
@@ -223,6 +223,17 @@ def t_nettrouble(v, out):
     out.write("3. Internet (1.1.1.1): " + ("yes" if subprocess.run(["ping", "-c", "2", "-W", "3", "1.1.1.1"], capture_output=True).returncode == 0 else "NO"))
     ms = T.dns_time_ms("1.1.1.1")
     out.write("4. Name lookup (DNS): " + (f"works ({ms} ms)" if ms else "NOT working - try Settings > Network > DNS 1.1.1.1"))
+    import urllib.request
+    try:
+        with urllib.request.urlopen(T.CAPTIVE_URL, timeout=6) as r:
+            body = r.read(512).decode(errors="replace")
+    except OSError:
+        body = None
+    if body is not None and T.captive_portal(body):
+        out.write("5. Wi-Fi login page: YES - this Wi-Fi wants you to sign in. Opening the login page ...")
+        subprocess.Popen(["xdg-open", "http://neverssl.com"])
+    elif body is not None:
+        out.write("5. Wi-Fi login page: not needed")
 
 
 def t_boot(v, out):
@@ -313,6 +324,648 @@ def t_keys(v, out):
     GLib.idle_add(key_tester)
 
 
+# ======================= NAVIN 2.2 tools =======================
+DATA = pathlib.Path(os.environ.get("XDG_DATA_HOME", os.path.join(HOME, ".local/share"))) / "navin"
+CONF = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config"))) / "navin"
+
+
+def sh(cmd, timeout=60):
+    """Output of a read-only command ('' when it is missing)."""
+    if not which(cmd[0]):
+        return ""
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+    except subprocess.TimeoutExpired:
+        return ""
+
+
+def recent():
+    f = pathlib.Path(HOME, ".local/share/recently-used.xbel")
+    return T.parse_recent(f.read_text(errors="replace")) if f.exists() else []
+
+
+def t_suggest(v, out):
+    apps = T.app_suggestions(recent())
+    if not apps:
+        out.write("No history yet. Open some files and come back - suggestions come from what you really use."); return
+    out.write("Your most used apps (from the files you opened):")
+    for a, c in apps:
+        out.write(f"{c:5}x  {a}")
+
+
+def t_activity(v, out):
+    rows = recent()[:int(v.get("show") or 50)]
+    out.write("\n".join(f"{m[:16].replace('T', ' ')}  {p}" for p, m, _ in rows) or "No recent files.")
+
+
+def t_voice(v, out):
+    if not which("pocketsphinx"):
+        out.write("Voice search needs the offline speech package 'pocketsphinx' (App Store > search pocketsphinx)."); return
+    wav = os.path.join(tempfile.gettempdir(), "navin-voice.wav")
+    out.write("Speak now (5 seconds) ...")
+    if not run_cmd(["ffmpeg", "-y", "-loglevel", "error", "-f", "pulse", "-i", "default", "-t", "5", "-ac", "1", "-ar", "16000", wav], out):
+        return
+    q = T.voice_query(sh(["pocketsphinx", "single", wav], timeout=120))
+    if not q:
+        out.write("Nothing understood. Speak a little louder, in English."); return
+    out.write(f"You said: {q}")
+    subprocess.Popen(["navin-search", q])
+
+
+def t_arrange(v, out):
+    desk = sh(["xdotool", "get_desktop"]).strip()
+    wins = [w for w in T.parse_wmctrl(sh(["wmctrl", "-lpG"])) if str(w[1]) == desk]
+    geo = Gdk.Display.get_default().get_primary_monitor() or Gdk.Display.get_default().get_monitor(0)
+    wa = geo.get_workarea()
+    cells = T.tile_layout(len(wins), wa.width, wa.height, wa.y)
+    for (wid, *_), (x, y, w, h) in zip(wins, cells):
+        subprocess.run(["wmctrl", "-ir", wid, "-b", "remove,maximized_vert,maximized_horz"])
+        subprocess.run(["wmctrl", "-ir", wid, "-e", f"0,{wa.x + x},{y},{w},{h}"])
+    out.write(f"{len(wins)} windows arranged side by side." if wins else "No windows open on this desktop.")
+
+
+def t_profiles(v, out):
+    src = pathlib.Path(HOME, ".config/xfce4/xfconf/xfce-perchannel-xml")
+    name, act = v.get("name") or "", v.get("action")
+    base = CONF / "profiles"
+    if act == "list":
+        out.write("\n".join(sorted(p.name for p in base.glob("*") if p.is_dir())) or "No profiles saved yet."); return
+    if not T.profile_name_ok(name):
+        out.write("Profile name: letters, numbers, space, - or _ (max 40)."); return
+    dst = base / name
+    if act == "save":
+        dst.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["xfconf-query", "-c", "xfce4-panel", "-p", "/panels", "-l"], capture_output=True)  # flush
+        for ch in T.PROFILE_CHANNELS:
+            if (src / ch).exists():
+                shutil.copy2(src / ch, dst / ch)
+        out.write(f"Saved desktop profile '{name}' (wallpaper, panel, theme, windows, shortcuts).")
+    elif act == "load":
+        if not dst.is_dir():
+            out.write("No profile with that name."); return
+        subprocess.run(["pkill", "-x", "xfconfd"])
+        for ch in T.PROFILE_CHANNELS:
+            if (dst / ch).exists():
+                shutil.copy2(dst / ch, src / ch)
+        subprocess.Popen(["xfce4-panel", "-r"]); subprocess.Popen(["xfdesktop", "--reload"]); subprocess.Popen(["xfwm4", "--replace"])
+        out.write(f"Profile '{name}' loaded.")
+
+
+def t_clipslots(v, out):
+    base = CONF / "clipboard"; base.mkdir(parents=True, exist_ok=True)
+    path = T.clip_slot_path(base, v.get("slot") or 1)
+    if v.get("action") == "save current clipboard":
+        text = sh(["xclip", "-o", "-selection", "clipboard"])
+        if not text:
+            out.write("The clipboard is empty (copy some text first)."); return
+        pathlib.Path(path).write_text(text); out.write(f"Slot {v['slot']} saved ({len(text)} characters).")
+    elif v.get("action") == "put slot into clipboard":
+        if not os.path.exists(path):
+            out.write("That slot is empty."); return
+        subprocess.run(["xclip", "-selection", "clipboard"], input=pathlib.Path(path).read_text(), text=True)
+        out.write(f"Slot {v['slot']} is in the clipboard - press Ctrl+V to paste.")
+    for i in range(1, T.CLIP_SLOTS + 1):
+        f = T.clip_slot_path(base, i)
+        txt = pathlib.Path(f).read_text()[:60].replace("\n", " ") if os.path.exists(f) else "(empty)"
+        out.write(f"Slot {i}: {txt}")
+
+
+def t_recover(v, out):
+    out.write("Deleted files: first look in the Trash (Files > Trash > right-click > Restore).")
+    if not which("photorec"):
+        out.write("Deep recovery needs 'testdisk' (App Store)."); return
+    out.write("Opening PhotoRec: choose the drive, then a DIFFERENT drive to save recovered files to.")
+    subprocess.Popen(["xfce4-terminal", "--title", "NAVIN File Recovery", "-x", "pkexec", "photorec"])
+
+
+def t_convert(v, out):
+    need(v, "folder", "format")
+    folder = v["folder"]
+    names = [n for n in os.listdir(folder) if os.path.isfile(os.path.join(folder, n))]
+    plan = T.batch_convert_plan(names, v["format"])
+    if not plan:
+        out.write("No files of a matching type to convert."); return
+    for old, new in plan:
+        ok = run_cmd(T.media_convert_cmd(os.path.join(folder, old), os.path.join(folder, new)), out, timeout=3600)
+        out.write(f"{'ok  ' if ok else 'FAIL'} {old} -> {new}")
+
+
+def t_perms(v, out):
+    need(v, "file")
+    f = v["file"]
+    if v.get("mode"):
+        if not T.safe_user_path(f, HOME):
+            out.write("Only your own files can be changed here."); return
+        run_cmd(T.chmod_cmd(f, v["mode"]), out)
+    st = os.stat(f)
+    import pwd, grp
+    out.write(f"{f}\nOwner: {pwd.getpwuid(st.st_uid).pw_name}   Group: {grp.getgrgid(st.st_gid).gr_name}\n{T.mode_text(st.st_mode & 0o777)}")
+
+
+def t_join(v, out):
+    files = v.get("files") or []
+    need(v, "save")
+    lst = os.path.join(tempfile.gettempdir(), "navin-join.txt")
+    pathlib.Path(lst).write_text(T.video_join_list(files))
+    run_cmd(T.video_join_cmd(lst, v["save"]), out, f"Saved {v['save']}", timeout=3600)
+
+
+def t_library(v, out):
+    for name in ("Pictures", "Videos", "Music", "Documents", "Downloads"):
+        d = os.path.join(HOME, name)
+        if os.path.isdir(d):
+            lib = T.media_library(T.walk_files(d))
+            out.write(f"{name}: " + (", ".join(f"{c} {n} ({T.human_size(b)})" for c, (n, b) in sorted(lib.items())) or "empty"))
+    out.write("\nOpen a folder in Files to play or view; VLC plays music/videos, Ristretto shows pictures.")
+
+
+def t_annotate(v, out):
+    if not which("gromit-mpx"):
+        out.write("Screen drawing needs 'gromit-mpx'."); return
+    subprocess.Popen(["gromit-mpx", "-a"])
+    out.write("Draw on the screen with the mouse. F9 = drawing on/off, Shift+F9 = clear, Ctrl+F9 = hide, Alt+F9 = quit.")
+
+
+def t_shotedit(v, out):
+    f = os.path.join(HOME, "Pictures", time.strftime("Screenshot %Y-%m-%d %H-%M-%S.png"))
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    out.write("Drag a rectangle on the screen ...")
+    if run_cmd(["xfce4-screenshooter", "-r", "-s", f], out) and os.path.exists(f):
+        editor = "drawing" if which("drawing") else "ristretto"
+        subprocess.Popen([editor, f]); out.write(f"Saved {f} - opened in {editor} for editing.")
+
+
+def history():
+    f = DATA / "history.csv"
+    return T.parse_history(f.read_text()) if f.exists() else []
+
+
+def show_hist(out, rows, key, unit, label):
+    s = T.summarize_history(rows, key)
+    if not s:
+        out.write(f"No {label} history yet (a sample is taken every 5 minutes)."); return
+    out.write(f"{label}: now {rows[-1][key] if rows[-1][key] is not None else '-'}{unit}, lowest {s['min']}{unit}, highest {s['max']}{unit}, average {s['avg']}{unit} ({s['samples']} samples)")
+    for r in rows[-36:]:
+        if r[key] is not None:
+            out.write(f"{time.strftime('%d %b %H:%M', time.localtime(r['time']))}  {'#' * int(r[key] / 2.5):40} {r[key]}{unit}")
+
+
+def t_bathist(v, out):
+    rows = history(); show_hist(out, rows, "battery", "%", "Battery")
+    d = T.battery_drain_per_hour(rows)
+    if d:
+        out.write(f"\nOn battery you use about {d}% per hour (about {round(100 / d, 1)} hours from full).")
+
+
+def t_ramcpu(v, out):
+    rows = history(); show_hist(out, rows, "ram", "%", "RAM used"); out.write(""); show_hist(out, rows, "cpu", "%", "CPU load")
+
+
+def t_wifihist(v, out):
+    show_hist(out, history(), "wifi", "%", "Wi-Fi signal")
+
+
+def t_usbhealth(v, out):
+    run_cmd(["lsusb", "-t"], out)
+    probs = T.usb_problems(sh(["journalctl", "-k", "-b", "--no-pager"]) or sh(["dmesg"]))
+    out.write("\nUSB problems this start-up: " + ("none" if not probs else ""))
+    for msg, n in probs:
+        out.write(f"{n:4}x {msg}  -> try another cable/port")
+
+
+def t_audio(v, out):
+    out.write("Speakers / headphones:")
+    for n, st in T.parse_pactl_short(sh(["pactl", "list", "short", "sinks"])):
+        out.write(f"  {st:10} {n}")
+    out.write("Microphones:")
+    for n, st in T.parse_pactl_short(sh(["pactl", "list", "short", "sources"])):
+        out.write(f"  {st:10} {n}")
+    out.write("Default output: " + sh(["pactl", "get-default-sink"]).strip() + "\nDefault input: " + sh(["pactl", "get-default-source"]).strip())
+    out.write("PipeWire switches to headphones/HDMI automatically when plugged in. Change it in Sound (pavucontrol).")
+
+
+def t_display(v, out):
+    for o, con, mode, prim in T.parse_xrandr(sh(["xrandr", "--query"])):
+        if con:
+            out.write(f"{o}: connected{' (main)' if prim else ''}, {mode or 'off'}")
+    out.write("\nGraphics: " + (sh(["glxinfo", "-B"]) or "glxinfo not available"))
+
+
+def t_notes(v, out):
+    notes = pathlib.Path(HOME, "Documents", "Notes"); notes.mkdir(parents=True, exist_ok=True)
+    if v.get("action") == "new note":
+        f = notes / time.strftime("Note %Y-%m-%d %H-%M.txt"); f.touch(); subprocess.Popen(["mousepad", str(f)]); out.write(f"New note: {f}"); return
+    need(v, "folder")
+    other = pathlib.Path(v["folder"]) / "NAVIN Notes"; other.mkdir(parents=True, exist_ok=True)
+    m = lambda d: {p.name: p.stat().st_mtime for p in d.glob("*") if p.is_file()}
+    to_dst, to_src = T.sync_plan(m(notes), m(other))
+    for n in to_dst:
+        shutil.copy2(notes / n, other / n)
+    for n in to_src:
+        shutil.copy2(other / n, notes / n)
+    out.write(f"Synced: {len(to_dst)} copied to {other}, {len(to_src)} copied back. Nothing deleted.")
+
+
+def t_workspace(v, out):
+    f = CONF / "workspace.json"
+    if v.get("action") == "save":
+        def argv(pid):
+            try:
+                return [a for a in pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="replace").split("\0") if a]
+            except OSError:
+                return []
+        sess = T.session_from_windows(T.parse_wmctrl(sh(["wmctrl", "-lpG"])), argv)
+        CONF.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(sess, indent=1))
+        out.write(f"Saved {len(sess)} apps:\n" + "\n".join(f"desktop {s['desktop'] + 1}: {' '.join(s['argv'])[:90]}" for s in sess))
+        return
+    if not f.exists():
+        out.write("Nothing saved yet."); return
+    for s in json.loads(f.read_text()):
+        if which(s["argv"][0]) or os.path.exists(s["argv"][0]):
+            subprocess.run(["wmctrl", "-s", str(s["desktop"])]); subprocess.Popen(s["argv"]); time.sleep(1.5)
+            out.write("started " + " ".join(s["argv"])[:90])
+    out.write("Workspace restored.")
+
+
+def current_connections():
+    return [l.split(":", 1)[0] for l in sh(["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]).splitlines() if ":" in l and "loopback" not in l]
+
+
+def t_reconnect(v, out):
+    names = current_connections()
+    if not names:
+        out.write("No saved networks."); return
+    for n in names:
+        run_cmd(T.reconnect_cmd(n.replace("\\:", ":")), out)
+    out.write(f"Auto-reconnect on for {len(names)} saved networks: NAVIN keeps retrying until the network is back.")
+
+
+def t_discover(v, out):
+    route = sh(["ip", "-4", "-o", "addr", "show", "scope", "global"]).split()
+    cidr = next((route[i + 1] for i, w in enumerate(route) if w == "inet"), None)
+    if not cidr:
+        out.write("Not connected to a network."); return
+    hosts = T.subnet_hosts(cidr)
+    out.write(f"Looking for devices on {cidr} ({len(hosts)} addresses) ...")
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(48) as ex:
+        list(ex.map(lambda h: subprocess.run(["ping", "-c", "1", "-W", "1", h], capture_output=True), hosts))
+    found = T.parse_neigh(sh(["ip", "neigh"]))
+    for ip, mac in found:
+        try:
+            import socket
+            name = socket.gethostbyaddr(ip)[0]
+        except OSError:
+            name = ""
+        out.write(f"{ip:16} {mac}  {name}")
+    out.write(f"{len(found)} devices found.")
+
+
+def t_download(v, out):
+    need(v, "link")
+    folder = os.path.join(HOME, "Downloads"); os.makedirs(folder, exist_ok=True)
+    out.write("Downloading (if it breaks, run again with the same link - it continues where it stopped) ...")
+    run_cmd(T.download_cmd(v["link"].strip(), folder), out, "Download complete (in Downloads).")
+
+
+def t_priority(v, out):
+    if v.get("network") and v.get("priority"):
+        run_cmd(T.priority_cmd(v["network"], v["priority"]), out, "Saved. Higher number = used first.")
+    out.write(sh(["nmcli", "-f", "NAME,TYPE,AUTOCONNECT,AUTOCONNECT-PRIORITY", "connection", "show"]))
+
+
+def t_usbscan(v, out):
+    need(v, "folder")
+    root = v["folder"]
+    rel = [os.path.relpath(p, root) for p, _ in T.walk_files(root, walker=lambda r: os.walk(r))]
+    hidden = []
+    for d, dirs, files in os.walk(root):
+        hidden += [os.path.relpath(os.path.join(d, f), root) for f in files if f.startswith(".")]
+    risks = T.usb_risks(sorted(set(rel + hidden)))
+    out.write(f"{len(rel)} files checked.")
+    for p, why in risks:
+        out.write(f"WARNING  {p}: {why}")
+    out.write("No risky files found." if not risks else "Do not open these on Windows. Delete them if you did not put them there.")
+    if which("clamscan"):
+        run_cmd(["clamscan", "-r", "-i", root], out, timeout=3600)
+
+
+def t_logins(v, out):
+    rows = T.failed_logins(sh(["journalctl", "--no-pager", "-q", "-o", "short-iso", "--since", "-30d", "SYSLOG_FACILITY=10", "SYSLOG_FACILITY=4"]))
+    out.write(f"Wrong password attempts in the last 30 days: {len(rows)}")
+    for when, user in rows[-100:]:
+        out.write(f"{when}  user {user}")
+    out.write("You also get a notification at login when there were new attempts.")
+
+
+def t_integrity(v, out):
+    if not which("dpkg"):
+        out.write("dpkg is not available."); return
+    out.write("Checking every installed program file against its package (a few minutes) ...")
+    changed = T.parse_dpkg_verify(sh(["dpkg", "--verify"], timeout=1800))
+    for p, what in changed[:300]:
+        out.write(f"{what:16} {p}")
+    out.write(f"{len(changed)} changed program files." if changed else "All program files match their packages.")
+
+
+def t_permhist(v, out):
+    f = DATA / "permissions.json"
+    paths = [HOME] + [os.path.join(HOME, n) for n in (".ssh", ".gnupg", ".config/autostart", ".bashrc", ".profile", "Documents", "Desktop", ".navin-vault")]
+    entries = []
+    for p in paths:
+        try:
+            st = os.lstat(p); entries.append((p, st.st_mode, st.st_uid))
+        except OSError:
+            pass
+    now = T.perm_snapshot(entries)
+    old = json.loads(f.read_text()) if f.exists() else {}
+    log = DATA / "permission-changes.log"
+    diff = T.perm_diff(old, now) if old else []
+    if diff:
+        with open(log, "a") as fh:
+            for p, a, b in diff:
+                fh.write(f"{time.strftime('%Y-%m-%d %H:%M')}  {p}: {a} -> {b}\n")
+    DATA.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(now))
+    if not old:
+        out.write("First check saved. Changes will be listed here from the next check.")
+    else:
+        out.write((f"{len(diff)} new change(s) since the last check.\n" if diff else "No permission changes since the last check.\n")
+                  + (log.read_text() if log.exists() else ""))
+
+
+def t_guest(v, out):
+    for c in T.guest_cmds(v["action"]):
+        if not run_cmd(c, out):
+            return
+    out.write({"create": "Guest account ready (no password, cannot install or change the system). Pick 'Guest' at the login screen.",
+               "reset": "Guest files wiped.", "remove": "Guest account removed."}[v["action"]])
+
+
+def t_autolock(v, out):
+    if not which("light-locker"):
+        out.write("Screen lock needs 'light-locker'."); return
+    for c in T.lock_delay_cmds(v.get("minutes") or 10):
+        run_cmd(c, out)
+    out.write(f"The screen locks after {v.get('minutes') or 10} idle minutes and when the lid closes / the laptop sleeps.")
+
+
+def t_startup(v, out):
+    entries = []
+    for d in (pathlib.Path(HOME, ".config/autostart"), pathlib.Path("/etc/xdg/autostart")):
+        for f in d.glob("*.desktop"):
+            ex = next((l.split("=", 1)[1] for l in f.read_text(errors="replace").splitlines() if l.startswith("Exec=")), "")
+            entries.append((str(d), f.name, ex))
+    cron = sh(["crontab", "-l"])
+    entries += [("crontab", "line", l) for l in cron.splitlines() if l.strip() and not l.startswith("#")]
+    owned = lambda path: subprocess.run(["dpkg", "-S", path], capture_output=True).returncode == 0
+    risks = T.startup_risks(entries, owned)
+    out.write(f"{len(entries)} start-up entries checked.")
+    for src, name, why in risks:
+        out.write(f"CHECK  {name} ({src}): {why}")
+    out.write("Nothing suspicious." if not risks else "Remove an entry in Settings > Session and Startup if you do not know it.")
+
+
+def t_firewall(v, out):
+    run_cmd(["pkexec", "ufw", "status", "verbose"], out)
+    blocks = T.parse_ufw_blocks(sh(["journalctl", "-k", "--no-pager", "--since", "-7d"]))
+    out.write(f"\nBlocked connection attempts (7 days): {sum(n for _, n in blocks)}")
+    for (src, proto, port), n in blocks[:40]:
+        out.write(f"{n:5}x from {src:18} {proto} port {port}")
+
+
+def t_audit(v, out):
+    ufw = sh(["systemctl", "is-active", "ufw"]).strip() == "active"
+    upd = os.path.exists("/etc/apt/apt.conf.d/20auto-upgrades") and "1" in pathlib.Path("/etc/apt/apt.conf.d/20auto-upgrades").read_text()
+    sb = sh(["mokutil", "--sb-state"])
+    lock = which("light-locker")
+    shadow_ok = None  # needs root; report unknown honestly
+    ports = T.parse_listening(sh(["ss", "-tulnH"]))
+    home = (os.stat(HOME).st_mode & 0o007) == 0
+    score, lines = T.audit_score({"firewall": ufw, "updates": upd, "secureboot": ("enabled" in sb) if sb else None,
+                                  "lock": lock, "nopass": shadow_ok, "ports": not ports, "homeperm": home})
+    out.write(f"Security score: {score} / 100\n")
+    for ok, text in lines:
+        out.write(("  OK   " if ok else "  ??   " if ok is None else "  FIX  ") + text)
+    for proto, addr, port in ports:
+        out.write(f"       open: {proto} {addr}:{port}")
+    if not home:
+        out.write("Fix home folder: chmod 750 ~")
+
+
+def t_background(v, out):
+    import psutil
+    wins = {w[2] for w in T.parse_wmctrl(sh(["wmctrl", "-lpG"]))}
+    procs = []
+    for p in psutil.process_iter(["pid", "name", "uids", "memory_info", "cpu_times"]):
+        try:
+            i = p.info
+            procs.append({"pid": i["pid"], "name": i["name"], "uid": i["uids"].real, "rss": i["memory_info"].rss,
+                          "cpu_time": sum(i["cpu_times"][:2]), "has_window": i["pid"] in wins})
+        except (psutil.Error, TypeError, AttributeError):
+            pass
+    out.write("Your programs running without a window (heaviest first):")
+    for p in T.rank_processes(procs, os.getuid()):
+        out.write(f"{p['pid']:7}  {T.human_size(p['rss']):>9}  CPU {p['cpu_time']:7.1f} s  {p['name']}")
+    out.write("\nClose one: Task Manager (Ctrl+Shift+Esc).")
+
+
+def t_emergency(v, out):
+    import psutil
+    vm = psutil.virtual_memory()
+    procs = []
+    for p in psutil.process_iter(["pid", "name", "uids", "memory_info"]):
+        try:
+            if p.info["uids"].real == os.getuid():
+                procs.append({"pid": p.info["pid"], "name": p.info["name"], "rss": p.info["memory_info"].rss})
+        except (psutil.Error, AttributeError):
+            pass
+    out.write(f"Free RAM: {T.human_size(vm.available)} of {T.human_size(vm.total)}")
+    targets = T.emergency_targets(procs, vm.available)
+    if not targets:
+        out.write("Enough memory free. (earlyoom also stops a runaway app automatically before the PC freezes.)"); return
+    if confirm("Low memory! Close: " + ", ".join(f"{p['name']} ({T.human_size(p['rss'])})" for p in targets) + " ?"):
+        for p in targets:
+            try:
+                psutil.Process(p["pid"]).terminate(); out.write(f"closed {p['name']}")
+            except psutil.Error as e:
+                out.write(f"could not close {p['name']}: {e}")
+
+
+def t_zram(v, out):
+    if v.get("profile") and v["profile"] != "show":
+        run_cmd(T.zram_profile_cmd(v["profile"]), out, f"Memory profile set to {v['profile']}.")
+    for dev, algo, size, data, compr in T.parse_zramctl(sh(["zramctl", "--raw", "--noheadings", "--output", "NAME,ALGORITHM,DISKSIZE,DATA,COMPR"])):
+        out.write(f"{dev}: {algo}, size {T.human_size(int(size))}, holds {T.human_size(int(data))} in {T.human_size(int(compr))}")
+    out.write("Current profile: " + (pathlib.Path("/run/navin/memprofile").read_text().strip() if os.path.exists("/run/navin/memprofile") else "?"))
+
+
+def t_cache(v, out):
+    c = pathlib.Path(HOME, ".cache")
+    total = sum(s for _, s in T.walk_files(str(c))) if c.exists() else 0
+    out.write(f"Your cache: {T.human_size(total)}")
+    if os.path.exists("/usr/local/lib/navin/navin-history"):
+        subprocess.run(["/usr/local/lib/navin/navin-history", "--clean"])
+    th = pathlib.Path(HOME, ".cache/thumbnails")
+    if v.get("level") == "everything" and th.exists():
+        shutil.rmtree(th, ignore_errors=True); out.write("Thumbnails removed (they come back when needed).")
+    if v.get("level") == "everything":
+        run_cmd(["pkexec", "sh", "-c", "apt-get clean && journalctl --vacuum-size=100M"], out)
+    after = sum(s for _, s in T.walk_files(str(c))) if c.exists() else 0
+    out.write(f"Now: {T.human_size(after)}  (freed {T.human_size(max(0, total - after))}). This also runs by itself once a week.")
+
+
+def t_nice(v, out):
+    need(v, "process id")
+    run_cmd(T.renice_cmd(v["process id"], v["level"]), out, "Priority changed.")
+    out.write(sh(["ps", "-o", "pid,ni,comm", "-p", str(int(v["process id"]))]))
+
+
+def t_drivers(v, out):
+    for dev, drv in T.parse_lspci_k(sh(["lspci", "-k"])):
+        out.write(f"{'OK  ' if drv else 'NONE'} {dev[:70]:70} {drv or '-> no driver (Driver Center)'}")
+    run_cmd(["lsusb"], out)
+
+
+def t_repos(v, out):
+    for f in sorted(pathlib.Path("/etc/apt/sources.list.d").glob("*.sources")) + [pathlib.Path("/etc/apt/sources.list")]:
+        if f.exists():
+            out.write(f"== {f}")
+            if f.suffix == ".sources":
+                for r in T.parse_sources(f.read_text()):
+                    out.write(f"  {'off' if r.get('Enabled') == 'no' else 'on '}  {r.get('URIs')}  {r.get('Suites')}  {r.get('Components')}")
+            else:
+                out.write("\n".join("  " + l for l in f.read_text().splitlines() if l.strip() and not l.startswith("#")))
+    out.write("\nTo add or switch off a repository: Synaptic > Settings > Repositories.")
+
+
+def t_deps(v, out):
+    need(v, "package")
+    if not T.pkg_name_ok(v["package"]):
+        out.write("Not a valid package name."); return
+    run_cmd(["apt-cache", "depends", "--important", v["package"]], out)
+    out.write("\nNeeded by:"); run_cmd(["apt-cache", "rdepends", "--installed", v["package"]], out)
+    out.write("\nBroken packages on this system:"); run_cmd(["apt-get", "check"], out, "none - all dependencies are fine.")
+
+
+def t_grub(v, out):
+    f = pathlib.Path("/etc/default/grub.d/navin.cfg")
+    if not f.exists():
+        f = pathlib.Path("/etc/default/grub")
+    if os.path.exists("/run/live"):
+        out.write("Live Mode: the boot menu is on the USB. This setting is for installed NAVIN."); return
+    text = f.read_text()
+    if v.get("menu seconds"):
+        new = T.grub_set(text, timeout=v["menu seconds"], quiet={"logo (quiet)": True, "text messages": False}.get(v["boot screen"]))
+        tmp = os.path.join(tempfile.gettempdir(), "navin-grub.cfg"); pathlib.Path(tmp).write_text(new)
+        run_cmd(["pkexec", "sh", "-c", f"install -m 644 {tmp} {f} && update-grub"], out, "Boot menu updated.", timeout=300)
+    out.write(pathlib.Path(f).read_text())
+
+
+def t_compat(v, out):
+    need(v, "file")
+    with open(v["file"], "rb") as fh:
+        head = fh.read(4096)
+    verdict, text = T.compat_verdict(v["file"], head)
+    out.write({"yes": "WORKS", "maybe": "PROBABLY WORKS", "no": "DOES NOT WORK", "unknown": "?"}[verdict] + f": {text}")
+    if v["file"].lower().endswith(".deb"):
+        run_cmd(["dpkg-deb", "-f", v["file"], "Package", "Version", "Architecture", "Depends"], out)
+
+
+def t_maintain(v, out):
+    import psutil
+    du = psutil.disk_usage("/")
+    failed = [l.split()[0] for l in sh(["systemctl", "--failed", "--no-legend", "--plain"]).splitlines() if l.strip()]
+    cache = sum(s for _, s in T.walk_files(os.path.join(HOME, ".cache"))) if os.path.isdir(os.path.join(HOME, ".cache")) else 0
+    upd = len([l for l in sh(["apt", "list", "--upgradable"]).splitlines() if "/" in l])
+    todo = T.maintenance_plan(du.free, du.total, failed, cache, upd)
+    out.write(f"Disk: {T.human_size(du.free)} free of {T.human_size(du.total)} · Updates waiting: {upd} · Failed services: {len(failed)}")
+    for key, text in todo:
+        out.write(f"TODO  {text}")
+    if not todo:
+        out.write("Everything is fine. Nothing to do."); return
+    if confirm("Fix these now? (cleans cache; updates open the Update Center)"):
+        if any(k in ("cache", "disk") for k, _ in todo):
+            t_cache({"level": "everything" if any(k == "disk" for k, _ in todo) else "old files"}, out)
+        if any(k == "updates" for k, _ in todo):
+            subprocess.Popen(["navin-updater"])
+        if failed:
+            out.write("Failed services: see Toolbox > Service Manager or System Center > Repair.")
+
+
+def t_avatar(v, out):
+    need(v, "picture")
+    import getpass
+    tmp = os.path.join(tempfile.gettempdir(), "navin-avatar.png")
+    cmds = T.avatar_cmds(v["picture"], getpass.getuser(), tmp)
+    if run_cmd(cmds[0], out) and run_cmd(cmds[1], out):
+        shutil.copy2(tmp, os.path.join(HOME, ".face"))
+        out.write("Your picture now shows on the login and lock screen.")
+
+
+def t_speedtest(v, out):
+    import urllib.request
+    out.write("Measuring download speed (25 MB from Cloudflare) ...")
+    t, got = time.monotonic(), 0
+    try:
+        req = urllib.request.Request(T.SPEED_URL.format(25_000_000), headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) NAVIN-Toolbox/2.2"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            while chunk := r.read(1 << 16):
+                got += len(chunk)
+                if time.monotonic() - t > 20:
+                    break
+    except OSError as e:
+        out.write(f"No internet: {e}"); return
+    secs = time.monotonic() - t
+    out.write(f"Download: {T.mbit_per_s(got, secs)} Mbit/s  ({T.human_size(got)} in {secs:.1f} s)")
+    ms = T.dns_time_ms("1.1.1.1")
+    out.write(f"Response time (DNS 1.1.1.1): {ms} ms" if ms else "DNS did not answer.")
+
+
+def t_netreset(v, out):
+    if confirm("Reset networking? Wi-Fi and cable reconnect in a few seconds (saved passwords are kept)."):
+        run_cmd(["pkexec", "/usr/local/lib/navin/navin-repair", "wifi"], out, "Network restarted. Saved networks reconnect by themselves.", timeout=120)
+
+
+def t_parental(v, out):
+    hosts = pathlib.Path("/etc/hosts").read_text()
+    if v.get("action") != "show":
+        sites = [] if v["action"] == "unblock all" else sorted(set(T.blocked_sites(hosts)) | set((v.get("websites") or "").replace(",", " ").split()))
+        tmp = os.path.join(tempfile.gettempdir(), "navin-hosts"); pathlib.Path(tmp).write_text(T.hosts_block(hosts, sites))
+        if run_cmd(["pkexec", "sh", "-c", f"install -m 644 {tmp} /etc/hosts && resolvectl flush-caches 2>/dev/null; true"], out):
+            hosts = pathlib.Path("/etc/hosts").read_text()
+    b = T.blocked_sites(hosts)
+    out.write("Blocked for every user on this PC: " + (", ".join(b) if b else "nothing"))
+    out.write("Tip: give children their own account without administrator rights so they cannot undo this.")
+
+
+def t_schedule(v, out):
+    unitdir = pathlib.Path(HOME, ".config/systemd/user"); unitdir.mkdir(parents=True, exist_ok=True)
+    if v["type"] == "backup Documents/Pictures/Desktop":
+        need(v, "folder")
+        name, desc = "backup", "NAVIN scheduled backup"
+        cmd = T.backup_command([os.path.join(HOME, d) for d in ("Documents", "Pictures", "Desktop")], os.path.join(v["folder"], "NAVIN Backup"))
+    else:
+        need(v, "command")
+        name, desc, cmd = "task-" + time.strftime("%H%M%S"), "NAVIN automation: " + v["command"][:60], v["command"]
+    for fn, text in T.user_timer_units(name, cmd, v.get("when") or "daily", desc).items():
+        (unitdir / fn).write_text(text)
+    run_cmd(["systemctl", "--user", "daemon-reload"], out)
+    if run_cmd(["systemctl", "--user", "enable", "--now", f"navin-auto-{name}.timer"], out):
+        out.write(f"Scheduled ({v.get('when') or 'daily'}). If the PC was off, it runs at the next start.")
+    out.write(sh(["systemctl", "--user", "list-timers", "navin-auto-*", "--no-pager"]))
+
+
+
+def t_open(prog, *args):
+    def fn(v, out):
+        if not which(prog):
+            out.write(f"'{prog}' is not installed."); return
+        subprocess.Popen([prog, *args]); out.write(f"Opened {prog}.")
+    return fn
+
+
+
+CAT_ORDER = ["Desktop", "Files", "PDF & Media", "Laptop", "Network", "Security", "System", "Productivity", "NAVIN"]
 TOOLS = [
     ("large", "Files", "Large File Finder", "Biggest files in a folder.", [("folder", "folder"), ("min MB", "text:100")], t_large),
     ("dupes", "Files", "Duplicate File Finder", "Identical files (same SHA-256). Nothing is deleted.", [("folder", "folder")], t_dupes),
@@ -345,6 +998,70 @@ TOOLS = [
     ("focus", "Productivity", "Focus Mode", "Silences notifications (run again to turn off).", [], t_focus),
     ("ontop", "Productivity", "Window Always on Top", "Pick a window with the mouse.", [], t_ontop),
     ("keys", "Productivity", "Keyboard Key Tester", "Shows every key you press (Fn keys too).", [], t_keys),
+    # ---- NAVIN 2.2 ----
+    ("suggest", "Desktop", "Smart App Suggestions", "Your most used apps, learned from the files you open.", [], t_suggest),
+    ("voice", "Desktop", "Voice Search", "Say what to search for (5 s, English, offline).", [], t_voice),
+    ("arrange", "Desktop", "Smart Window Arrangement", "Puts every window on this desktop side by side.", [], t_arrange),
+    ("activity", "Desktop", "Activity History", "Files you opened recently, newest first.", [("show", "text:50")], t_activity),
+    ("profiles", "Desktop", "Desktop Profiles", "Save/load wallpaper, panel, theme, window and shortcut settings.", [("name", "text:Work"), ("action", "choice:list,save,load")], t_profiles),
+    ("clipslots", "Desktop", "Clipboard Slots", "9 saved clipboard slots (Clipboard history: Win+V).", [("slot", "choice:1,2,3,4,5,6,7,8,9"), ("action", "choice:show,save current clipboard,put slot into clipboard")], t_clipslots),
+    ("widgets", "Desktop", "Desktop Widgets", "CPU/RAM/battery pill on the panel; add more: right-click panel > Add New Items.", [], t_open("xfce4-panel", "--add-items")),
+    ("gestures", "Desktop", "Gesture Settings", "3-finger swipes and pinch (touchpad settings).", [], t_open("navin-center", "laptop")),
+    ("recover", "Files", "File Recovery", "Trash first, then deep recovery with PhotoRec.", [], t_recover),
+    ("convert", "Files", "Batch File Converter", "Converts every picture/song/video in a folder.", [("folder", "folder"), ("format", "choice:jpg,png,webp,mp3,ogg,flac,mp4,mkv,webm")], t_convert),
+    ("perms", "Files", "File Permissions", "See who may read/change/run a file; set a mode like 644 or 755.", [("file", "file"), ("mode", "text:")], t_perms),
+    ("join", "PDF & Media", "Join Videos (Recording Editor)", "Joins screen recordings/clips without re-encoding.", [("files", "files"), ("save", "save:joined.mp4")], t_join),
+    ("library", "PDF & Media", "Media Library", "How many pictures, songs, videos and documents you have.", [], t_library),
+    ("annotate", "PDF & Media", "Screen Annotation", "Draw on the screen (presentations, teaching).", [], t_annotate),
+    ("shotedit", "PDF & Media", "Screenshot Editor", "Select an area, then edit the picture.", [], t_shotedit),
+    ("bathist", "Laptop", "Battery History", "Battery level over time and how fast it drains.", [], t_bathist),
+    ("usbhealth", "Laptop", "USB Health Check", "USB devices and connection errors this start-up.", [], t_usbhealth),
+    ("audio", "Laptop", "Audio Devices", "Speakers, headphones and microphones that were found.", [], t_audio),
+    ("display", "Laptop", "Display Information", "Screens, resolution and graphics driver.", [], t_display),
+    ("hwassist", "Laptop", "Hardware Assistant", "Detects hardware and applies the right fixes.", [], t_open("navin-driver-center")),
+    ("notes", "Productivity", "Notes & Notes Sync", "New note, or sync Documents/Notes with a USB/folder.", [("action", "choice:new note,sync"), ("folder", "folder")], t_notes),
+    ("workspace", "Productivity", "Workspace Saver", "Save the open apps; restore them later (also after restart).", [("action", "choice:save,restore")], t_workspace),
+    ("hotkeys", "Productivity", "Custom Hotkeys", "Create your own keyboard shortcuts.", [], t_open("navin-shortcuts")),
+    ("wifihist", "Network", "Wi-Fi Signal History", "Signal strength over time.", [], t_wifihist),
+    ("reconnect", "Network", "Wi-Fi Auto Reconnect", "Saved networks reconnect by themselves, forever.", [], t_reconnect),
+    ("discover", "Network", "Network Devices", "Phones, PCs and printers on your Wi-Fi.", [], t_discover),
+    ("download", "Network", "Download Resume Manager", "Downloads that continue after a broken connection.", [("link", "text:https://")], t_download),
+    ("priority", "Network", "Connection Priority", "Which saved network is used first (higher = first).", [("network", "text:"), ("priority", "text:10")], t_priority),
+    ("share", "Network", "Local File Sharing", "Send files to a phone/PC on the same Wi-Fi.", [], t_open("navin-quick-share")),
+    ("usbscan", "Security", "USB Security Scanner", "Finds autorun files, hidden and disguised programs on a USB drive.", [("folder", "folder")], t_usbscan),
+    ("logins", "Security", "Login Attempt Alerts", "Wrong password attempts (also notified at login).", [], t_logins),
+    ("integrity", "Security", "App Integrity Checker", "Checks every program file against its package.", [], t_integrity),
+    ("permhist", "Security", "Permission Change History", "Notices when private folders become readable by others.", [], t_permhist),
+    ("guest", "Security", "Guest Account", "A guest login without admin rights.", [("action", "choice:create,reset,remove")], t_guest),
+    ("autolock", "Security", "Automatic Screen Lock", "Lock after some idle minutes and on sleep.", [("minutes", "text:10")], t_autolock),
+    ("startup", "Security", "Suspicious Startup Check", "Start-up entries from temp/hidden folders or unknown programs.", [], t_startup),
+    ("firewall", "Security", "Firewall Dashboard", "Firewall state and blocked connection attempts.", [], t_firewall),
+    ("audit", "Security", "Security Audit", "A score with what to fix.", [], t_audit),
+    ("vault", "Security", "Encrypted Vault", "AES-256 encrypted private folder.", [], t_open("navin-vault")),
+    ("ramcpu", "System", "RAM & CPU History", "Memory and processor load over time.", [], t_ramcpu),
+    ("background", "System", "Background App Analyzer", "Programs running without a window.", [], t_background),
+    ("emergency", "System", "Low-RAM Emergency", "Closes the biggest apps when memory is almost full.", [], t_emergency),
+    ("zram", "System", "Smart ZRAM Controller", "Compressed memory: auto by RAM, or choose a profile.", [("profile", "choice:show,auto,lite,balanced,standard")], t_zram),
+    ("cache", "System", "Cache Cleaner", "Old cache (weekly by itself) or everything.", [("level", "choice:old files,everything")], t_cache),
+    ("nice", "System", "Process Priority", "Give a program more or less CPU time.", [("process id", "text:"), ("level", "choice:normal,high,above normal,below normal,low")], t_nice),
+    ("drivers", "System", "Driver Status", "Every device and the driver it uses.", [], t_drivers),
+    ("repos", "System", "Repository Manager", "Where apps and updates come from.", [], t_repos),
+    ("deps", "System", "Package Dependency Checker", "What a package needs and what needs it.", [("package", "text:vlc")], t_deps),
+    ("grub", "System", "Boot Menu Settings", "Boot menu time and logo/text start-up (installed NAVIN).", [("menu seconds", "text:"), ("boot screen", "choice:logo (quiet),text messages")], t_grub),
+    ("restore", "System", "Restore Points", "System snapshots and rollback.", [], t_open("navin-snapshot")),
+    ("compat", "NAVIN", "App Compatibility Checker", "Will this .exe/.deb/AppImage run on NAVIN?", [("file", "file")], t_compat),
+    ("maintain", "NAVIN", "Smart Maintenance Center", "Checks disk, services, updates and cache; fixes on request.", [], t_maintain),
+    ("benchmark", "NAVIN", "System Benchmark", "Repeatable speed test.", [], t_open("xfce4-terminal", "--hold", "-x", "navin-benchmark", "run")),
+    ("welcome", "NAVIN", "Welcome Center", "First steps and What's New.", [], t_open("navin-welcome")),
+    ("control", "NAVIN", "Control Hub", "Quick toggles and settings.", [], t_open("navin-control-center")),
+    ("themes", "NAVIN", "Theme Studio", "Light/dark/auto theme.", [], t_open("navin-theme", "menu")),
+    ("updates", "NAVIN", "Update Dashboard", "NAVIN updates and history.", [], t_open("navin-updater")),
+    ("recovery", "NAVIN", "Recovery Assistant", "Repairs, boot repair and recovery.", [], t_open("navin-center", "recovery")),
+    ("avatar", "Desktop", "Account Picture", "Your picture on the login and lock screen.", [("picture", "file")], t_avatar),
+    ("speedtest", "Network", "Internet Speed Test", "Real download speed and response time.", [], t_speedtest),
+    ("netreset", "Network", "Network Reset", "Restart Wi-Fi/cable networking (passwords kept).", [], t_netreset),
+    ("parental", "Security", "Parental Controls", "Block websites for every user (example: youtube.com, games.com).", [("websites", "text:"), ("action", "choice:show,block,unblock all")], t_parental),
+    ("schedule", "Productivity", "Backup Schedule & Automation", "Run a backup or your own command at a set time. Time: daily, weekly, *-*-* 20:00, Mon 09:00", [("type", "choice:backup Documents/Pictures/Desktop,my command"), ("folder", "folder"), ("command", "text:"), ("when", "text:daily")], t_schedule),
 ]
 
 
@@ -374,7 +1091,7 @@ def key_tester():
 
 class Win(Gtk.Window):
     def __init__(self, start=None):
-        super().__init__(title="NAVIN Toolbox"); self.set_default_size(980, 640); self.connect("destroy", Gtk.main_quit)
+        super().__init__(title="NAVIN Toolbox 2.2"); self.set_default_size(980, 640); self.connect("destroy", Gtk.main_quit)
         prov = Gtk.CssProvider(); prov.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         pane = Gtk.Box(); self.add(pane)
@@ -382,7 +1099,7 @@ class Win(Gtk.Window):
         self.list = Gtk.ListBox(); side.add(self.list); pane.pack_start(side, False, False, 0)
         self.rows = {}
         last = None
-        for tid, cat, name, *_ in TOOLS:
+        for tid, cat, name, *_ in sorted(TOOLS, key=lambda t: CAT_ORDER.index(t[1])):
             if cat != last:
                 h = Gtk.Label(label=cat.upper(), xalign=0); h.get_style_context().add_class("cat")
                 r = Gtk.ListBoxRow(); r.add(h); r.set_selectable(False); r.set_activatable(False); self.list.add(r); last = cat

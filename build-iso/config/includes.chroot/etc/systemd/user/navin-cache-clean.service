@@ -1,0 +1,8 @@
+[Unit]
+Description=NAVIN automatic cache management (thumbnails and app caches unused for 30 days)
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/local/lib/navin/navin-history --clean

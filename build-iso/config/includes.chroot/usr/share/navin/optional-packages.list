@@ -6,3 +6,6 @@ nvidia-detect thermald fancontrol i2c-tools evtest vainfo glmark2-x11 stress-ng
 smartmontools nvme-cli hwdata sysstat
 firmware-nvidia-graphics
 
+
+# NAVIN 2.2: offline voice search (Toolbox) and screenshot editor
+pocketsphinx pocketsphinx-en-us drawing

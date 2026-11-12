@@ -1,0 +1,3221 @@
+{
+ "version": "2.2",
+ "sections": [
+  {
+   "title": "Desktop & Ui",
+   "slots": "1-100",
+   "items": [
+    {
+     "n": 1,
+     "name": "Modern Windows 11-inspired desktop",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::whiskermenu"
+    },
+    {
+     "n": 2,
+     "name": "bottom taskbar",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::p=10"
+    },
+    {
+     "n": 3,
+     "name": "Start menu",
+     "kind": "pkg",
+     "ref": "xfce4-whiskermenu-plugin"
+    },
+    {
+     "n": 4,
+     "name": "search",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-search::search"
+    },
+    {
+     "n": 5,
+     "name": "widgets",
+     "kind": "tool",
+     "ref": "widgets"
+    },
+    {
+     "n": 6,
+     "name": "desktop icons",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml::desktop-icons"
+    },
+    {
+     "n": 7,
+     "name": "drag-and-drop",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 8,
+     "name": "smooth animations",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-compositor::xfwm"
+    },
+    {
+     "n": 9,
+     "name": "rounded windows",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-compositor::xfwm"
+    },
+    {
+     "n": 10,
+     "name": "light theme",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-theme::light"
+    },
+    {
+     "n": 11,
+     "name": "white/gray/black/pale-blue colors",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-toolbox::#F4F7FB"
+    },
+    {
+     "n": 12,
+     "name": "wallpapers",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml::last-image"
+    },
+    {
+     "n": 13,
+     "name": "live wallpapers",
+     "kind": "partial",
+     "note": "Changing wallpaper slideshow (Desktop settings > change background every N minutes); animated video wallpapers are not built in - they cost too much CPU on 2-4 GB laptops",
+     "via": {
+      "kind": "pkg",
+      "ref": "xfce4"
+     }
+    },
+    {
+     "n": 14,
+     "name": "virtual desktops",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-workspace::add"
+    },
+    {
+     "n": 15,
+     "name": "multiple monitors",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-display-switcher::display"
+    },
+    {
+     "n": 16,
+     "name": "desktop customization",
+     "kind": "tool",
+     "ref": "profiles"
+    },
+    {
+     "n": 17,
+     "name": "icon resizing",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml::icon-size"
+    },
+    {
+     "n": 18,
+     "name": "auto-hide taskbar",
+     "kind": "pkg",
+     "ref": "xfce4-panel"
+    },
+    {
+     "n": 19,
+     "name": "notification center",
+     "kind": "pkg",
+     "ref": "xfce4-notifyd"
+    },
+    {
+     "n": 20,
+     "name": "quick settings",
+     "kind": "key",
+     "ref": "<Super>a"
+    },
+    {
+     "n": 21,
+     "name": "system tray",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::systray"
+    },
+    {
+     "n": 22,
+     "name": "clock",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::clock"
+    },
+    {
+     "n": 23,
+     "name": "calendar",
+     "kind": "pkg",
+     "ref": "xfce4-datetime-plugin"
+    },
+    {
+     "n": 24,
+     "name": "battery",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::power-manager-plugin"
+    },
+    {
+     "n": 25,
+     "name": "Wi-Fi",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 26,
+     "name": "Bluetooth",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 27,
+     "name": "volume",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::pulseaudio"
+    },
+    {
+     "n": 28,
+     "name": "brightness",
+     "kind": "key",
+     "ref": "XF86MonBrightnessUp"
+    },
+    {
+     "n": 29,
+     "name": "desktop right-click menu",
+     "kind": "pkg",
+     "ref": "xfce4"
+    },
+    {
+     "n": 30,
+     "name": "refresh",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 31,
+     "name": "personalize",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Wallpaper"
+    },
+    {
+     "n": 32,
+     "name": "new folder",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-new-folder::New Folder"
+    },
+    {
+     "n": 33,
+     "name": "shortcuts",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::Shortcuts"
+    },
+    {
+     "n": 34,
+     "name": "window snapping",
+     "kind": "key",
+     "ref": "<Super>Left"
+    },
+    {
+     "n": 35,
+     "name": "minimize",
+     "kind": "key",
+     "ref": "<Super>Down"
+    },
+    {
+     "n": 36,
+     "name": "maximize",
+     "kind": "key",
+     "ref": "<Super>Up"
+    },
+    {
+     "n": 37,
+     "name": "restore",
+     "kind": "pkg",
+     "ref": "xfce4"
+    },
+    {
+     "n": 38,
+     "name": "task switching",
+     "kind": "key",
+     "ref": "<Alt>Tab"
+    },
+    {
+     "n": 39,
+     "name": "Alt+Tab",
+     "kind": "key",
+     "ref": "<Alt>Tab"
+    },
+    {
+     "n": 40,
+     "name": "overview",
+     "kind": "key",
+     "ref": "<Super>w"
+    },
+    {
+     "n": 41,
+     "name": "lock screen",
+     "kind": "pkg",
+     "ref": "light-locker"
+    },
+    {
+     "n": 42,
+     "name": "login screen",
+     "kind": "pkg",
+     "ref": "lightdm-gtk-greeter"
+    },
+    {
+     "n": 43,
+     "name": "user avatars",
+     "kind": "tool",
+     "ref": "avatar"
+    },
+    {
+     "n": 44,
+     "name": "themes",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-theme::dark"
+    },
+    {
+     "n": 45,
+     "name": "transparency",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-compositor::glass"
+    },
+    {
+     "n": 46,
+     "name": "accessibility scaling",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::scaling"
+    },
+    {
+     "n": 47,
+     "name": "advanced desktop customization",
+     "kind": "tool",
+     "ref": "profiles"
+    }
+   ]
+  },
+  {
+   "title": "Start Menu & Taskbar",
+   "slots": "101-180",
+   "items": [
+    {
+     "n": 101,
+     "name": "Windows-style Start menu",
+     "kind": "key",
+     "ref": "Super_L"
+    },
+    {
+     "n": 102,
+     "name": "pinned apps",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::launcher"
+    },
+    {
+     "n": 103,
+     "name": "recommended apps",
+     "kind": "tool",
+     "ref": "suggest"
+    },
+    {
+     "n": 104,
+     "name": "all apps",
+     "kind": "pkg",
+     "ref": "xfce4-whiskermenu-plugin"
+    },
+    {
+     "n": 105,
+     "name": "app search",
+     "kind": "key",
+     "ref": "<Super>s"
+    },
+    {
+     "n": 106,
+     "name": "power menu",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-security-options::Shut down"
+    },
+    {
+     "n": 107,
+     "name": "restart",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-security-options::Restart"
+    },
+    {
+     "n": 108,
+     "name": "shutdown",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-security-options::Shut down"
+    },
+    {
+     "n": 109,
+     "name": "sleep",
+     "kind": "pkg",
+     "ref": "xfce4-power-manager"
+    },
+    {
+     "n": 110,
+     "name": "hibernate",
+     "kind": "none",
+     "note": ":Hibernate needs a disk swap area as big as RAM; NAVIN uses compressed RAM (ZRAM) for speed, so hibernate is reported as unsupported. Sleep works"
+    },
+    {
+     "n": 111,
+     "name": "taskbar pinning",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::launcher"
+    },
+    {
+     "n": 112,
+     "name": "one-click app launch",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::launcher"
+    },
+    {
+     "n": 113,
+     "name": "running app indicators",
+     "kind": "pkg",
+     "ref": "xfce4-panel"
+    },
+    {
+     "n": 114,
+     "name": "grouped windows",
+     "kind": "pkg",
+     "ref": "xfce4-panel"
+    },
+    {
+     "n": 115,
+     "name": "Wi-Fi panel",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 116,
+     "name": "Bluetooth panel",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 117,
+     "name": "volume mixer",
+     "kind": "pkg",
+     "ref": "pavucontrol"
+    },
+    {
+     "n": 118,
+     "name": "battery percentage",
+     "kind": "pkg",
+     "ref": "xfce4-power-manager-plugins"
+    },
+    {
+     "n": 119,
+     "name": "network status",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 120,
+     "name": "calendar popup",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::clock"
+    },
+    {
+     "n": 121,
+     "name": "notification badges",
+     "kind": "pkg",
+     "ref": "xfce4-notifyd"
+    },
+    {
+     "n": 122,
+     "name": "taskbar position",
+     "kind": "pkg",
+     "ref": "xfce4-panel"
+    },
+    {
+     "n": 123,
+     "name": "multiple taskbars",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::panel-2"
+    },
+    {
+     "n": 124,
+     "name": "system tray customization",
+     "kind": "pkg",
+     "ref": "xfce4-panel"
+    },
+    {
+     "n": 125,
+     "name": "taskbar search",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-search::search"
+    },
+    {
+     "n": 126,
+     "name": "app previews",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-compositor::Alt+Tab"
+    },
+    {
+     "n": 127,
+     "name": "jump lists",
+     "kind": "partial",
+     "note": "Right-click an app in the Start menu for its actions (new window, private window); per-app recent-file jump lists do not exist in XFCE",
+     "via": {
+      "kind": "pkg",
+      "ref": "xfce4-whiskermenu-plugin"
+     }
+    },
+    {
+     "n": 128,
+     "name": "customizable shortcuts",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::add"
+    }
+   ]
+  },
+  {
+   "title": "File Manager",
+   "slots": "181-260",
+   "items": [
+    {
+     "n": 181,
+     "name": "Advanced file explorer",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 182,
+     "name": "tabs",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 183,
+     "name": "dual-pane view",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 184,
+     "name": "thumbnails",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 185,
+     "name": "preview panel",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 186,
+     "name": "quick access",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 187,
+     "name": "recent files",
+     "kind": "tool",
+     "ref": "activity"
+    },
+    {
+     "n": 188,
+     "name": "favorites",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 189,
+     "name": "bookmarks",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 190,
+     "name": "file search",
+     "kind": "tool",
+     "ref": "search"
+    },
+    {
+     "n": 191,
+     "name": "advanced filters",
+     "kind": "tool",
+     "ref": "large"
+    },
+    {
+     "n": 192,
+     "name": "file sorting",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 193,
+     "name": "copy",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 194,
+     "name": "cut",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 195,
+     "name": "paste",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 196,
+     "name": "rename",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 197,
+     "name": "delete",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 198,
+     "name": "restore",
+     "kind": "pkg",
+     "ref": "xfce4"
+    },
+    {
+     "n": 199,
+     "name": "permanent delete",
+     "kind": "tool",
+     "ref": "shred"
+    },
+    {
+     "n": 200,
+     "name": "drag-and-drop",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 201,
+     "name": "ZIP",
+     "kind": "pkg",
+     "ref": "file-roller"
+    },
+    {
+     "n": 202,
+     "name": "RAR",
+     "kind": "pkg",
+     "ref": "7zip"
+    },
+    {
+     "n": 203,
+     "name": "7Z",
+     "kind": "pkg",
+     "ref": "7zip"
+    },
+    {
+     "n": 204,
+     "name": "TAR support",
+     "kind": "pkg",
+     "ref": "file-roller"
+    },
+    {
+     "n": 205,
+     "name": "extraction",
+     "kind": "pkg",
+     "ref": "thunar-archive-plugin"
+    },
+    {
+     "n": 206,
+     "name": "compression",
+     "kind": "pkg",
+     "ref": "thunar-archive-plugin"
+    },
+    {
+     "n": 207,
+     "name": "hidden files",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 208,
+     "name": "permissions",
+     "kind": "tool",
+     "ref": "perms"
+    },
+    {
+     "n": 209,
+     "name": "storage analysis",
+     "kind": "tool",
+     "ref": "sizes"
+    },
+    {
+     "n": 210,
+     "name": "duplicate finder",
+     "kind": "tool",
+     "ref": "dupes"
+    },
+    {
+     "n": 211,
+     "name": "batch rename",
+     "kind": "tool",
+     "ref": "rename"
+    },
+    {
+     "n": 212,
+     "name": "file encryption",
+     "kind": "pkg",
+     "ref": "gocryptfs"
+    },
+    {
+     "n": 213,
+     "name": "file sharing",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-quick-share::QR"
+    },
+    {
+     "n": 214,
+     "name": "network folders",
+     "kind": "pkg",
+     "ref": "gvfs-backends"
+    },
+    {
+     "n": 215,
+     "name": "USB management",
+     "kind": "pkg",
+     "ref": "udisks2"
+    },
+    {
+     "n": 216,
+     "name": "disk management",
+     "kind": "pkg",
+     "ref": "gnome-disk-utility"
+    },
+    {
+     "n": 217,
+     "name": "recycle bin",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml::show-trash"
+    }
+   ]
+  },
+  {
+   "title": "Settings & Control Panel",
+   "slots": "261-340",
+   "items": [
+    {
+     "n": 261,
+     "name": "Complete Settings application with system",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::NAVIN Settings"
+    },
+    {
+     "n": 262,
+     "name": "display",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Display"
+    },
+    {
+     "n": 263,
+     "name": "sound",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Sound"
+    },
+    {
+     "n": 264,
+     "name": "Wi-Fi",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 265,
+     "name": "Bluetooth",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 266,
+     "name": "keyboard",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Keyboard"
+    },
+    {
+     "n": 267,
+     "name": "mouse",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Mouse"
+    },
+    {
+     "n": 268,
+     "name": "touchpad",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-touchpad::apply"
+    },
+    {
+     "n": 269,
+     "name": "printer",
+     "kind": "pkg",
+     "ref": "system-config-printer"
+    },
+    {
+     "n": 270,
+     "name": "power",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-power::balanced"
+    },
+    {
+     "n": 271,
+     "name": "battery",
+     "kind": "file",
+     "ref": "etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml::power-manager-plugin"
+    },
+    {
+     "n": 272,
+     "name": "storage",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Storage"
+    },
+    {
+     "n": 273,
+     "name": "users",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Users"
+    },
+    {
+     "n": 274,
+     "name": "accounts",
+     "kind": "tool",
+     "ref": "guest"
+    },
+    {
+     "n": 275,
+     "name": "security",
+     "kind": "tool",
+     "ref": "audit"
+    },
+    {
+     "n": 276,
+     "name": "privacy",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Privacy"
+    },
+    {
+     "n": 277,
+     "name": "updates",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Updates"
+    },
+    {
+     "n": 278,
+     "name": "recovery",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Recovery"
+    },
+    {
+     "n": 279,
+     "name": "backup",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-backup::Backup"
+    },
+    {
+     "n": 280,
+     "name": "language",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Language"
+    },
+    {
+     "n": 281,
+     "name": "region",
+     "kind": "pkg",
+     "ref": "locales"
+    },
+    {
+     "n": 282,
+     "name": "date",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Date & Time"
+    },
+    {
+     "n": 283,
+     "name": "time",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Timezone"
+    },
+    {
+     "n": 284,
+     "name": "accessibility",
+     "kind": "pkg",
+     "ref": "orca"
+    },
+    {
+     "n": 285,
+     "name": "themes",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-theme::dark"
+    },
+    {
+     "n": 286,
+     "name": "personalization",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Accent"
+    },
+    {
+     "n": 287,
+     "name": "applications",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-app-store::store"
+    },
+    {
+     "n": 288,
+     "name": "default apps",
+     "kind": "pkg",
+     "ref": "xfce4-settings"
+    },
+    {
+     "n": 289,
+     "name": "startup apps",
+     "kind": "tool",
+     "ref": "startup"
+    },
+    {
+     "n": 290,
+     "name": "notifications",
+     "kind": "pkg",
+     "ref": "xfce4-notifyd"
+    },
+    {
+     "n": 291,
+     "name": "firewall",
+     "kind": "pkg",
+     "ref": "gufw"
+    },
+    {
+     "n": 292,
+     "name": "network diagnostics",
+     "kind": "tool",
+     "ref": "nettrouble"
+    },
+    {
+     "n": 293,
+     "name": "device information",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-about::CPU"
+    },
+    {
+     "n": 294,
+     "name": "advanced settings",
+     "kind": "pkg",
+     "ref": "xfce4-settings"
+    }
+   ]
+  },
+  {
+   "title": "Laptop & Hardware Support",
+   "slots": "341-430",
+   "items": [
+    {
+     "n": 341,
+     "name": "Samsung RV411 compatibility",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_hw.py::Samsung"
+    },
+    {
+     "n": 342,
+     "name": "touchpad auto-detection",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-touchpad-rescue::touchpad"
+    },
+    {
+     "n": 343,
+     "name": "Synaptics support",
+     "kind": "pkg",
+     "ref": "xserver-xorg-input-libinput"
+    },
+    {
+     "n": 344,
+     "name": "libinput support",
+     "kind": "pkg",
+     "ref": "libinput-tools"
+    },
+    {
+     "n": 345,
+     "name": "I2C HID support",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::i2c_hid_acpi"
+    },
+    {
+     "n": 346,
+     "name": "touchpad enable/disable",
+     "kind": "key",
+     "ref": "XF86TouchpadToggle"
+    },
+    {
+     "n": 347,
+     "name": "Fn+F10",
+     "kind": "key",
+     "ref": "XF86TouchpadToggle"
+    },
+    {
+     "n": 348,
+     "name": "F10 touchpad shortcuts where supported",
+     "kind": "key",
+     "ref": "<Primary><Super>t"
+    },
+    {
+     "n": 349,
+     "name": "touchpad gestures",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-gestures::swipe"
+    },
+    {
+     "n": 350,
+     "name": "sensitivity",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-touchpad::speed"
+    },
+    {
+     "n": 351,
+     "name": "acceleration",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-touchpad::speed"
+    },
+    {
+     "n": 352,
+     "name": "tap-to-click",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-touchpad::tap"
+    },
+    {
+     "n": 353,
+     "name": "two-finger scrolling",
+     "kind": "file",
+     "ref": "etc/X11/xorg.conf.d/40-navin-touchpad.conf::ScrollMethod"
+    },
+    {
+     "n": 354,
+     "name": "palm rejection",
+     "kind": "file",
+     "ref": "etc/X11/xorg.conf.d/40-navin-touchpad.conf::DisableWhileTyping"
+    },
+    {
+     "n": 355,
+     "name": "keyboard backlight where supported",
+     "kind": "pkg",
+     "ref": "brightnessctl"
+    },
+    {
+     "n": 356,
+     "name": "brightness keys",
+     "kind": "key",
+     "ref": "XF86MonBrightnessDown"
+    },
+    {
+     "n": 357,
+     "name": "volume keys",
+     "kind": "key",
+     "ref": "XF86AudioRaiseVolume"
+    },
+    {
+     "n": 358,
+     "name": "Wi-Fi keys",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::rfkill unblock wifi"
+    },
+    {
+     "n": 359,
+     "name": "Bluetooth keys",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::rfkill unblock bluetooth"
+    },
+    {
+     "n": 360,
+     "name": "battery detection",
+     "kind": "tool",
+     "ref": "battery"
+    },
+    {
+     "n": 361,
+     "name": "AC adapter detection",
+     "kind": "pkg",
+     "ref": "xfce4-power-manager"
+    },
+    {
+     "n": 362,
+     "name": "CPU monitoring",
+     "kind": "tool",
+     "ref": "ramcpu"
+    },
+    {
+     "n": 363,
+     "name": "RAM monitoring",
+     "kind": "tool",
+     "ref": "ramcpu"
+    },
+    {
+     "n": 364,
+     "name": "GPU detection",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_hw.py::OLD_INTEL_GPU"
+    },
+    {
+     "n": 365,
+     "name": "thermal monitoring",
+     "kind": "pkg",
+     "ref": "lm-sensors"
+    },
+    {
+     "n": 366,
+     "name": "fan monitoring where supported",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-fan-control::fan"
+    },
+    {
+     "n": 367,
+     "name": "USB devices",
+     "kind": "tool",
+     "ref": "usb"
+    },
+    {
+     "n": 368,
+     "name": "webcam",
+     "kind": "tool",
+     "ref": "webcam"
+    },
+    {
+     "n": 369,
+     "name": "microphone",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-mic-fix::Capture"
+    },
+    {
+     "n": 370,
+     "name": "speakers",
+     "kind": "tool",
+     "ref": "audio"
+    },
+    {
+     "n": 371,
+     "name": "headphones",
+     "kind": "tool",
+     "ref": "audio"
+    },
+    {
+     "n": 372,
+     "name": "printer",
+     "kind": "pkg",
+     "ref": "system-config-printer"
+    },
+    {
+     "n": 373,
+     "name": "Bluetooth devices",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 374,
+     "name": "driver detection",
+     "kind": "tool",
+     "ref": "drivers"
+    },
+    {
+     "n": 375,
+     "name": "missing-driver alerts",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-driver-center::driver"
+    },
+    {
+     "n": 376,
+     "name": "hardware diagnostics",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Hardware Diagnostics"
+    },
+    {
+     "n": 377,
+     "name": "automatic compatible driver configuration",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-hwdetect::--apply"
+    }
+   ]
+  },
+  {
+   "title": "Windows Keyboard Shortcuts",
+   "slots": "431-510",
+   "items": [
+    {
+     "n": 431,
+     "name": "Win+R Run",
+     "kind": "key",
+     "ref": "<Super>r"
+    },
+    {
+     "n": 432,
+     "name": "Win+E File Explorer",
+     "kind": "key",
+     "ref": "<Super>e"
+    },
+    {
+     "n": 433,
+     "name": "Win+D Desktop",
+     "kind": "key",
+     "ref": "<Super>d"
+    },
+    {
+     "n": 434,
+     "name": "Win+L Lock",
+     "kind": "key",
+     "ref": "<Super>l"
+    },
+    {
+     "n": 435,
+     "name": "Win+I Settings",
+     "kind": "key",
+     "ref": "<Super>i"
+    },
+    {
+     "n": 436,
+     "name": "Win+S Search",
+     "kind": "key",
+     "ref": "<Super>s"
+    },
+    {
+     "n": 437,
+     "name": "Win+A Quick Settings",
+     "kind": "key",
+     "ref": "<Super>a"
+    },
+    {
+     "n": 438,
+     "name": "Win+Tab Task View",
+     "kind": "key",
+     "ref": "<Super>Tab"
+    },
+    {
+     "n": 439,
+     "name": "Win+X Power Menu",
+     "kind": "key",
+     "ref": "<Super>x"
+    },
+    {
+     "n": 440,
+     "name": "Win+V Clipboard",
+     "kind": "key",
+     "ref": "<Super>v"
+    },
+    {
+     "n": 441,
+     "name": "Win+Shift+S Screenshot",
+     "kind": "key",
+     "ref": "<Super><Shift>s"
+    },
+    {
+     "n": 442,
+     "name": "Win+P Display",
+     "kind": "key",
+     "ref": "<Super>p"
+    },
+    {
+     "n": 443,
+     "name": "Win+Ctrl+D New Desktop",
+     "kind": "key",
+     "ref": "<Primary><Super>d"
+    },
+    {
+     "n": 444,
+     "name": "Win+Ctrl+Left/Right Switch Desktop",
+     "kind": "key",
+     "ref": "<Primary><Super>Left"
+    },
+    {
+     "n": 445,
+     "name": "Alt+Tab",
+     "kind": "key",
+     "ref": "<Alt>Tab"
+    },
+    {
+     "n": 446,
+     "name": "Alt+F4",
+     "kind": "key",
+     "ref": "<Alt>F4"
+    },
+    {
+     "n": 447,
+     "name": "Ctrl+Shift+Esc Task Manager",
+     "kind": "key",
+     "ref": "<Primary><Shift>Escape"
+    },
+    {
+     "n": 448,
+     "name": "Ctrl+C",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 449,
+     "name": "Ctrl+V",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 450,
+     "name": "Ctrl+X",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 451,
+     "name": "Ctrl+Z",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 452,
+     "name": "Ctrl+Y",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 453,
+     "name": "Ctrl+A",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 454,
+     "name": "Ctrl+F",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 455,
+     "name": "Ctrl+N",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 456,
+     "name": "Ctrl+W",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 457,
+     "name": "Ctrl+T",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 458,
+     "name": "Ctrl+Shift+T",
+     "kind": "pkg",
+     "ref": "xfce4-terminal"
+    },
+    {
+     "n": 459,
+     "name": "F2 Rename",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 460,
+     "name": "F5 Refresh",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 461,
+     "name": "F10 Menu",
+     "kind": "pkg",
+     "ref": "gir1.2-gtk-3.0"
+    },
+    {
+     "n": 462,
+     "name": "F11 Fullscreen",
+     "kind": "pkg",
+     "ref": "xfce4"
+    },
+    {
+     "n": 463,
+     "name": "Delete",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 464,
+     "name": "Shift+Delete",
+     "kind": "pkg",
+     "ref": "thunar"
+    },
+    {
+     "n": 465,
+     "name": "PrtSc Screenshot",
+     "kind": "key",
+     "ref": "Print"
+    },
+    {
+     "n": 466,
+     "name": "Ctrl+Alt+Delete security options",
+     "kind": "key",
+     "ref": "<Primary><Alt>Delete"
+    },
+    {
+     "n": 467,
+     "name": "brightness",
+     "kind": "key",
+     "ref": "XF86MonBrightnessUp"
+    },
+    {
+     "n": 468,
+     "name": "volume",
+     "kind": "key",
+     "ref": "XF86AudioMute"
+    },
+    {
+     "n": 469,
+     "name": "Wi-Fi",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::nmcli radio wifi on"
+    },
+    {
+     "n": 470,
+     "name": "Fn keys + customizable shortcut management",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::conflict"
+    },
+    {
+     "n": 471,
+     "name": "complete shortcut documentation",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::search"
+    }
+   ]
+  },
+  {
+   "title": "Applications & Software",
+   "slots": "511-590",
+   "items": [
+    {
+     "n": 511,
+     "name": "NAVIN App Store",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-app-store::store"
+    },
+    {
+     "n": 512,
+     "name": "real application installation",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/catalog.json::Browsers"
+    },
+    {
+     "n": 513,
+     "name": "removal",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::apt-get remove"
+    },
+    {
+     "n": 514,
+     "name": "updates",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Updates"
+    },
+    {
+     "n": 515,
+     "name": "package manager integration",
+     "kind": "pkg",
+     "ref": "synaptic"
+    },
+    {
+     "n": 516,
+     "name": "Debian repositories",
+     "kind": "tool",
+     "ref": "repos"
+    },
+    {
+     "n": 517,
+     "name": "Flatpak support",
+     "kind": "pkg",
+     "ref": "flatpak"
+    },
+    {
+     "n": 518,
+     "name": "AppImage support",
+     "kind": "tool",
+     "ref": "compat"
+    },
+    {
+     "n": 519,
+     "name": ".deb installation",
+     "kind": "pkg",
+     "ref": "gdebi"
+    },
+    {
+     "n": 520,
+     "name": "Synaptic",
+     "kind": "pkg",
+     "ref": "synaptic"
+    },
+    {
+     "n": 521,
+     "name": "GDebi",
+     "kind": "pkg",
+     "ref": "gdebi"
+    },
+    {
+     "n": 522,
+     "name": "Firefox",
+     "kind": "store",
+     "ref": "firefox-esr"
+    },
+    {
+     "n": 523,
+     "name": "Chromium",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-chrome::chrom"
+    },
+    {
+     "n": 524,
+     "name": "office suite",
+     "kind": "store",
+     "ref": "libreoffice-writer"
+    },
+    {
+     "n": 525,
+     "name": "PDF reader",
+     "kind": "pkg",
+     "ref": "atril"
+    },
+    {
+     "n": 526,
+     "name": "image viewer",
+     "kind": "pkg",
+     "ref": "ristretto"
+    },
+    {
+     "n": 527,
+     "name": "media player",
+     "kind": "pkg",
+     "ref": "vlc"
+    },
+    {
+     "n": 528,
+     "name": "music player",
+     "kind": "pkg",
+     "ref": "vlc"
+    },
+    {
+     "n": 529,
+     "name": "video player",
+     "kind": "pkg",
+     "ref": "vlc"
+    },
+    {
+     "n": 530,
+     "name": "calculator",
+     "kind": "pkg",
+     "ref": "galculator"
+    },
+    {
+     "n": 531,
+     "name": "calendar",
+     "kind": "pkg",
+     "ref": "xfce4-datetime-plugin"
+    },
+    {
+     "n": 532,
+     "name": "notes",
+     "kind": "tool",
+     "ref": "notes"
+    },
+    {
+     "n": 533,
+     "name": "text editor",
+     "kind": "pkg",
+     "ref": "mousepad"
+    },
+    {
+     "n": 534,
+     "name": "archive manager",
+     "kind": "pkg",
+     "ref": "file-roller"
+    },
+    {
+     "n": 535,
+     "name": "terminal",
+     "kind": "pkg",
+     "ref": "xfce4-terminal"
+    },
+    {
+     "n": 536,
+     "name": "screenshot tool",
+     "kind": "pkg",
+     "ref": "xfce4-screenshooter"
+    },
+    {
+     "n": 537,
+     "name": "screen recorder",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-recorder::Videos"
+    },
+    {
+     "n": 538,
+     "name": "webcam app",
+     "kind": "pkg",
+     "ref": "guvcview"
+    },
+    {
+     "n": 539,
+     "name": "Bluetooth manager",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 540,
+     "name": "system monitor",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::System Monitor"
+    },
+    {
+     "n": 541,
+     "name": "task manager",
+     "kind": "pkg",
+     "ref": "xfce4-taskmanager"
+    },
+    {
+     "n": 542,
+     "name": "software updater",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-updater::updater"
+    },
+    {
+     "n": 543,
+     "name": "startup manager",
+     "kind": "tool",
+     "ref": "startup"
+    },
+    {
+     "n": 544,
+     "name": "application permissions",
+     "kind": "tool",
+     "ref": "perms"
+    }
+   ]
+  },
+  {
+   "title": "Network & Internet",
+   "slots": "591-650",
+   "items": [
+    {
+     "n": 591,
+     "name": "Wi-Fi scanning",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 592,
+     "name": "connection",
+     "kind": "pkg",
+     "ref": "network-manager"
+    },
+    {
+     "n": 593,
+     "name": "disconnection",
+     "kind": "pkg",
+     "ref": "network-manager"
+    },
+    {
+     "n": 594,
+     "name": "saved networks",
+     "kind": "tool",
+     "ref": "priority"
+    },
+    {
+     "n": 595,
+     "name": "password management",
+     "kind": "tool",
+     "ref": "wifiqr"
+    },
+    {
+     "n": 596,
+     "name": "Ethernet",
+     "kind": "pkg",
+     "ref": "network-manager"
+    },
+    {
+     "n": 597,
+     "name": "hotspot where supported",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::hotspot"
+    },
+    {
+     "n": 598,
+     "name": "Bluetooth networking",
+     "kind": "pkg",
+     "ref": "blueman"
+    },
+    {
+     "n": 599,
+     "name": "VPN",
+     "kind": "partial",
+     "note": "WireGuard VPN works in Network Connections out of the box; OpenVPN needs the optional network-manager-openvpn-gnome package (App Store)",
+     "via": {
+      "kind": "pkg",
+      "ref": "network-manager-gnome"
+     }
+    },
+    {
+     "n": 600,
+     "name": "proxy",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 601,
+     "name": "DNS settings",
+     "kind": "tool",
+     "ref": "dns"
+    },
+    {
+     "n": 602,
+     "name": "network speed test",
+     "kind": "tool",
+     "ref": "speedtest"
+    },
+    {
+     "n": 603,
+     "name": "download manager",
+     "kind": "tool",
+     "ref": "download"
+    },
+    {
+     "n": 604,
+     "name": "connection diagnostics",
+     "kind": "tool",
+     "ref": "nettrouble"
+    },
+    {
+     "n": 605,
+     "name": "network reset",
+     "kind": "tool",
+     "ref": "netreset"
+    },
+    {
+     "n": 606,
+     "name": "firewall integration",
+     "kind": "tool",
+     "ref": "firewall"
+    },
+    {
+     "n": 607,
+     "name": "internet status",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 608,
+     "name": "captive portal support",
+     "kind": "file",
+     "ref": "etc/NetworkManager/conf.d/navin-connectivity.conf::[connectivity]"
+    },
+    {
+     "n": 609,
+     "name": "IPv4",
+     "kind": "pkg",
+     "ref": "network-manager"
+    },
+    {
+     "n": 610,
+     "name": "IPv6",
+     "kind": "pkg",
+     "ref": "network-manager"
+    },
+    {
+     "n": 611,
+     "name": "network sharing",
+     "kind": "tool",
+     "ref": "share"
+    },
+    {
+     "n": 612,
+     "name": "LAN discovery",
+     "kind": "tool",
+     "ref": "discover"
+    },
+    {
+     "n": 613,
+     "name": "secure connection management",
+     "kind": "tool",
+     "ref": "reconnect"
+    }
+   ]
+  },
+  {
+   "title": "Security & Privacy",
+   "slots": "651-710",
+   "items": [
+    {
+     "n": 651,
+     "name": "UFW firewall",
+     "kind": "pkg",
+     "ref": "ufw"
+    },
+    {
+     "n": 652,
+     "name": "GUFW interface",
+     "kind": "pkg",
+     "ref": "gufw"
+    },
+    {
+     "n": 653,
+     "name": "automatic security updates",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-update-notify::update"
+    },
+    {
+     "n": 654,
+     "name": "malware scanning integration",
+     "kind": "tool",
+     "ref": "usbscan"
+    },
+    {
+     "n": 655,
+     "name": "application permissions",
+     "kind": "tool",
+     "ref": "perms"
+    },
+    {
+     "n": 656,
+     "name": "user accounts",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-settings::Users"
+    },
+    {
+     "n": 657,
+     "name": "administrator protection",
+     "kind": "pkg",
+     "ref": "polkitd"
+    },
+    {
+     "n": 658,
+     "name": "password management",
+     "kind": "tool",
+     "ref": "wifiqr"
+    },
+    {
+     "n": 659,
+     "name": "screen lock",
+     "kind": "tool",
+     "ref": "autolock"
+    },
+    {
+     "n": 660,
+     "name": "disk encryption option",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 661,
+     "name": "secure boot detection",
+     "kind": "pkg",
+     "ref": "mokutil"
+    },
+    {
+     "n": 662,
+     "name": "privacy controls",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-session-daemon::privacy"
+    },
+    {
+     "n": 663,
+     "name": "camera permissions",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-session-daemon::camera"
+    },
+    {
+     "n": 664,
+     "name": "microphone permissions",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-session-daemon::mic"
+    },
+    {
+     "n": 665,
+     "name": "browser security",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-chrome::chrom"
+    },
+    {
+     "n": 666,
+     "name": "network protection",
+     "kind": "tool",
+     "ref": "firewall"
+    },
+    {
+     "n": 667,
+     "name": "login history",
+     "kind": "tool",
+     "ref": "logins"
+    },
+    {
+     "n": 668,
+     "name": "security alerts",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-history::wrong password"
+    },
+    {
+     "n": 669,
+     "name": "file permissions",
+     "kind": "tool",
+     "ref": "perms"
+    },
+    {
+     "n": 670,
+     "name": "recovery protection",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-snapshot::Timeshift"
+    }
+   ]
+  },
+  {
+   "title": "Performance & Battery",
+   "slots": "711-770",
+   "items": [
+    {
+     "n": 711,
+     "name": "Low-RAM optimization",
+     "kind": "file",
+     "ref": "usr/local/sbin/navin-memprofile::lite"
+    },
+    {
+     "n": 712,
+     "name": "ZRAM",
+     "kind": "pkg",
+     "ref": "zram-tools"
+    },
+    {
+     "n": 713,
+     "name": "zstd compression",
+     "kind": "file",
+     "ref": "usr/local/sbin/navin-memprofile::zstd"
+    },
+    {
+     "n": 714,
+     "name": "smart memory management",
+     "kind": "pkg",
+     "ref": "earlyoom"
+    },
+    {
+     "n": 715,
+     "name": "CPU optimization",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-power::performance"
+    },
+    {
+     "n": 716,
+     "name": "startup optimization",
+     "kind": "tool",
+     "ref": "boot"
+    },
+    {
+     "n": 717,
+     "name": "faster boot",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-session-init::LIVE"
+    },
+    {
+     "n": 718,
+     "name": "background process management",
+     "kind": "tool",
+     "ref": "background"
+    },
+    {
+     "n": 719,
+     "name": "power-saving mode",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-power::powersave"
+    },
+    {
+     "n": 720,
+     "name": "balanced mode",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-power::balanced"
+    },
+    {
+     "n": 721,
+     "name": "performance mode",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-turbo::performance"
+    },
+    {
+     "n": 722,
+     "name": "battery monitoring",
+     "kind": "tool",
+     "ref": "bathist"
+    },
+    {
+     "n": 723,
+     "name": "battery health reporting where supported",
+     "kind": "tool",
+     "ref": "battery"
+    },
+    {
+     "n": 724,
+     "name": "disk cleanup",
+     "kind": "tool",
+     "ref": "cache"
+    },
+    {
+     "n": 725,
+     "name": "cache cleanup",
+     "kind": "file",
+     "ref": "etc/systemd/user/navin-cache-clean.timer::weekly"
+    },
+    {
+     "n": 726,
+     "name": "memory monitoring",
+     "kind": "tool",
+     "ref": "ramcpu"
+    },
+    {
+     "n": 727,
+     "name": "swap management",
+     "kind": "tool",
+     "ref": "zram"
+    },
+    {
+     "n": 728,
+     "name": "lightweight animations",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-compositor::lite"
+    },
+    {
+     "n": 729,
+     "name": "reduced resource usage",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-session-daemon::tick"
+    },
+    {
+     "n": 730,
+     "name": "thermal monitoring",
+     "kind": "pkg",
+     "ref": "thermald"
+    },
+    {
+     "n": 731,
+     "name": "application performance monitoring",
+     "kind": "pkg",
+     "ref": "htop"
+    }
+   ]
+  },
+  {
+   "title": "System Tools & Recovery",
+   "slots": "771-830",
+   "items": [
+    {
+     "n": 771,
+     "name": "Task Manager",
+     "kind": "key",
+     "ref": "<Primary><Shift>Escape"
+    },
+    {
+     "n": 772,
+     "name": "terminal",
+     "kind": "pkg",
+     "ref": "xfce4-terminal"
+    },
+    {
+     "n": 773,
+     "name": "system information",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-about::About NAVIN"
+    },
+    {
+     "n": 774,
+     "name": "hardware information",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Hardware Manager"
+    },
+    {
+     "n": 775,
+     "name": "disk utility",
+     "kind": "pkg",
+     "ref": "gnome-disk-utility"
+    },
+    {
+     "n": 776,
+     "name": "partition manager",
+     "kind": "pkg",
+     "ref": "gparted"
+    },
+    {
+     "n": 777,
+     "name": "USB formatter",
+     "kind": "pkg",
+     "ref": "gnome-disk-utility"
+    },
+    {
+     "n": 778,
+     "name": "boot repair",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Boot Manager"
+    },
+    {
+     "n": 779,
+     "name": "GRUB repair",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-grub-install::grub"
+    },
+    {
+     "n": 780,
+     "name": "filesystem check",
+     "kind": "pkg",
+     "ref": "gnome-disk-utility"
+    },
+    {
+     "n": 781,
+     "name": "package repair",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::dpkg --configure -a"
+    },
+    {
+     "n": 782,
+     "name": "system logs",
+     "kind": "tool",
+     "ref": "logs"
+    },
+    {
+     "n": 783,
+     "name": "crash reports",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-autotest::crash"
+    },
+    {
+     "n": 784,
+     "name": "recovery mode",
+     "kind": "file",
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Tools"
+    },
+    {
+     "n": 785,
+     "name": "restore points",
+     "kind": "tool",
+     "ref": "restore"
+    },
+    {
+     "n": 786,
+     "name": "backup",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-backup::Backup"
+    },
+    {
+     "n": 787,
+     "name": "restore",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-backup::restore"
+    },
+    {
+     "n": 788,
+     "name": "system reset",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-snapshot::Timeshift"
+    },
+    {
+     "n": 789,
+     "name": "update rollback",
+     "kind": "tool",
+     "ref": "restore"
+    },
+    {
+     "n": 790,
+     "name": "driver manager",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Driver Manager"
+    },
+    {
+     "n": 791,
+     "name": "diagnostics",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-ai-doctor::scans"
+    },
+    {
+     "n": 792,
+     "name": "startup repair",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::services"
+    },
+    {
+     "n": 793,
+     "name": "safe mode",
+     "kind": "file",
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Safe Graphics"
+    }
+   ]
+  },
+  {
+   "title": "Updates & Navin Os Ecosystem",
+   "slots": "831-890",
+   "items": [
+    {
+     "n": 831,
+     "name": "NAVIN OS Update Center",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Update Manager"
+    },
+    {
+     "n": 832,
+     "name": "real version checking",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-update-notify::GitHub"
+    },
+    {
+     "n": 833,
+     "name": "secure update downloads",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_desktop.py::sha256"
+    },
+    {
+     "n": 834,
+     "name": "package updates",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::full-upgrade"
+    },
+    {
+     "n": 835,
+     "name": "system updates",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-repair::upgrade"
+    },
+    {
+     "n": 836,
+     "name": "desktop UI updates",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-apply-update::NAVIN patch applied"
+    },
+    {
+     "n": 837,
+     "name": "changelog",
+     "kind": "file",
+     "ref": "usr/share/navin/whatsnew-2.2.json::What's new in NAVIN 2.2"
+    },
+    {
+     "n": 838,
+     "name": "update progress",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_desktop.py::updater"
+    },
+    {
+     "n": 839,
+     "name": "update verification",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_desktop.py::hexdigest"
+    },
+    {
+     "n": 840,
+     "name": "rollback",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-apply-update::reversed(applied)"
+    },
+    {
+     "n": 841,
+     "name": "automatic update settings",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-update-notify::once a day"
+    },
+    {
+     "n": 842,
+     "name": "GitHub release integration",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-update-notify::GitHub"
+    },
+    {
+     "n": 843,
+     "name": "signed update metadata",
+     "kind": "partial",
+     "note": "Update files are checked with SHA-256 from the GitHub release over HTTPS; a separate signing key is not used yet",
+     "via": {
+      "kind": "file",
+      "ref": "usr/local/lib/navin/navin_desktop.py::sha256"
+     }
+    },
+    {
+     "n": 844,
+     "name": "release notifications",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-update-notify::notif"
+    },
+    {
+     "n": 845,
+     "name": "update history",
+     "kind": "partial",
+     "note": "Every applied update keeps a folder /var/backups/navin/<old>-<new> with the replaced files; there is no separate history window yet",
+     "via": {
+      "kind": "file",
+      "ref": "usr/local/lib/navin/navin-apply-update::/var/backups/navin"
+     }
+    },
+    {
+     "n": 846,
+     "name": "OS version information",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-about::NAVIN"
+    },
+    {
+     "n": 847,
+     "name": "update backup",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-apply-update::/var/backups/navin"
+    },
+    {
+     "n": 848,
+     "name": "recovery after failed updates",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-apply-update::reversed(applied)"
+    }
+   ]
+  },
+  {
+   "title": "Installer, Live Mode & Boot",
+   "slots": "891-950",
+   "items": [
+    {
+     "n": 891,
+     "name": "NAVIN branded boot screen",
+     "kind": "file",
+     "ref": "usr/share/plymouth/themes/navin/navin.plymouth::navin"
+    },
+    {
+     "n": 892,
+     "name": "corrected logo alignment",
+     "kind": "file",
+     "ref": "usr/share/plymouth/themes/navin/navin.script::logo"
+    },
+    {
+     "n": 893,
+     "name": "fast boot",
+     "kind": "file",
+     "ref": "etc/default/grub.d/navin.cfg::GRUB_TIMEOUT"
+    },
+    {
+     "n": 894,
+     "name": "keyboard-controlled boot menu",
+     "kind": "file",
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Live Mode"
+    },
+    {
+     "n": 895,
+     "name": "Live Mode",
+     "kind": "file",
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Live Mode - Try NAVIN"
+    },
+    {
+     "n": 896,
+     "name": "Full Installation",
+     "kind": "file",
+     "ref": "hooks:02-navin-bootmenu.hook.binary::Full Installation - Install NAVIN"
+    },
+    {
+     "n": 897,
+     "name": "language selection",
+     "kind": "pkg",
+     "ref": "calamares-settings-debian"
+    },
+    {
+     "n": 898,
+     "name": "keyboard selection",
+     "kind": "pkg",
+     "ref": "calamares-settings-debian"
+    },
+    {
+     "n": 899,
+     "name": "Wi-Fi setup",
+     "kind": "pkg",
+     "ref": "network-manager-gnome"
+    },
+    {
+     "n": 900,
+     "name": "disk detection",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 901,
+     "name": "partition selection",
+     "kind": "file",
+     "ref": "usr/share/navin/calamares/partition.conf::partition"
+    },
+    {
+     "n": 902,
+     "name": "installation progress",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 903,
+     "name": "user creation",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 904,
+     "name": "password setup",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 905,
+     "name": "timezone",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 906,
+     "name": "bootloader setup",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/calamares-bootloader-config::grub"
+    },
+    {
+     "n": 907,
+     "name": "installation verification",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-grub-finish::grub"
+    },
+    {
+     "n": 908,
+     "name": "restart option",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 909,
+     "name": "USB live session",
+     "kind": "pkg",
+     "ref": "live-boot"
+    },
+    {
+     "n": 910,
+     "name": "persistent USB support",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-persistence::persistence"
+    },
+    {
+     "n": 911,
+     "name": "hardware detection",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-hwdetect::Hardware"
+    },
+    {
+     "n": 912,
+     "name": "Calamares integration",
+     "kind": "pkg",
+     "ref": "calamares"
+    },
+    {
+     "n": 913,
+     "name": "installer error handling",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_install_guide.py::error"
+    },
+    {
+     "n": 914,
+     "name": "first-boot setup",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-welcome::welcome"
+    }
+   ]
+  },
+  {
+   "title": "Advanced Features & Accessibility",
+   "slots": "951-1000",
+   "items": [
+    {
+     "n": 951,
+     "name": "Voice control",
+     "kind": "partial",
+     "note": "Offline voice search (English) opens results; full hands-free control of every window is not built",
+     "via": {
+      "kind": "tool",
+      "ref": "voice"
+     }
+    },
+    {
+     "n": 952,
+     "name": "screen reader",
+     "kind": "pkg",
+     "ref": "orca"
+    },
+    {
+     "n": 953,
+     "name": "magnifier",
+     "kind": "partial",
+     "note": "Alt + mouse wheel zooms the whole screen while window effects are on; there is no separate magnifier window",
+     "via": {
+      "kind": "pkg",
+      "ref": "xfce4"
+     }
+    },
+    {
+     "n": 954,
+     "name": "high contrast",
+     "kind": "partial",
+     "note": "GTK's built-in HighContrast style (Appearance); not every app follows it",
+     "via": {
+      "kind": "pkg",
+      "ref": "gir1.2-gtk-3.0"
+     }
+    },
+    {
+     "n": 955,
+     "name": "color filters",
+     "kind": "partial",
+     "note": "Night Light warm filter; colour-blind filters are not built in",
+     "via": {
+      "kind": "pkg",
+      "ref": "redshift"
+     }
+    },
+    {
+     "n": 956,
+     "name": "on-screen keyboard",
+     "kind": "pkg",
+     "ref": "onboard"
+    },
+    {
+     "n": 957,
+     "name": "clipboard history",
+     "kind": "key",
+     "ref": "<Super>v"
+    },
+    {
+     "n": 958,
+     "name": "universal search",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-search::search"
+    },
+    {
+     "n": 959,
+     "name": "multi-user sessions",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-security-options::Switch user"
+    },
+    {
+     "n": 960,
+     "name": "parental controls",
+     "kind": "tool",
+     "ref": "parental"
+    },
+    {
+     "n": 961,
+     "name": "remote desktop",
+     "kind": "store",
+     "ref": "remmina"
+    },
+    {
+     "n": 962,
+     "name": "file sharing",
+     "kind": "tool",
+     "ref": "share"
+    },
+    {
+     "n": 963,
+     "name": "cloud integration",
+     "kind": "partial",
+     "note": "Nextcloud/WebDAV, FTP, SMB and SFTP folders in Files > Other Locations; Google Drive/OneDrive accounts are not built in",
+     "via": {
+      "kind": "pkg",
+      "ref": "gvfs-backends"
+     }
+    },
+    {
+     "n": 964,
+     "name": "backup scheduling",
+     "kind": "tool",
+     "ref": "schedule"
+    },
+    {
+     "n": 965,
+     "name": "automation",
+     "kind": "tool",
+     "ref": "schedule"
+    },
+    {
+     "n": 966,
+     "name": "custom scripts",
+     "kind": "tool",
+     "ref": "schedule"
+    },
+    {
+     "n": 967,
+     "name": "developer tools",
+     "kind": "store",
+     "ref": "geany"
+    },
+    {
+     "n": 968,
+     "name": "API integration",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin-ai-request::http"
+    },
+    {
+     "n": 969,
+     "name": "localization",
+     "kind": "pkg",
+     "ref": "locales"
+    },
+    {
+     "n": 970,
+     "name": "Hindi",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-session-init::hin-kagapa"
+    },
+    {
+     "n": 971,
+     "name": "English language support",
+     "kind": "pkg",
+     "ref": "locales"
+    },
+    {
+     "n": 972,
+     "name": "help center",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_ai.py::NAVIN"
+    },
+    {
+     "n": 973,
+     "name": "tutorials",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-welcome::welcome"
+    },
+    {
+     "n": 974,
+     "name": "keyboard shortcut guide",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::search"
+    },
+    {
+     "n": 975,
+     "name": "system diagnostics dashboard",
+     "kind": "file",
+     "ref": "usr/local/lib/navin/navin_center.py::Hardware Diagnostics"
+    },
+    {
+     "n": 976,
+     "name": "accessibility profiles",
+     "kind": "file",
+     "ref": "usr/local/bin/navin-shortcuts::Sticky"
+    },
+    {
+     "n": 977,
+     "name": "customization profiles",
+     "kind": "tool",
+     "ref": "profiles"
+    },
+    {
+     "n": 978,
+     "name": "advanced system administration tools",
+     "kind": "tool",
+     "ref": "services"
+    }
+   ]
+  }
+ ],
+ "named": [
+  {
+   "n": 1001,
+   "name": "Desktop AI Assistant",
+   "kind": "file",
+   "ref": "usr/local/lib/navin/navin_ai.py::NAVIN"
+  },
+  {
+   "n": 1002,
+   "name": "Smart App Suggestions",
+   "kind": "tool",
+   "ref": "suggest"
+  },
+  {
+   "n": 1003,
+   "name": "Desktop Voice Search",
+   "kind": "tool",
+   "ref": "voice"
+  },
+  {
+   "n": 1004,
+   "name": "Smart Window Arrangement",
+   "kind": "tool",
+   "ref": "arrange"
+  },
+  {
+   "n": 1005,
+   "name": "Desktop Activity History",
+   "kind": "tool",
+   "ref": "activity"
+  },
+  {
+   "n": 1006,
+   "name": "Custom Desktop Profiles",
+   "kind": "tool",
+   "ref": "profiles"
+  },
+  {
+   "n": 1007,
+   "name": "Interactive Widgets",
+   "kind": "file",
+   "ref": "usr/local/bin/navin-pill::CPU"
+  },
+  {
+   "n": 1008,
+   "name": "Smart Clipboard",
+   "kind": "tool",
+   "ref": "clipslots"
+  },
+  {
+   "n": 1009,
+   "name": "Desktop Quick Actions",
+   "kind": "key",
+   "ref": "<Super>a"
+  },
+  {
+   "n": 1010,
+   "name": "Custom Gesture Controls",
+   "kind": "tool",
+   "ref": "gestures"
+  },
+  {
+   "n": 1011,
+   "name": "File Content Search",
+   "kind": "tool",
+   "ref": "search"
+  },
+  {
+   "n": 1012,
+   "name": "Duplicate File Detection",
+   "kind": "tool",
+   "ref": "dupes"
+  },
+  {
+   "n": 1013,
+   "name": "Large File Finder",
+   "kind": "tool",
+   "ref": "large"
+  },
+  {
+   "n": 1014,
+   "name": "Secure File Shredder",
+   "kind": "tool",
+   "ref": "shred"
+  },
+  {
+   "n": 1015,
+   "name": "File Recovery",
+   "kind": "tool",
+   "ref": "recover"
+  },
+  {
+   "n": 1016,
+   "name": "Folder Size Visualization",
+   "kind": "tool",
+   "ref": "sizes"
+  },
+  {
+   "n": 1017,
+   "name": "File Checksum Generator",
+   "kind": "tool",
+   "ref": "checksum"
+  },
+  {
+   "n": 1018,
+   "name": "Batch File Converter",
+   "kind": "tool",
+   "ref": "convert"
+  },
+  {
+   "n": 1019,
+   "name": "Advanced File Permissions",
+   "kind": "tool",
+   "ref": "perms"
+  },
+  {
+   "n": 1020,
+   "name": "Automatic Folder Organization",
+   "kind": "tool",
+   "ref": "organize"
+  },
+  {
+   "n": 1021,
+   "name": "Smart Battery Saver",
+   "kind": "file",
+   "ref": "usr/local/bin/navin-power::powersave"
+  },
+  {
+   "n": 1022,
+   "name": "Battery Usage History",
+   "kind": "tool",
+   "ref": "bathist"
+  },
+  {
+   "n": 1023,
+   "name": "Touchpad Gesture Customizer",
+   "kind": "tool",
+   "ref": "gestures"
+  },
+  {
+   "n": 1024,
+   "name": "Keyboard Key Tester",
+   "kind": "tool",
+   "ref": "keys"
+  },
+  {
+   "n": 1025,
+   "name": "Fn Key Detection",
+   "kind": "tool",
+   "ref": "keys"
+  },
+  {
+   "n": 1026,
+   "name": "Hardware Compatibility Checker",
+   "kind": "tool",
+   "ref": "hwassist"
+  },
+  {
+   "n": 1027,
+   "name": "USB Device Health Checker",
+   "kind": "tool",
+   "ref": "usbhealth"
+  },
+  {
+   "n": 1028,
+   "name": "Audio Device Auto Detection",
+   "kind": "tool",
+   "ref": "audio"
+  },
+  {
+   "n": 1029,
+   "name": "Display Health Information",
+   "kind": "tool",
+   "ref": "display"
+  },
+  {
+   "n": 1030,
+   "name": "Laptop Performance Dashboard",
+   "kind": "file",
+   "ref": "usr/local/lib/navin/navin_center.py::Performance Center"
+  },
+  {
+   "n": 1031,
+   "name": "Multiple Clipboard Slots",
+   "kind": "tool",
+   "ref": "clipslots"
+  },
+  {
+   "n": 1032,
+   "name": "Built-in Notes Sync",
+   "kind": "tool",
+   "ref": "notes"
+  },
+  {
+   "n": 1033,
+   "name": "Focus Mode",
+   "kind": "tool",
+   "ref": "focus"
+  },
+  {
+   "n": 1034,
+   "name": "Pomodoro Timer",
+   "kind": "tool",
+   "ref": "pomodoro"
+  },
+  {
+   "n": 1035,
+   "name": "Screen Annotation",
+   "kind": "tool",
+   "ref": "annotate"
+  },
+  {
+   "n": 1036,
+   "name": "Quick Screenshot Editor",
+   "kind": "tool",
+   "ref": "shotedit"
+  },
+  {
+   "n": 1037,
+   "name": "Window Always-on-Top",
+   "kind": "tool",
+   "ref": "ontop"
+  },
+  {
+   "n": 1038,
+   "name": "Custom Hotkey Creator",
+   "kind": "tool",
+   "ref": "hotkeys"
+  },
+  {
+   "n": 1039,
+   "name": "Workspace Saver",
+   "kind": "tool",
+   "ref": "workspace"
+  },
+  {
+   "n": 1040,
+   "name": "Automatic Session Restore",
+   "kind": "tool",
+   "ref": "workspace"
+  },
+  {
+   "n": 1041,
+   "name": "Wi-Fi Signal History",
+   "kind": "tool",
+   "ref": "wifihist"
+  },
+  {
+   "n": 1042,
+   "name": "Network Usage Monitor",
+   "kind": "tool",
+   "ref": "netuse"
+  },
+  {
+   "n": 1043,
+   "name": "DNS Performance Checker",
+   "kind": "tool",
+   "ref": "dns"
+  },
+  {
+   "n": 1044,
+   "name": "Internet Troubleshooter",
+   "kind": "tool",
+   "ref": "nettrouble"
+  },
+  {
+   "n": 1045,
+   "name": "Wi-Fi Auto Reconnect",
+   "kind": "tool",
+   "ref": "reconnect"
+  },
+  {
+   "n": 1046,
+   "name": "Network Device Discovery",
+   "kind": "tool",
+   "ref": "discover"
+  },
+  {
+   "n": 1047,
+   "name": "Local File Sharing",
+   "kind": "tool",
+   "ref": "share"
+  },
+  {
+   "n": 1048,
+   "name": "Secure QR Wi-Fi Sharing",
+   "kind": "tool",
+   "ref": "wifiqr"
+  },
+  {
+   "n": 1049,
+   "name": "Download Resume Manager",
+   "kind": "tool",
+   "ref": "download"
+  },
+  {
+   "n": 1050,
+   "name": "Connection Priority Manager",
+   "kind": "tool",
+   "ref": "priority"
+  },
+  {
+   "n": 1051,
+   "name": "USB Security Scanner",
+   "kind": "tool",
+   "ref": "usbscan"
+  },
+  {
+   "n": 1052,
+   "name": "Login Attempt Alerts",
+   "kind": "tool",
+   "ref": "logins"
+  },
+  {
+   "n": 1053,
+   "name": "Application Integrity Checker",
+   "kind": "tool",
+   "ref": "integrity"
+  },
+  {
+   "n": 1054,
+   "name": "Permission Change History",
+   "kind": "tool",
+   "ref": "permhist"
+  },
+  {
+   "n": 1055,
+   "name": "Secure Guest Account",
+   "kind": "tool",
+   "ref": "guest"
+  },
+  {
+   "n": 1056,
+   "name": "Automatic Screen Lock",
+   "kind": "tool",
+   "ref": "autolock"
+  },
+  {
+   "n": 1057,
+   "name": "Suspicious Startup Detection",
+   "kind": "tool",
+   "ref": "startup"
+  },
+  {
+   "n": 1058,
+   "name": "Firewall Activity Dashboard",
+   "kind": "tool",
+   "ref": "firewall"
+  },
+  {
+   "n": 1059,
+   "name": "Security Audit Tool",
+   "kind": "tool",
+   "ref": "audit"
+  },
+  {
+   "n": 1060,
+   "name": "Encrypted Personal Vault",
+   "kind": "tool",
+   "ref": "vault"
+  },
+  {
+   "n": 1061,
+   "name": "Startup Time Analyzer",
+   "kind": "tool",
+   "ref": "boot"
+  },
+  {
+   "n": 1062,
+   "name": "RAM Usage History",
+   "kind": "tool",
+   "ref": "ramcpu"
+  },
+  {
+   "n": 1063,
+   "name": "CPU Usage History",
+   "kind": "tool",
+   "ref": "ramcpu"
+  },
+  {
+   "n": 1064,
+   "name": "Disk Health Monitoring",
+   "kind": "tool",
+   "ref": "disk"
+  },
+  {
+   "n": 1065,
+   "name": "Background App Analyzer",
+   "kind": "tool",
+   "ref": "background"
+  },
+  {
+   "n": 1066,
+   "name": "Lightweight Gaming Mode",
+   "kind": "file",
+   "ref": "usr/local/bin/navin-turbo::Turbo"
+  },
+  {
+   "n": 1067,
+   "name": "Low-RAM Emergency Mode",
+   "kind": "tool",
+   "ref": "emergency"
+  },
+  {
+   "n": 1068,
+   "name": "Smart ZRAM Controller",
+   "kind": "tool",
+   "ref": "zram"
+  },
+  {
+   "n": 1069,
+   "name": "Boot Performance Analyzer",
+   "kind": "tool",
+   "ref": "boot"
+  },
+  {
+   "n": 1070,
+   "name": "Automatic Cache Management",
+   "kind": "tool",
+   "ref": "cache"
+  },
+  {
+   "n": 1071,
+   "name": "Built-in Audio Recorder",
+   "kind": "tool",
+   "ref": "record"
+  },
+  {
+   "n": 1072,
+   "name": "Video Trimmer",
+   "kind": "tool",
+   "ref": "trim"
+  },
+  {
+   "n": 1073,
+   "name": "Image Resizer",
+   "kind": "tool",
+   "ref": "image"
+  },
+  {
+   "n": 1074,
+   "name": "Image Format Converter",
+   "kind": "tool",
+   "ref": "image"
+  },
+  {
+   "n": 1075,
+   "name": "PDF Merger",
+   "kind": "tool",
+   "ref": "pdfmerge"
+  },
+  {
+   "n": 1076,
+   "name": "PDF Splitter",
+   "kind": "tool",
+   "ref": "pdfsplit"
+  },
+  {
+   "n": 1077,
+   "name": "PDF Compressor",
+   "kind": "tool",
+   "ref": "pdfsmall"
+  },
+  {
+   "n": 1078,
+   "name": "Screen Recording Editor",
+   "kind": "tool",
+   "ref": "join"
+  },
+  {
+   "n": 1079,
+   "name": "Webcam Preview",
+   "kind": "tool",
+   "ref": "webcam"
+  },
+  {
+   "n": 1080,
+   "name": "Media Library Manager",
+   "kind": "tool",
+   "ref": "library"
+  },
+  {
+   "n": 1081,
+   "name": "Service Manager",
+   "kind": "tool",
+   "ref": "services"
+  },
+  {
+   "n": 1082,
+   "name": "Process Priority Manager",
+   "kind": "tool",
+   "ref": "nice"
+  },
+  {
+   "n": 1083,
+   "name": "Kernel Information Viewer",
+   "kind": "tool",
+   "ref": "kernel"
+  },
+  {
+   "n": 1084,
+   "name": "Driver Status Dashboard",
+   "kind": "tool",
+   "ref": "drivers"
+  },
+  {
+   "n": 1085,
+   "name": "Repository Manager",
+   "kind": "tool",
+   "ref": "repos"
+  },
+  {
+   "n": 1086,
+   "name": "Package Dependency Checker",
+   "kind": "tool",
+   "ref": "deps"
+  },
+  {
+   "n": 1087,
+   "name": "System Log Viewer",
+   "kind": "tool",
+   "ref": "logs"
+  },
+  {
+   "n": 1088,
+   "name": "Bootloader Configuration Tool",
+   "kind": "tool",
+   "ref": "grub"
+  },
+  {
+   "n": 1089,
+   "name": "Restore Point Manager",
+   "kind": "tool",
+   "ref": "restore"
+  },
+  {
+   "n": 1090,
+   "name": "System Health Report Generator",
+   "kind": "tool",
+   "ref": "report"
+  },
+  {
+   "n": 1091,
+   "name": "NAVIN Welcome Center",
+   "kind": "tool",
+   "ref": "welcome"
+  },
+  {
+   "n": 1092,
+   "name": "NAVIN Control Hub",
+   "kind": "tool",
+   "ref": "control"
+  },
+  {
+   "n": 1093,
+   "name": "NAVIN Theme Studio",
+   "kind": "tool",
+   "ref": "themes"
+  },
+  {
+   "n": 1094,
+   "name": "NAVIN Shortcut Center",
+   "kind": "file",
+   "ref": "usr/local/bin/navin-shortcuts::Shortcuts"
+  },
+  {
+   "n": 1095,
+   "name": "NAVIN Hardware Assistant",
+   "kind": "tool",
+   "ref": "hwassist"
+  },
+  {
+   "n": 1096,
+   "name": "NAVIN Update Dashboard",
+   "kind": "tool",
+   "ref": "updates"
+  },
+  {
+   "n": 1097,
+   "name": "NAVIN Recovery Assistant",
+   "kind": "tool",
+   "ref": "recovery"
+  },
+  {
+   "n": 1098,
+   "name": "NAVIN App Compatibility Checker",
+   "kind": "tool",
+   "ref": "compat"
+  },
+  {
+   "n": 1099,
+   "name": "NAVIN System Benchmark",
+   "kind": "tool",
+   "ref": "benchmark"
+  },
+  {
+   "n": 1100,
+   "name": "NAVIN OS Smart Maintenance Center",
+   "kind": "tool",
+   "ref": "maintain"
+  }
+ ]
+}

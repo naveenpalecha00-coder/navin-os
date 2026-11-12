@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build NAVIN 2.1 ISO. Run as root on Debian 13 (or inside `debian:trixie` docker with --privileged).
+# Build NAVIN 2.2 ISO. Run as root on Debian 13 (or inside `debian:trixie` docker with --privileged).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -16,8 +16,8 @@ lb build
 
 ISO=$(find . -maxdepth 1 -type f -name "*.iso" -print -quit)
 [ -f "$ISO" ] || { echo "ISO not produced"; exit 1; }
-if [ "$ISO" != "./navin-2.1-x86_64.iso" ]; then mv -f "$ISO" navin-2.1-x86_64.iso; fi
-sha256sum navin-2.1-x86_64.iso | tee navin-2.1-x86_64.iso.sha256
+if [ "$ISO" != "./navin-2.2-x86_64.iso" ]; then mv -f "$ISO" navin-2.2-x86_64.iso; fi
+sha256sum navin-2.2-x86_64.iso | tee navin-2.2-x86_64.iso.sha256
 # Reports produced inside the image (package manifest, kernel, missing optional packages, base)
 mkdir -p reports; cp -a chroot/usr/share/navin/reports/. reports/ 2>/dev/null || true
-ls -lh navin-2.1-x86_64.iso
+ls -lh navin-2.2-x86_64.iso

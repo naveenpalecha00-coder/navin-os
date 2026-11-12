@@ -312,8 +312,8 @@ class Updater(Window):
  def applied(self,text):self.status.set_text(text); self.restart.set_sensitive(True); launch(['notify-send','NAVIN updated','Restart when ready'])
 class Welcome(Window):
  def __init__(self):
-  super().__init__('Welcome to NAVIN 2.1'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
-  for label,cmd in [('Connect Wi-Fi','nm-connection-editor'),('NAVIN AI','navin-ai-desktop'),('App Store','navin-app-store'),('Install NAVIN OS','install-debian'),("What's new in NAVIN 2.1",'navin-center'),('NAVIN Toolbox','navin-toolbox')]:self.button(label,lambda c=cmd:launch([c,'whatsnew'] if c=='navin-center' else [c]))
+  super().__init__('Welcome to NAVIN 2.2'); self.box.pack_start(Gtk.Image.new_from_file('/usr/share/pixmaps/navin-os-logo.png'),True,True,0); self.box.pack_start(Gtk.Label(label='Namaste, Navin!\nYour PC. Your OS. Your Freedom.'),False,False,0)
+  for label,cmd in [('Connect Wi-Fi','nm-connection-editor'),('NAVIN AI','navin-ai-desktop'),('App Store','navin-app-store'),('Install NAVIN OS','install-debian'),("What's new in NAVIN 2.2",'navin-center'),('NAVIN Toolbox','navin-toolbox')]:self.button(label,lambda c=cmd:launch([c,'whatsnew'] if c=='navin-center' else [c]))
   self.button('Done',self.destroy); self.finish(); launch(['paplay','/usr/share/sounds/freedesktop/stereo/desktop-login.oga'])
 mode=sys.argv[1] if len(sys.argv)>1 else 'controls'
 if mode=='welcome' and '--autostart' in sys.argv:

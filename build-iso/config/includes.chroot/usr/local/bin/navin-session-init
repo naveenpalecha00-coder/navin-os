@@ -13,6 +13,10 @@ setxkbmap -layout us,in -variant ,hin-kagapa -option grp:alt_shift_toggle
 navin-touchpad apply --login >/dev/null 2>&1
 # NAVIN 2.1: touchpads that appear late (touchpad rescue, slow USB live boot) get the same settings.
 (sleep 15; navin-touchpad apply --login >/dev/null 2>&1) &
+# NAVIN 2.2: auto screen lock (light-locker) only on installed NAVIN; the Live user must never be locked out
+[ "$LIVE" = 1 ] && (sleep 6; pkill -x light-locker) &
+# NAVIN 2.2: tell the user about wrong password attempts since the last login
+(sleep 20; /usr/local/lib/navin/navin-history --logins >/dev/null 2>&1) &
 /usr/local/lib/navin/navin-session-daemon &
 # Window effects: xfwm4 compositor with Alt+Tab previews (default) or picom; off in the 2 GB lite profile.
 navin-compositor apply >/dev/null 2>&1

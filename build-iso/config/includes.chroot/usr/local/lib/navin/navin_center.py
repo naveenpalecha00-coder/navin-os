@@ -13,7 +13,7 @@ from navin_sys import leak_candidates, parse_systemd_analyze
 REPAIR = ["pkexec", "/usr/local/lib/navin/navin-repair"]
 FAN = ["pkexec", "/usr/local/lib/navin/navin-fan"]
 LIVE = pathlib.Path("/run/live").exists()
-PAGES = [("whatsnew", "What's New in 2.1"), ("laptop", "Laptop & Touchpad"), ("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
+PAGES = [("whatsnew", "What's New in 2.2"), ("laptop", "Laptop & Touchpad"), ("hardware", "Hardware Manager"), ("drivers", "Driver Manager"), ("monitor", "System Monitor"),
          ("performance", "Performance Center"), ("fan", "Fan Control"), ("boot", "Boot Manager"),
          ("recovery", "Recovery"), ("repair", "System Repair"), ("updates", "Update Manager"),
          ("diagnostics", "Hardware Diagnostics")]
@@ -209,9 +209,9 @@ class Center(Gtk.Window):
 
     # ---- NAVIN 2.0: What's New (real list shipped with the image, every entry names its file)
     def p_whatsnew(self):
-        b = page("What's New in NAVIN 2.1", "Every change below is in this system; the file that does it is shown in grey. 2.0 changes are kept and listed after the 2.1 ones.")
+        b = page("What's New in NAVIN 2.2", "Every change below is in this system; the file that does it is shown in grey. 2.1 and 2.0 changes are kept and listed after the 2.2 ones.")
         items = []
-        for ver in ("2.1", "2.0"):
+        for ver in ("2.2", "2.1", "2.0"):
             try:
                 items += [dict(it, category=f"{ver} · {it['category']}") for it in json.loads(pathlib.Path(f"/usr/share/navin/whatsnew-{ver}.json").read_text())["items"]]
             except (OSError, ValueError, KeyError):

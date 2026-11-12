@@ -57,7 +57,7 @@ class BootMenu(unittest.TestCase):
 
     def test_grub_main_menu_has_exactly_live_and_install(self):
         self.assertEqual([l.split('"')[1] for l in self.top_level_entries()],
-                         ['Live Mode - Try NAVIN 2.1', 'Full Installation - Install NAVIN 2.1'])
+                         ['Live Mode - Try NAVIN 2.2', 'Full Installation - Install NAVIN 2.2'])
         self.assertNotIn('Old Laptop', self.grub)
 
     def test_both_grub_choices_have_touchpad_fix_once(self):
@@ -69,7 +69,7 @@ class BootMenu(unittest.TestCase):
 
     def test_safe_graphics_lives_in_tools_submenu(self):
         sub = self.grub[self.grub.index('submenu'):]
-        self.assertIn('Safe Graphics - NAVIN 2.1', sub)
+        self.assertIn('Safe Graphics - NAVIN 2.2', sub)
         self.assertIn('nomodeset', sub)
 
     def test_isolinux_two_visible_choices(self):
@@ -208,8 +208,8 @@ class WhatsNew21(unittest.TestCase):
 
     def test_every_toolbox_tool_is_listed(self):
         src = (IC / 'usr/local/bin/navin-toolbox').read_text()
-        data = json.loads((IC / 'usr/share/navin/whatsnew-2.1.json').read_text())
-        listed = {it['check'] for it in data['items'] if it['category'] == 'Toolbox'}
+        listed = {it['check'] for v in ('2.1', '2.2') for it in json.loads((IC / f'usr/share/navin/whatsnew-{v}.json').read_text())['items']
+                  if it['category'] == 'Toolbox'}
         import re
         for tid in re.findall(r'^    \("(\w+)", "', src, re.M):
             self.assertIn(f'("{tid}", ', listed)
